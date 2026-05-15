@@ -11,6 +11,7 @@ rsync -av --delete \
   --exclude="CLAUDE.md" \
   --exclude="*.base" \
   --exclude="node_modules/" \
+  --exclude="/index.md" \
   "$VAULT/" "$CONTENT/"
 
 echo "✅ Synced vault → content/"
