@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MoE 路由器互動模擬器</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang TC",
+                 "Microsoft JhengHei", sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #f1f5f9;
+    min-height: 100vh;
+    padding: 24px;
+    line-height: 1.6;
+  }
+  .container { max-width: 960px; margin: 0 auto; }
+  h1 {
+    font-size: 26px; margin-bottom: 6px;
+    background: linear-gradient(135deg,#38bdf8,#a78bfa);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: #94a3b8; margin-bottom: 24px; font-size: 14px; }
+
+  .card {
+    background: rgba(30,41,59,.7); backdrop-filter: blur(8px);
+    border: 1px solid rgba(148,163,184,.15);
+    border-radius: 16px; padding: 22px; margin-bottom: 20px;
+  }
+  .card h2 { font-size: 17px; margin-bottom: 14px; color: #e2e8f0; }
+
+  /* Input row */
+  .input-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  input[type="text"] {
+    flex: 1; min-width: 200px;
+    background: #0f172a; color: #f1f5f9;
+    border: 1px solid #334155; border-radius: 10px;
+    padding: 11px 14px; font-size: 15px;
+    font-family: inherit;
+  }
+  input[type="text"]:focus { outline: none; border-color: #38bdf8; }
+  button {
+    background: linear-gradient(135deg,#38bdf8,#6366f1);
+    color: white; border: none; border-radius: 10px;
+    padding: 11px 22px; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: transform .15s, box-shadow .15s;
+    font-family: inherit;
+  }
+  button:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(56,189,248,.3); }
+  button.secondary {
+    background: rgba(148,163,184,.15); color: #cbd5e1;
+  }
+
+  .preset-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .preset {
+    background: rgba(56,189,248,.1); color: #7dd3fc;
+    border: 1px solid rgba(56,189,248,.3);
+    padding: 5px 11px; border-radius: 999px;
+    font-size: 12px; cursor: pointer;
+  }
+  .preset:hover { background: rgba(56,189,248,.2); }
+
+  /* Experts grid */
+  .experts-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 10px; margin: 12px 0;
+  }
+  .expert {
+    aspect-ratio: 1.3;
+    background: rgba(15,23,42,.7);
+    border: 1.5px solid #334155;
+    border-radius: 12px;
+    padding: 10px 6px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; transition: all .35s ease;
+    position: relative; overflow: hidden;
+  }
+  .expert .id { font-size: 11px; color: #64748b; margin-bottom: 4px; }
+  .expert .name { font-size: 12px; color: #cbd5e1; font-weight: 600; }
+  .expert .score {
+    font-size: 11px; color: #64748b;
+    margin-top: 6px; font-family: ui-monospace, monospace;
+  }
+  .expert.active {
+    border-color: #38bdf8;
+    background: linear-gradient(135deg, rgba(56,189,248,.2), rgba(99,102,241,.15));
+    transform: scale(1.04);
+    box-shadow: 0 0 24px rgba(56,189,248,.3);
+  }
+  .expert.active .name { color: #f0f9ff; }
+  .expert.active .score { color: #7dd3fc; }
+  .expert.dim { opacity: .35; }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+  .stat {
+    background: rgba(15,23,42,.6);
+    border: 1px solid #1e293b;
+    padding: 12px; border-radius: 10px; text-align: center;
+  }
+  .stat .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; }
+  .stat .value { font-size: 22px; font-weight: 700; margin-top: 4px; color: #38bdf8; }
+  .stat .sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+  /* Explanation */
+  .explain {
+    background: rgba(56,189,248,.08);
+    border-left: 3px solid #38bdf8;
+    padding: 12px 14px; border-radius: 6px; font-size: 14px; color: #cbd5e1;
+  }
+  .explain strong { color: #7dd3fc; }
+  .arrow {
+    color: #475569; margin: 0 8px;
+  }
+
+  /* Router visualization */
+  .router-viz {
+    background: rgba(15,23,42,.5);
+    border-radius: 10px; padding: 14px;
+    margin-bottom: 14px; font-family: ui-monospace, monospace;
+    font-size: 12px; color: #94a3b8;
+  }
+  .router-viz .input-token {
+    color: #fbbf24; font-weight: bold;
+  }
+  .router-viz .top { color: #34d399; }
+
+  footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 28px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>🧩 MoE 路由器互動模擬器</h1>
+  <p class="subtitle">輸入一個 token，看看 MoE 路由器把它分派給哪些「專家」處理。架構模擬 Gemma 4 MoE：16 個專家、每次啟用 2 個。</p>
+
+  <!-- Input -->
+  <div class="card">
+    <h2>① 輸入 Token</h2>
+    <div class="input-row">
+      <input type="text" id="tokenInput" placeholder="輸入單字或片語，例如：def function、量子力學、love poem"
+             value="def function():">
+      <button onclick="route()">🚀 路由</button>
+      <button class="secondary" onclick="randomToken()">🎲 隨機</button>
+    </div>
+    <div class="preset-row">
+      <span class="preset" onclick="setToken('SELECT * FROM users')">SQL 查詢</span>
+      <span class="preset" onclick="setToken('量子糾纏理論')">中文物理</span>
+      <span class="preset" onclick="setToken('def fibonacci(n):')">Python 函式</span>
+      <span class="preset" onclick="setToken('愛在黎明破曉時')">中文文學</span>
+      <span class="preset" onclick="setToken('∫ x² dx')">數學公式</span>
+      <span class="preset" onclick="setToken('CREATE TABLE orders')">SQL DDL</span>
+      <span class="preset" onclick="setToken('Привет мир')">俄文</span>
+      <span class="preset" onclick="setToken('🦀 Rust borrow checker')">Rust</span>
+    </div>
+  </div>
+
+  <!-- Router visualization -->
+  <div class="card">
+    <h2>② 路由分數（softmax）</h2>
+    <div class="router-viz" id="routerViz">
+      待輸入 token ⋯⋯
+    </div>
+
+    <h2>③ 16 個專家（Top-2 啟用）</h2>
+    <div class="experts-grid" id="expertsGrid"></div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="label">總參數 (Total)</div>
+        <div class="value">26B</div>
+        <div class="sub">16 個專家 × 1.625B</div>
+      </div>
+      <div class="stat">
+        <div class="label">啟用參數 (Active)</div>
+        <div class="value" id="activeParams">3.25B</div>
+        <div class="sub">每 token 用 2 個專家</div>
+      </div>
+      <div class="stat">
+        <div class="label">運算比率</div>
+        <div class="value" id="ratio">~12.5%</div>
+        <div class="sub">相對於密集 26B 模型</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Explain -->
+  <div class="card">
+    <h2>💡 怎麼看這個結果</h2>
+    <div class="explain" id="explainBox">
+      點上方按鈕路由一個 token，這裡會出現解釋。
+    </div>
+  </div>
+
+  <footer>
+    本模擬器為教學示意，路由分數採用 hash 啟發式 + 隨機擾動，並非真實 Gemma 4 MoE 行為。<br>
+    真實 MoE 路由器是訓練出來的小型 FFN，本質上學會了「給定 token embedding，輸出 K 個分數」。
+  </footer>
+</div>
+
+<script>
+  // 16 fictional "experts" with implied specialties for educational illustration
+  const EXPERTS = [
+    { id: 0,  name: "代碼語法",        keywords: ['def', 'function', 'class', 'import', '()', '{', '};', 'return'] },
+    { id: 1,  name: "SQL/資料庫",      keywords: ['select', 'from', 'where', 'create', 'table', 'join', 'insert'] },
+    { id: 2,  name: "數學公式",        keywords: ['∫','∑','dx','log','sin','cos','數','方程','理論','量子'] },
+    { id: 3,  name: "中文古典",        keywords: ['詩','詞','賦','聖','賢','道','禮','義','春秋'] },
+    { id: 4,  name: "中文現代",        keywords: ['愛','你','我','的','是','在','黎明','破曉','說','看'] },
+    { id: 5,  name: "英文一般",        keywords: ['the','a','is','was','have','can','will','this','that'] },
+    { id: 6,  name: "邏輯推理",        keywords: ['if','then','because','therefore','since','assume','prove'] },
+    { id: 7,  name: "符號 / Emoji",    keywords: ['🦀','🚀','🎉','💡','⚡','🔥','✨','→','←','↑','↓'] },
+    { id: 8,  name: "斯拉夫語系",      keywords: ['привет','мир','спасибо','день','dobry','здр'] },
+    { id: 9,  name: "羅曼語系",        keywords: ['bonjour','hola','ciao','olá','très','muy','molto'] },
+    { id: 10, name: "日韓語系",        keywords: ['です','ます','こんにちは','감사','안녕','の','は'] },
+    { id: 11, name: "系統 / 低階",     keywords: ['malloc','pointer','kernel','syscall','rust','borrow','heap','stack'] },
+    { id: 12, name: "醫學 / 生物",     keywords: ['cell','dna','protein','病','症','診','治療','基因'] },
+    { id: 13, name: "金融 / 商業",     keywords: ['stock','市場','投資','財報','revenue','margin','ipo','併購'] },
+    { id: 14, name: "新聞語體",        keywords: ['表示','報導','根據','聲明','said','reported','according'] },
+    { id: 15, name: "通用後備",        keywords: [] }, // catch-all
+  ];
+
+  function hashStr(s){ let h=0; for(const c of s){ h=((h<<5)-h+c.charCodeAt(0))|0; } return h; }
+  function scoreExpertsFor(token){
+    const t = token.toLowerCase();
+    const scores = EXPERTS.map(e=>{
+      let s = 0;
+      for(const kw of e.keywords){ if(t.includes(kw.toLowerCase())) s += 1; }
+      // Add deterministic noise based on token+id, so it's reproducible
+      const noise = ((hashStr(token + ':' + e.id) % 100) / 100) * 0.6;
+      // Catch-all gets a small baseline
+      if(e.id === 15) s += 0.4;
+      return { id: e.id, name: e.name, raw: s + noise };
+    });
+    // softmax
+    const m = Math.max(...scores.map(s=>s.raw));
+    const exps = scores.map(s=> ({ ...s, e: Math.exp(s.raw - m) }));
+    const sum = exps.reduce((a,b)=>a+b.e,0);
+    return exps.map(s=> ({ ...s, prob: s.e/sum })).sort((a,b)=>b.prob-a.prob);
+  }
+
+  function renderGrid(ranked){
+    const grid = document.getElementById('expertsGrid');
+    grid.innerHTML = '';
+    // index by id
+    const byId = Object.fromEntries(ranked.map(r=>[r.id,r]));
+    const topIds = new Set(ranked.slice(0,2).map(r=>r.id));
+    for(let i=0;i<16;i++){
+      const r = byId[i];
+      const div = document.createElement('div');
+      div.className = 'expert' + (topIds.has(i) ? ' active' : ' dim');
+      div.innerHTML = `
+        <div class="id">Expert ${String(i).padStart(2,'0')}</div>
+        <div class="name">${EXPERTS[i].name}</div>
+        <div class="score">${(r.prob*100).toFixed(1)}%</div>
+      `;
+      grid.appendChild(div);
+    }
+  }
+
+  function renderRouterViz(token, ranked){
+    const top2 = ranked.slice(0,2);
+    const viz = `
+<span class="input-token">"${token}"</span>
+   <span class="arrow">→</span> Router 計算 16 個分數
+   <span class="arrow">→</span> Softmax 正規化
+   <span class="arrow">→</span> Top-2:
+   ${top2.map(t=>`<span class="top">Expert ${String(t.id).padStart(2,'0')} (${EXPERTS[t.id].name}) ${(t.prob*100).toFixed(1)}%</span>`).join(' &nbsp;|&nbsp; ')}
+`;
+    document.getElementById('routerViz').innerHTML = viz;
+  }
+
+  function renderExplain(token, ranked){
+    const top2 = ranked.slice(0,2);
+    const top1 = top2[0], top2nd = top2[1];
+    const html = `
+      Token <strong>「${token}」</strong> 被路由器評分後，<strong>Expert ${String(top1.id).padStart(2,'0')} (${EXPERTS[top1.id].name})</strong>
+      和 <strong>Expert ${String(top2nd.id).padStart(2,'0')} (${EXPERTS[top2nd.id].name})</strong> 拿到最高分數，於是這個 token 由它們倆協同處理。<br><br>
+      其他 14 個專家**在這次推論中完全不參與運算**——這就是 MoE 「總參數 26B、啟用 3.25B」的由來。
+      換到下一個 token，可能又是另一組兩個專家負責——這也是為什麼 MoE 模型的記憶體佔用無法省，但運算成本可以省。
+    `;
+    document.getElementById('explainBox').innerHTML = html;
+  }
+
+  function route(){
+    const t = document.getElementById('tokenInput').value.trim() || 'hello world';
+    const ranked = scoreExpertsFor(t);
+    renderRouterViz(t, ranked);
+    renderGrid(ranked);
+    renderExplain(t, ranked);
+  }
+
+  function setToken(t){
+    document.getElementById('tokenInput').value = t;
+    route();
+  }
+  function randomToken(){
+    const pool = ['def main():', 'CREATE INDEX', '量子糾纏', 'def parse_json', '愛在黎明',
+                  '∂L/∂θ = ∇f', '🚀 launch', 'malloc(sizeof', '安康な生活',
+                  '財報亮眼', 'stock market', 'основной', 'borrow checker'];
+    setToken(pool[Math.floor(Math.random()*pool.length)]);
+  }
+
+  // Initial render
+  // create empty grid first
+  (function init(){
+    const grid = document.getElementById('expertsGrid');
+    for(let i=0;i<16;i++){
+      const d = document.createElement('div');
+      d.className='expert';
+      d.innerHTML = `<div class="id">Expert ${String(i).padStart(2,'0')}</div>
+                     <div class="name">${EXPERTS[i].name}</div>
+                     <div class="score">—</div>`;
+      grid.appendChild(d);
+    }
+    route();
+  })();
+
+  document.getElementById('tokenInput').addEventListener('keydown', e=>{
+    if(e.key==='Enter') route();
+  });
+</script>
+</body>
+</html>

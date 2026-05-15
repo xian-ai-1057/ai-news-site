@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RLM 遞迴查詢視覺化</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang TC",
+                 "Microsoft JhengHei", sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+    color: #f1f5f9;
+    min-height: 100vh;
+    padding: 24px;
+    line-height: 1.6;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  h1 {
+    font-size: 26px; margin-bottom: 6px;
+    background: linear-gradient(135deg,#a78bfa,#f472b6);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: #94a3b8; margin-bottom: 24px; font-size: 14px; }
+
+  .card {
+    background: rgba(30,27,75,.55); backdrop-filter: blur(8px);
+    border: 1px solid rgba(167,139,250,.2);
+    border-radius: 16px; padding: 22px; margin-bottom: 18px;
+  }
+  .card h2 { font-size: 17px; margin-bottom: 14px; color: #e9d5ff; }
+
+  /* Question picker */
+  .q-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .q-btn {
+    background: rgba(167,139,250,.12); color: #e9d5ff;
+    border: 1px solid rgba(167,139,250,.35);
+    padding: 9px 14px; border-radius: 999px;
+    font-size: 13px; cursor: pointer; transition: all .2s;
+    font-family: inherit;
+  }
+  .q-btn:hover { background: rgba(167,139,250,.25); transform: translateY(-1px); }
+  .q-btn.active {
+    background: linear-gradient(135deg,#a78bfa,#f472b6);
+    color: white; border-color: transparent;
+  }
+  button {
+    background: linear-gradient(135deg,#a78bfa,#f472b6);
+    color: white; border: none; border-radius: 10px;
+    padding: 10px 20px; font-size: 14px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+  button.secondary { background: rgba(148,163,184,.15); color: #e2e8f0; }
+
+  /* Tree visualization */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 768px) { .compare { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: rgba(15,23,42,.6); border-radius: 12px;
+    padding: 16px; border: 1px solid rgba(148,163,184,.12);
+  }
+  .panel .panel-title { font-size: 14px; color: #cbd5e1; font-weight: 600; margin-bottom: 12px; }
+  .panel.naive .panel-title::before { content: "📦 "; }
+  .panel.rlm .panel-title::before { content: "🔄 "; }
+
+  .tree { font-family: ui-monospace, 'SF Mono', Consolas, monospace; font-size: 13px; line-height: 1.55; }
+  .node {
+    padding: 2px 6px; border-radius: 4px;
+    margin: 1px 0;
+    transition: all .35s ease;
+    color: #64748b;
+    display: inline-block;
+  }
+  .node.loaded { color: #fbbf24; background: rgba(251,191,36,.12); }
+  .node.visited { color: #a78bfa; background: rgba(167,139,250,.18); }
+  .node.expanded { color: #f472b6; background: rgba(244,114,182,.18); font-weight: 600; }
+  .indent { color: #475569; }
+
+  .meter {
+    background: rgba(15,23,42,.8); border-radius: 8px; padding: 10px; margin-top: 12px;
+    border: 1px solid rgba(148,163,184,.12);
+  }
+  .meter .meter-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; }
+  .meter .meter-val { font-size: 24px; font-weight: 700; margin-top: 2px; }
+  .meter.naive .meter-val { color: #fbbf24; }
+  .meter.rlm .meter-val { color: #a78bfa; }
+  .meter .meter-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+  /* Log */
+  .log {
+    background: rgba(15,23,42,.7);
+    border-radius: 8px; padding: 12px;
+    margin-top: 14px; font-family: ui-monospace, monospace;
+    font-size: 12px; color: #94a3b8;
+    max-height: 220px; overflow-y: auto;
+    border: 1px solid rgba(148,163,184,.12);
+  }
+  .log .line { margin: 2px 0; }
+  .log .line.q { color: #f472b6; }
+  .log .line.exp { color: #a78bfa; }
+  .log .line.found { color: #34d399; }
+  .log .line.done { color: #fbbf24; font-weight: 600; }
+
+  .savings {
+    background: linear-gradient(135deg, rgba(167,139,250,.15), rgba(244,114,182,.15));
+    border: 1px solid rgba(167,139,250,.3);
+    border-radius: 10px; padding: 14px; margin-top: 14px; text-align: center;
+  }
+  .savings .pct { font-size: 32px; font-weight: 800;
+    background: linear-gradient(135deg,#a78bfa,#f472b6);
+    -webkit-background-clip:text; background-clip:text;
+    -webkit-text-fill-color: transparent;
+  }
+  .savings .lbl { font-size: 13px; color: #cbd5e1; margin-top: 4px; }
+
+  footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 28px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>🔄 RLM 遞迴查詢視覺化</h1>
+  <p class="subtitle">假裝有一本「800 頁的虛構公司財報」。比較傳統大窗模型（一次讀完）vs RLM（遞迴展開）的 token 用量。</p>
+
+  <!-- Question picker -->
+  <div class="card">
+    <h2>① 選一個問題</h2>
+    <div class="q-row" id="qRow"></div>
+    <button onclick="run()">▶ 開始查詢</button>
+    <button class="secondary" onclick="reset()">↻ 重置</button>
+  </div>
+
+  <!-- Comparison -->
+  <div class="compare">
+    <div class="panel naive">
+      <div class="panel-title">傳統大窗模型（一次塞入全部）</div>
+      <div class="tree" id="naiveTree"></div>
+      <div class="meter naive">
+        <div class="meter-label">已消耗 Token</div>
+        <div class="meter-val" id="naiveTokens">0</div>
+        <div class="meter-sub" id="naiveSub">尚未開始</div>
+      </div>
+    </div>
+    <div class="panel rlm">
+      <div class="panel-title">RLM（遞迴展開）</div>
+      <div class="tree" id="rlmTree"></div>
+      <div class="meter rlm">
+        <div class="meter-label">已消耗 Token</div>
+        <div class="meter-val" id="rlmTokens">0</div>
+        <div class="meter-sub" id="rlmSub">尚未開始</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="savings" id="savingsBox" style="display:none">
+    <div class="pct" id="savingsPct">—</div>
+    <div class="lbl" id="savingsLbl">RLM 相對於大窗模型節省的 Token</div>
+  </div>
+
+  <!-- Log -->
+  <div class="card">
+    <h2>② 執行紀錄</h2>
+    <div class="log" id="log"></div>
+  </div>
+
+  <footer>
+    教學示意。實際 RLM 會更複雜——本工具簡化為「文件目錄樹的遞迴展開」。<br>
+    真實 RLM 還會有 KV cache 重用、事實卡蒸餾、退出條件判斷等機制。
+  </footer>
+</div>
+
+<script>
+  // Fictional document tree representing a 800-page report
+  const DOC = {
+    name: '📚 公司財報-2026 (800 頁)',
+    cost: 200, // tokens for the index summary
+    children: [
+      { name: 'Ch.1 公司治理', cost: 300, tags:['governance'] },
+      { name: 'Ch.2 業務概要', cost: 400, tags:['business'] },
+      { name: 'Ch.3 財務分析', cost: 500, tags:['finance','q3'], children: [
+        { name: '§3.1 營收分析', cost: 600, tags:['revenue'] },
+        { name: '§3.2 費用分析', cost: 800, tags:['expense','q3'], children: [
+          { name: '¶3.2.1 Q3 行銷費用', cost: 200, tags:['marketing','q3'] },
+          { name: '¶3.2.2 Q3 研發費用', cost: 250, tags:['rnd','q3'] },
+          { name: '¶3.2.3 Q3 其他費用', cost: 180, tags:['other','q3'] },
+        ]},
+        { name: '§3.3 毛利分析', cost: 500, tags:['margin'] },
+        { name: '§3.4 現金流量', cost: 400, tags:['cashflow'] },
+      ]},
+      { name: 'Ch.4 風險揭露', cost: 350, tags:['risk'] },
+      { name: 'Ch.5 ESG 揭露', cost: 400, tags:['esg'] },
+      { name: 'Ch.6 永續報告', cost: 300, tags:['sustainability'] },
+      { name: 'Ch.7 員工與薪酬', cost: 250, tags:['hr'] },
+      { name: 'Ch.8 子公司明細', cost: 600, tags:['subsidiary'] },
+      { name: 'Ch.9 法律訴訟', cost: 200, tags:['legal'] },
+      { name: 'Ch.10 附錄財務報表', cost: 1200, tags:['statement'] },
+    ]
+  };
+
+  const QUESTIONS = [
+    { q: 'Q3 行銷費用為什麼上升？',          tags:['q3','marketing'], path: ['Ch.3 財務分析','§3.2 費用分析','¶3.2.1 Q3 行銷費用'] },
+    { q: '公司主要的法律風險有哪些？',        tags:['legal','risk'],   path: ['Ch.4 風險揭露','Ch.9 法律訴訟'] },
+    { q: 'ESG 政策對 EBITDA 的影響？',       tags:['esg'],            path: ['Ch.5 ESG 揭露','Ch.3 財務分析'] },
+    { q: '子公司中哪家貢獻最多營收？',        tags:['subsidiary','revenue'], path:['Ch.8 子公司明細','Ch.3 財務分析','§3.1 營收分析'] },
+    { q: 'Q3 研發費用變動與毛利的關聯？',     tags:['rnd','q3','margin'], path:['Ch.3 財務分析','§3.2 費用分析','¶3.2.2 Q3 研發費用','§3.3 毛利分析'] },
+  ];
+
+  let chosen = QUESTIONS[0];
+
+  function renderQuestions(){
+    const row = document.getElementById('qRow');
+    row.innerHTML='';
+    QUESTIONS.forEach((q,i)=>{
+      const b = document.createElement('button');
+      b.className = 'q-btn' + (q===chosen?' active':'');
+      b.textContent = q.q;
+      b.onclick = ()=>{ chosen = q; renderQuestions(); reset(); };
+      row.appendChild(b);
+    });
+  }
+
+  function renderTree(elId, mark){
+    // mark: { 'name': 'loaded'|'visited'|'expanded' }
+    const root = document.getElementById(elId);
+    root.innerHTML = '';
+    function rec(node, depth){
+      const div = document.createElement('div');
+      const spanIndent = '<span class="indent">' + '│  '.repeat(depth) + (depth>0?'├─ ':'') + '</span>';
+      const cls = mark[node.name] || '';
+      div.innerHTML = spanIndent + '<span class="node ' + cls + '" data-name="'+node.name+'">' + node.name + '</span>';
+      root.appendChild(div);
+      if(node.children){ node.children.forEach(c=>rec(c, depth+1)); }
+    }
+    rec(DOC, 0);
+  }
+
+  function allNodes(node, arr=[]){
+    arr.push(node);
+    if(node.children) node.children.forEach(c=>allNodes(c,arr));
+    return arr;
+  }
+
+  function logLine(elId, text, cls=''){
+    const log = document.getElementById(elId);
+    const div = document.createElement('div');
+    div.className = 'line ' + cls;
+    div.textContent = text;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+  function reset(){
+    document.getElementById('naiveTokens').textContent = '0';
+    document.getElementById('rlmTokens').textContent = '0';
+    document.getElementById('naiveSub').textContent = '尚未開始';
+    document.getElementById('rlmSub').textContent = '尚未開始';
+    document.getElementById('log').innerHTML = '';
+    document.getElementById('savingsBox').style.display = 'none';
+    renderTree('naiveTree', {});
+    renderTree('rlmTree', {});
+  }
+
+  async function run(){
+    reset();
+    logLine('log', '🔎 問題：' + chosen.q, 'q');
+    await sleep(400);
+
+    // Naive: load everything
+    logLine('log', '— 大窗模型：把整本 800 頁載入上下文 ——', 'q');
+    const all = allNodes(DOC);
+    let naiveTotal = 0;
+    const naiveMark = {};
+    for(const n of all){
+      naiveTotal += n.cost;
+      naiveMark[n.name] = 'loaded';
+      document.getElementById('naiveTokens').textContent = naiveTotal.toLocaleString();
+      document.getElementById('naiveSub').textContent = '已載入：' + n.name;
+      renderTree('naiveTree', naiveMark);
+      await sleep(40);
+    }
+    document.getElementById('naiveSub').textContent = '已載入全部 ' + all.length + ' 個節點';
+    logLine('log', '✓ 大窗模型完成載入：' + naiveTotal.toLocaleString() + ' tokens', 'done');
+
+    await sleep(500);
+
+    // RLM: recursively expand only relevant path
+    logLine('log', '— RLM：從目錄開始遞迴展開 ——', 'q');
+    let rlmTotal = 0;
+    const rlmMark = {};
+
+    // Step 0: read index of root
+    rlmTotal += DOC.cost;
+    rlmMark[DOC.name] = 'visited';
+    document.getElementById('rlmTokens').textContent = rlmTotal.toLocaleString();
+    document.getElementById('rlmSub').textContent = '讀目錄';
+    renderTree('rlmTree', rlmMark);
+    logLine('log', '  L0 讀目錄索引：' + DOC.name + ' (+' + DOC.cost + ')', 'exp');
+    await sleep(500);
+
+    // Traverse path
+    let cur = DOC;
+    for(let depth=0; depth<chosen.path.length; depth++){
+      const target = chosen.path[depth];
+      // first, "summarize" all siblings at this level (small cost each)
+      if(cur.children){
+        for(const c of cur.children){
+          if(rlmMark[c.name]) continue;
+          const sib = Math.round(c.cost * 0.12); // small summary cost
+          rlmTotal += sib;
+          rlmMark[c.name] = 'visited';
+          logLine('log', '    L'+(depth+1)+' 掃 sibling: ' + c.name + ' 摘要 (+' + sib + ')', 'exp');
+          document.getElementById('rlmTokens').textContent = rlmTotal.toLocaleString();
+          renderTree('rlmTree', rlmMark);
+          await sleep(120);
+        }
+      }
+      // expand the target chapter/section fully
+      const next = (cur.children||[]).find(c=>c.name===target);
+      if(next){
+        rlmMark[next.name] = 'expanded';
+        if(!next.children){
+          // leaf — pay full cost
+          rlmTotal += next.cost;
+          logLine('log', '  ✦ 命中 leaf: ' + next.name + ' 完整載入 (+' + next.cost + ')', 'found');
+        }
+        document.getElementById('rlmTokens').textContent = rlmTotal.toLocaleString();
+        document.getElementById('rlmSub').textContent = '深入：' + next.name;
+        renderTree('rlmTree', rlmMark);
+        await sleep(400);
+        cur = next;
+      }
+    }
+
+    logLine('log', '✓ RLM 已收集足夠證據，停止遞迴', 'done');
+    document.getElementById('rlmSub').textContent = '已完成（節點數：' + Object.keys(rlmMark).length + '/' + all.length + '）';
+
+    // Savings
+    const pct = ((1 - rlmTotal/naiveTotal) * 100).toFixed(1);
+    const box = document.getElementById('savingsBox');
+    box.style.display='block';
+    document.getElementById('savingsPct').textContent = '節省 ' + pct + '%';
+    document.getElementById('savingsLbl').textContent =
+      'RLM ' + rlmTotal.toLocaleString() + ' tokens ／ 大窗模型 ' + naiveTotal.toLocaleString() + ' tokens';
+  }
+
+  // init
+  renderQuestions();
+  renderTree('naiveTree', {});
+  renderTree('rlmTree', {});
+</script>
+</body>
+</html>
