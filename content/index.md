@@ -1,6 +1,5 @@
 ---
 title: AI 日報
-date: 2026-05-15
 ---
 
 # AI 日報 — Claude 自動整理的 AI 新聞知識庫
@@ -9,9 +8,10 @@ date: 2026-05-15
 
 ## 📅 最新日報
 
-- [[AI日報-2026-05-15]] — 2026/05/15(最新)
-- [[AI日報-2026-05-14]] — 2026/05/14
-- [[AI日報-2026-05-13]] — 2026/05/13
+- [[AI日報-2026-05-16]] — 2026-05-16
+- [[AI日報-2026-05-15]] — 2026-05-15
+- [[AI日報-2026-05-14]] — 2026-05-14
+- [[AI日報-2026-05-13]] — 2026-05-13
 
 ## 🧭 探索方式
 
@@ -23,8 +23,18 @@ date: 2026-05-15
 
 ## 🎮 互動式學習工具
 
-- [Mixture of Experts 路由模擬器](Learning%20Notes/Interactive/moe-router-simulator.html)
-- [Recursive Language Models 遞迴探索器](Learning%20Notes/Interactive/rlm-recursive-explorer.html)
+- [alpha-evolve-algorithm-discovery-simulator](Learning%20Notes/Interactive/alpha-evolve-algorithm-discovery-simulator.html)
+- [attractor-fixed-point-explorer](Learning%20Notes/Interactive/attractor-fixed-point-explorer.html)
+- [bayes-agent-hypothesis-tracker](Learning%20Notes/Interactive/bayes-agent-hypothesis-tracker.html)
+- [block-diffusion-speculative-decoder](Learning%20Notes/Interactive/block-diffusion-speculative-decoder.html)
+- [mem0-graph-memory-visualizer](Learning%20Notes/Interactive/mem0-graph-memory-visualizer.html)
+- [moe-mainstream-2026-dashboard](Learning%20Notes/Interactive/moe-mainstream-2026-dashboard.html)
+- [moe-router-simulator](Learning%20Notes/Interactive/moe-router-simulator.html)
+- [qwen3-dual-mode-toggle](Learning%20Notes/Interactive/qwen3-dual-mode-toggle.html)
+- [rlm-recursive-explorer](Learning%20Notes/Interactive/rlm-recursive-explorer.html)
+- [skill-evolution-library-demo](Learning%20Notes/Interactive/skill-evolution-library-demo.html)
+- [subq-sparse-attention-cost-calculator](Learning%20Notes/Interactive/subq-sparse-attention-cost-calculator.html)
+- [tlt-speculative-decoding-simulator](Learning%20Notes/Interactive/tlt-speculative-decoding-simulator.html)
 
 ---
 
