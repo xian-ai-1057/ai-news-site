@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TLT 訓練加速 + 推測解碼模擬器</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang TC",
+                 "Microsoft JhengHei", sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #f1f5f9;
+    min-height: 100vh;
+    padding: 24px;
+    line-height: 1.6;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  h1 {
+    font-size: 26px; margin-bottom: 6px;
+    background: linear-gradient(135deg,#38bdf8,#a78bfa);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: #94a3b8; margin-bottom: 24px; font-size: 14px; }
+
+  .card {
+    background: rgba(30,41,59,.7); backdrop-filter: blur(8px);
+    border: 1px solid rgba(148,163,184,.15);
+    border-radius: 16px; padding: 22px; margin-bottom: 20px;
+  }
+  .card h2 { font-size: 17px; margin-bottom: 14px; color: #e2e8f0; }
+  .card h3 { font-size: 14px; margin: 8px 0 10px; color: #94a3b8; font-weight: 600; }
+
+  button {
+    background: linear-gradient(135deg,#38bdf8,#6366f1);
+    color: white; border: none; border-radius: 10px;
+    padding: 11px 22px; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: transform .15s, box-shadow .15s;
+    font-family: inherit;
+  }
+  button:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(56,189,248,.3); }
+  button.secondary { background: rgba(148,163,184,.15); color: #cbd5e1; }
+  button:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  /* Controls row */
+  .controls-row {
+    display: grid; grid-template-columns: 1fr 1fr auto auto;
+    gap: 14px; align-items: center; margin-bottom: 8px;
+  }
+  .slider-wrap { display: flex; flex-direction: column; gap: 4px; }
+  .slider-wrap .lbl {
+    font-size: 12px; color: #94a3b8;
+    display: flex; justify-content: space-between;
+  }
+  .slider-wrap .lbl strong { color: #38bdf8; font-family: ui-monospace, monospace; }
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 6px; border-radius: 3px;
+    background: #1e293b; outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: linear-gradient(135deg,#38bdf8,#6366f1);
+    cursor: pointer; border: 2px solid #0f172a;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: linear-gradient(135deg,#38bdf8,#6366f1);
+    cursor: pointer; border: 2px solid #0f172a;
+  }
+
+  /* Toggle */
+  .toggle-wrap { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+  .toggle-wrap .lbl { font-size: 12px; color: #94a3b8; }
+  .toggle {
+    position: relative; width: 56px; height: 28px;
+    background: #1e293b; border-radius: 14px;
+    cursor: pointer; transition: background .25s;
+    border: 1px solid #334155;
+  }
+  .toggle .thumb {
+    position: absolute; top: 2px; left: 2px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #cbd5e1; transition: all .25s ease;
+  }
+  .toggle.on { background: linear-gradient(135deg,#38bdf8,#6366f1); border-color: transparent; }
+  .toggle.on .thumb { left: 32px; background: #f0f9ff; }
+
+  /* Token grid */
+  .token-grid {
+    display: grid; grid-template-columns: repeat(20, 1fr);
+    gap: 4px; margin: 10px 0;
+  }
+  .token {
+    aspect-ratio: 1;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: #475569;
+    font-family: ui-monospace, monospace;
+    transition: all .3s ease;
+    position: relative;
+  }
+  .token.drafted {
+    background: rgba(56,189,248,.15);
+    border-color: rgba(56,189,248,.4);
+    color: #7dd3fc;
+    animation: drafted-pulse .4s ease;
+  }
+  .token.accepted {
+    background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+    border-color: #38bdf8;
+    color: #0f172a; font-weight: 700;
+    box-shadow: 0 0 12px rgba(56,189,248,.5);
+  }
+  .token.rejected {
+    background: rgba(248,113,113,.2);
+    border-color: #f87171;
+    color: #fca5a5;
+    animation: shake .3s ease;
+  }
+  .token.regenerated {
+    background: linear-gradient(135deg, #a78bfa, #6366f1);
+    border-color: #a78bfa;
+    color: #f0f9ff; font-weight: 700;
+  }
+  @keyframes drafted-pulse {
+    0% { transform: scale(.85); opacity: .3; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-3px); }
+    75% { transform: translateX(3px); }
+  }
+
+  .step-label { font-size: 12px; color: #94a3b8; min-height: 18px; }
+  .step-label .draft { color: #7dd3fc; }
+  .step-label .accept { color: #38bdf8; }
+  .step-label .reject { color: #f87171; }
+  .step-label .regen { color: #a78bfa; }
+
+  /* GPU cluster */
+  .gpu-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 10px; margin: 10px 0;
+  }
+  .gpu {
+    aspect-ratio: 1.4;
+    background: #1e293b;
+    border: 1.5px solid #334155;
+    border-radius: 10px;
+    padding: 10px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; transition: all .4s ease;
+    position: relative; overflow: hidden;
+  }
+  .gpu .id { font-size: 10px; color: #64748b; }
+  .gpu .role { font-size: 11px; color: #cbd5e1; font-weight: 600; margin-top: 4px; }
+  .gpu .util {
+    font-size: 13px; font-family: ui-monospace, monospace;
+    color: #64748b; margin-top: 4px;
+  }
+  .gpu.busy {
+    background: linear-gradient(135deg, rgba(251,191,36,.3), rgba(245,158,11,.2));
+    border-color: #fbbf24;
+    box-shadow: 0 0 16px rgba(251,191,36,.25);
+  }
+  .gpu.busy .role { color: #fef3c7; }
+  .gpu.busy .util { color: #fbbf24; }
+  .gpu.idle {
+    opacity: .55;
+  }
+  .gpu.training {
+    background: linear-gradient(135deg, rgba(52,211,153,.25), rgba(16,185,129,.15));
+    border-color: #34d399;
+    box-shadow: 0 0 16px rgba(52,211,153,.25);
+  }
+  .gpu.training .role { color: #d1fae5; }
+  .gpu.training .util { color: #34d399; }
+
+  .gpu .pulse {
+    position: absolute; bottom: 6px; left: 50%;
+    transform: translateX(-50%);
+    width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor; opacity: 0;
+  }
+  .gpu.busy .pulse, .gpu.training .pulse {
+    opacity: 1; animation: pulse 1.2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: .3; transform: translateX(-50%) scale(1); }
+    50% { opacity: 1; transform: translateX(-50%) scale(1.6); }
+  }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; }
+  .stat {
+    background: rgba(15,23,42,.6);
+    border: 1px solid #1e293b;
+    padding: 12px; border-radius: 10px; text-align: center;
+  }
+  .stat .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; }
+  .stat .value { font-size: 22px; font-weight: 700; margin-top: 4px; color: #38bdf8; }
+  .stat .sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .stat.speedup .value { color: #a78bfa; }
+  .stat.cluster .value { color: #34d399; }
+
+  /* Legend */
+  .legend {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    margin-top: 8px; font-size: 12px; color: #94a3b8;
+  }
+  .legend span span.box {
+    display: inline-block; width: 12px; height: 12px;
+    border-radius: 3px; margin-right: 5px; vertical-align: middle;
+  }
+
+  /* Concept mapping */
+  .concept-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .concept {
+    background: rgba(15,23,42,.5);
+    border: 1px solid #1e293b;
+    border-radius: 8px; padding: 10px 12px;
+    font-size: 13px; color: #cbd5e1;
+  }
+  .concept .viz { color: #fbbf24; font-weight: 600; }
+  .concept .arrow { color: #475569; margin: 0 6px; }
+  .concept .concept-name { color: #a78bfa; font-weight: 600; }
+
+  footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 28px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>⚡ TLT 訓練加速 + 推測解碼模擬器</h1>
+  <p class="subtitle">看 drafter 如何讓推理變快、看 TLT 如何讓訓練不浪費 GPU。</p>
+
+  <!-- Controls -->
+  <div class="card">
+    <h2>① 控制台</h2>
+    <div class="controls-row">
+      <div class="slider-wrap">
+        <div class="lbl">Lookahead 大小 <strong id="lookaheadVal">5</strong></div>
+        <input type="range" id="lookahead" min="1" max="10" value="5">
+        <div class="lbl"><span style="color:#64748b">小</span><span style="color:#64748b">大</span></div>
+      </div>
+      <div class="slider-wrap">
+        <div class="lbl">每步耗時 <strong id="speedVal">300</strong> ms</div>
+        <input type="range" id="speed" min="100" max="800" step="50" value="300">
+        <div class="lbl"><span style="color:#64748b">快</span><span style="color:#64748b">慢</span></div>
+      </div>
+      <div class="toggle-wrap">
+        <div class="lbl">TLT 啟用</div>
+        <div class="toggle on" id="tltToggle" onclick="toggleTLT()"><div class="thumb"></div></div>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button id="runBtn" onclick="toggleRun()">▶ 開始</button>
+        <button class="secondary" onclick="resetSim()">🔄 重設</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rollout viz -->
+  <div class="card">
+    <h2>② Rollout 推測解碼（Drafter → Target 驗證）</h2>
+    <h3>20-token rollout buffer · 動畫顯示每輪 drafter 預測與 target 驗證</h3>
+    <div class="token-grid" id="tokenGrid"></div>
+    <div class="step-label" id="stepLabel">按「開始」啟動 rollout。</div>
+    <div class="legend">
+      <span><span class="box" style="background:rgba(56,189,248,.15); border:1px solid rgba(56,189,248,.4);"></span>Drafter 預測中</span>
+      <span><span class="box" style="background:#38bdf8"></span>Target 驗證通過</span>
+      <span><span class="box" style="background:rgba(248,113,113,.2); border:1px solid #f87171;"></span>驗證失敗</span>
+      <span><span class="box" style="background:linear-gradient(135deg,#a78bfa,#6366f1);"></span>Target 重生成</span>
+    </div>
+  </div>
+
+  <!-- GPU cluster -->
+  <div class="card">
+    <h2>③ 集群 GPU 利用率（8 卡）</h2>
+    <h3>切換 TLT 開關，看閒置卡如何被「拿去訓練 drafter」</h3>
+    <div class="gpu-grid" id="gpuGrid"></div>
+    <div class="legend">
+      <span><span class="box" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);"></span>主訓練 rollout 工作中</span>
+      <span><span class="box" style="background:#1e293b; opacity:.55; border:1px solid #334155;"></span>閒置（傳統做法）</span>
+      <span><span class="box" style="background:linear-gradient(135deg,#34d399,#10b981);"></span>TLT 復用：訓 drafter</span>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="card">
+    <h2>④ 即時指標</h2>
+    <div class="stats">
+      <div class="stat">
+        <div class="label">當前接受率</div>
+        <div class="value" id="acceptRate">—</div>
+        <div class="sub">drafter 預測通過 %</div>
+      </div>
+      <div class="stat">
+        <div class="label">累計生成 token</div>
+        <div class="value" id="tokenCount">0</div>
+        <div class="sub">本回合 rollout</div>
+      </div>
+      <div class="stat speedup">
+        <div class="label">生成速度倍率</div>
+        <div class="value" id="speedup">1.0×</div>
+        <div class="sub">vs. 純 Target 自回歸</div>
+      </div>
+      <div class="stat cluster">
+        <div class="label">集群 GPU 利用率</div>
+        <div class="value" id="gpuUtil">25%</div>
+        <div class="sub">8 卡平均</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Concept mapping -->
+  <div class="card">
+    <h2>💡 視覺元素 ↔ TLT 概念對照</h2>
+    <div class="concept-grid">
+      <div class="concept"><span class="viz">淺藍 → 亮藍 / 紅 / 紫</span><span class="arrow">↔</span><span class="concept-name">Drafter 預測 → Target 驗證</span><br>
+        <span style="color:#94a3b8; font-size:12px;">小模型先猜、大模型一次性驗證；錯誤就由 target 重生</span></div>
+      <div class="concept"><span class="viz">Lookahead 滑桿</span><span class="arrow">↔</span><span class="concept-name">接受率 vs 並行度 trade-off</span><br>
+        <span style="color:#94a3b8; font-size:12px;">越大每輪猜越多 token，但接受率下降；最佳值需 adaptive 選擇</span></div>
+      <div class="concept"><span class="viz">TLT 開關</span><span class="arrow">↔</span><span class="concept-name">訓練端閒置 GPU 復用</span><br>
+        <span style="color:#94a3b8; font-size:12px;">原本 75% 卡在等待，現在拿去訓 drafter；同硬體預算多一件事</span></div>
+      <div class="concept"><span class="viz">速度倍率 ×</span><span class="arrow">↔</span><span class="concept-name">推測解碼加速效果</span><br>
+        <span style="color:#94a3b8; font-size:12px;">論文回報訓練時間壓到 32–59%（速度 1.7–3.1 倍）</span></div>
+    </div>
+  </div>
+
+  <footer>
+    本模擬器為教學示意，接受率採「lookahead 越大則越低」的啟發式（base 0.92 − 0.04×lookahead），並非真實 TLT 數值。<br>
+    真實 TLT 用 Adaptive Drafter Trainer + Adaptive Rollout Engine 動態挑 lookahead，並用閒置卡持續訓練對齊的 drafter。
+  </footer>
+</div>
+
+<script>
+  const GRID_SIZE = 20;
+  const GPU_COUNT = 8;
+
+  let state = {
+    running: false,
+    tltOn: true,
+    lookahead: 5,
+    stepMs: 300,
+    cursor: 0,           // next token index in grid
+    totalDrafted: 0,
+    totalAccepted: 0,
+    tokenCount: 0,
+    tokens: [],          // array of {state: idle|drafted|accepted|rejected|regenerated}
+    timer: null
+  };
+
+  function initTokens(){
+    state.tokens = Array.from({length: GRID_SIZE}, ()=> ({ state: 'idle', label: '' }));
+    state.cursor = 0;
+    state.totalDrafted = 0;
+    state.totalAccepted = 0;
+    state.tokenCount = 0;
+  }
+
+  function renderTokens(){
+    const grid = document.getElementById('tokenGrid');
+    grid.innerHTML = '';
+    state.tokens.forEach((t, i)=>{
+      const div = document.createElement('div');
+      div.className = 'token ' + (t.state !== 'idle' ? t.state : '');
+      div.textContent = t.label || (i+1);
+      grid.appendChild(div);
+    });
+  }
+
+  function renderGPUs(){
+    const grid = document.getElementById('gpuGrid');
+    grid.innerHTML = '';
+    // 2 GPUs busy (rollout), 6 idle or training depending on TLT
+    for(let i=0; i<GPU_COUNT; i++){
+      const div = document.createElement('div');
+      let cls, role, util;
+      if(i < 2){
+        cls = 'busy';
+        role = '主訓練 Rollout';
+        util = (90 + Math.floor(Math.random()*8)) + '%';
+      } else if(state.tltOn){
+        cls = 'training';
+        role = 'Drafter 訓練';
+        util = (75 + Math.floor(Math.random()*15)) + '%';
+      } else {
+        cls = 'idle';
+        role = '閒置';
+        util = (5 + Math.floor(Math.random()*8)) + '%';
+      }
+      div.className = 'gpu ' + cls;
+      div.innerHTML = `
+        <div class="id">GPU ${i}</div>
+        <div class="role">${role}</div>
+        <div class="util">${util}</div>
+        <div class="pulse"></div>
+      `;
+      grid.appendChild(div);
+    }
+    updateClusterUtil();
+  }
+
+  function updateClusterUtil(){
+    // Avg utilization: busy 90%, training 80%, idle 8%
+    let total = 0;
+    for(let i=0; i<GPU_COUNT; i++){
+      if(i<2) total += 90;
+      else if(state.tltOn) total += 80;
+      else total += 8;
+    }
+    const avg = Math.round(total / GPU_COUNT);
+    document.getElementById('gpuUtil').textContent = avg + '%';
+  }
+
+  // Compute acceptance rate based on lookahead
+  function currentAcceptRate(){
+    // base 0.92 - 0.04 * (lookahead-1), clamp [0.45, 0.95]
+    let r = 0.92 - 0.045 * (state.lookahead - 1);
+    return Math.max(0.45, Math.min(0.95, r));
+  }
+
+  function stepOnce(){
+    if(state.cursor >= GRID_SIZE){
+      stopSim();
+      document.getElementById('stepLabel').innerHTML = '✓ Rollout 完成。按「重設」再跑一次。';
+      return;
+    }
+    const la = state.lookahead;
+    const accRate = currentAcceptRate();
+    const remaining = GRID_SIZE - state.cursor;
+    const draftN = Math.min(la, remaining);
+
+    // Step 1: drafter predicts draftN tokens (visual: turn drafted)
+    for(let i=0; i<draftN; i++){
+      const idx = state.cursor + i;
+      state.tokens[idx] = { state: 'drafted', label: 'D' };
+    }
+    state.totalDrafted += draftN;
+    renderTokens();
+    document.getElementById('stepLabel').innerHTML =
+      `<span class="draft">Drafter 預測 ${draftN} 個 token（lookahead=${la}）…</span>`;
+
+    // Step 2: target verifies after a short pause
+    setTimeout(()=>{
+      let acceptedThisRound = 0;
+      let firstReject = -1;
+      for(let i=0; i<draftN; i++){
+        const idx = state.cursor + i;
+        const accepted = Math.random() < accRate;
+        if(accepted && firstReject === -1){
+          state.tokens[idx] = { state: 'accepted', label: '✓' };
+          acceptedThisRound++;
+        } else {
+          if(firstReject === -1){
+            firstReject = i;
+            state.tokens[idx] = { state: 'rejected', label: '✗' };
+          } else {
+            state.tokens[idx] = { state: 'idle', label: '' };
+          }
+        }
+      }
+      state.totalAccepted += acceptedThisRound;
+
+      // Step 3: if rejected, target regenerates the rejected token
+      let regenAt = -1;
+      if(firstReject !== -1){
+        regenAt = state.cursor + firstReject;
+      }
+      renderTokens();
+
+      if(firstReject !== -1){
+        setTimeout(()=>{
+          state.tokens[regenAt] = { state: 'regenerated', label: 'T' };
+          renderTokens();
+          state.cursor += acceptedThisRound + 1; // accepted ones + the regenerated one
+          state.tokenCount = state.cursor;
+          updateStats();
+          document.getElementById('stepLabel').innerHTML =
+            `<span class="accept">接受 ${acceptedThisRound}</span> · ` +
+            `<span class="reject">第 ${firstReject+1} 個失敗</span> · ` +
+            `<span class="regen">Target 重生 1 個</span>`;
+          if(state.running) state.timer = setTimeout(stepOnce, state.stepMs);
+        }, state.stepMs * 0.4);
+      } else {
+        // all accepted
+        state.cursor += acceptedThisRound;
+        state.tokenCount = state.cursor;
+        updateStats();
+        document.getElementById('stepLabel').innerHTML =
+          `<span class="accept">全部 ${acceptedThisRound} 個接受！</span> drafter 大勝。`;
+        if(state.running) state.timer = setTimeout(stepOnce, state.stepMs);
+      }
+    }, state.stepMs * 0.5);
+  }
+
+  function updateStats(){
+    const accRate = state.totalDrafted > 0
+      ? (state.totalAccepted / state.totalDrafted) * 100 : 0;
+    document.getElementById('acceptRate').textContent = accRate.toFixed(0) + '%';
+    document.getElementById('tokenCount').textContent = state.tokenCount;
+
+    // Speedup = (accepted + regen) / forward_passes_equivalent
+    // Each round = 1 target forward; pure autoregressive = 1 token per forward
+    // Tokens advanced per round = accepted + 1 (regen) or accepted if no reject
+    // Average rounds taken ~ tokenCount / avgPerRound
+    // simpler: speedup ~ 1 + (acceptRate * lookahead) / 1.0 — capped
+    const r = currentAcceptRate();
+    const avgPerRound = (1 - Math.pow(r, state.lookahead)) / (1 - r); // geometric sum-like estimate of accepted
+    const tokensPerRound = avgPerRound + 1; // + the regen if reject, or +0 if all accept — approx
+    const speedup = Math.min(state.lookahead, tokensPerRound);
+    document.getElementById('speedup').textContent = speedup.toFixed(1) + '×';
+  }
+
+  function toggleRun(){
+    if(state.running) stopSim();
+    else startSim();
+  }
+  function startSim(){
+    state.running = true;
+    document.getElementById('runBtn').textContent = '⏸ 暫停';
+    if(state.cursor >= GRID_SIZE){
+      initTokens();
+      renderTokens();
+    }
+    stepOnce();
+  }
+  function stopSim(){
+    state.running = false;
+    if(state.timer){ clearTimeout(state.timer); state.timer = null; }
+    document.getElementById('runBtn').textContent = '▶ 繼續';
+  }
+  function resetSim(){
+    stopSim();
+    initTokens();
+    renderTokens();
+    document.getElementById('stepLabel').textContent = '按「開始」啟動 rollout。';
+    document.getElementById('acceptRate').textContent = '—';
+    document.getElementById('tokenCount').textContent = '0';
+    updateStats();
+    document.getElementById('runBtn').textContent = '▶ 開始';
+  }
+
+  function toggleTLT(){
+    state.tltOn = !state.tltOn;
+    document.getElementById('tltToggle').classList.toggle('on', state.tltOn);
+    renderGPUs();
+  }
+
+  // Wire sliders
+  document.getElementById('lookahead').addEventListener('input', e=>{
+    state.lookahead = parseInt(e.target.value);
+    document.getElementById('lookaheadVal').textContent = state.lookahead;
+    updateStats();
+  });
+  document.getElementById('speed').addEventListener('input', e=>{
+    state.stepMs = parseInt(e.target.value);
+    document.getElementById('speedVal').textContent = state.stepMs;
+  });
+
+  // Init
+  initTokens();
+  renderTokens();
+  renderGPUs();
+  updateStats();
+
+  // Refresh GPU utilization numbers every couple seconds for "alive" feel
+  setInterval(()=>{ if(!document.hidden) renderGPUs(); }, 2500);
+</script>
+</body>
+</html>

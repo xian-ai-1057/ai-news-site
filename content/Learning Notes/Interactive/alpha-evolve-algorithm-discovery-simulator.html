@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AlphaEvolve 演化搜尋模擬器</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang TC",
+                 "Microsoft JhengHei", sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #f1f5f9;
+    min-height: 100vh;
+    padding: 24px;
+    line-height: 1.6;
+  }
+  .container { max-width: 1000px; margin: 0 auto; }
+  h1 {
+    font-size: 26px; margin-bottom: 6px;
+    background: linear-gradient(135deg,#38bdf8,#a78bfa);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: #94a3b8; margin-bottom: 24px; font-size: 14px; }
+
+  .card {
+    background: rgba(30,41,59,.7); backdrop-filter: blur(8px);
+    border: 1px solid rgba(148,163,184,.15);
+    border-radius: 16px; padding: 22px; margin-bottom: 20px;
+  }
+  .card h2 { font-size: 17px; margin-bottom: 14px; color: #e2e8f0; }
+
+  /* Controls */
+  .slider-group { margin-bottom: 16px; }
+  .slider-label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 8px; font-size: 13px; color: #cbd5e1;
+  }
+  .slider-label .value {
+    color: #38bdf8; font-family: ui-monospace, monospace; font-weight: 600;
+  }
+  input[type="range"] {
+    width: 100%; height: 6px;
+    -webkit-appearance: none; appearance: none;
+    background: #1e293b; border-radius: 4px; outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: linear-gradient(135deg,#38bdf8,#6366f1);
+    cursor: pointer; box-shadow: 0 2px 8px rgba(56,189,248,.4);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%; border: none;
+    background: linear-gradient(135deg,#38bdf8,#6366f1);
+    cursor: pointer;
+  }
+
+  .radio-row { display: flex; gap: 12px; margin-bottom: 4px; }
+  .radio-pill {
+    flex: 1; cursor: pointer;
+    background: rgba(15,23,42,.6);
+    border: 1.5px solid #334155;
+    border-radius: 10px;
+    padding: 10px 12px;
+    text-align: center; font-size: 13px; color: #cbd5e1;
+    transition: all .2s;
+  }
+  .radio-pill.active {
+    border-color: #a78bfa;
+    background: linear-gradient(135deg, rgba(167,139,250,.18), rgba(99,102,241,.12));
+    color: #ddd6fe;
+    box-shadow: 0 0 16px rgba(167,139,250,.25);
+  }
+  .radio-pill .hint { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .radio-pill.active .hint { color: #a78bfa; }
+
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  button {
+    background: linear-gradient(135deg,#38bdf8,#6366f1);
+    color: white; border: none; border-radius: 10px;
+    padding: 11px 22px; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: transform .15s, box-shadow .15s, opacity .15s;
+    font-family: inherit;
+  }
+  button:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(56,189,248,.3); }
+  button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  button.secondary { background: rgba(148,163,184,.15); color: #cbd5e1; }
+
+  .preset-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .preset {
+    background: rgba(56,189,248,.1); color: #7dd3fc;
+    border: 1px solid rgba(56,189,248,.3);
+    padding: 5px 11px; border-radius: 999px;
+    font-size: 12px; cursor: pointer;
+  }
+  .preset:hover { background: rgba(56,189,248,.2); }
+
+  /* Population grid */
+  .pop-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 10px; margin: 8px 0 16px;
+  }
+  @media (max-width: 640px) { .pop-grid { grid-template-columns: repeat(2, 1fr); } }
+  .candidate {
+    background: rgba(15,23,42,.7);
+    border: 1.5px solid #334155;
+    border-radius: 12px;
+    padding: 10px 8px;
+    text-align: center;
+    transition: all .5s ease;
+    position: relative; overflow: hidden;
+    min-height: 88px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .candidate.elite {
+    border-color: #34d399;
+    background: linear-gradient(135deg, rgba(52,211,153,.15), rgba(20,184,166,.08));
+    box-shadow: 0 0 20px rgba(52,211,153,.2);
+  }
+  .candidate.fresh {
+    border-color: #a78bfa;
+    background: linear-gradient(135deg, rgba(167,139,250,.15), rgba(99,102,241,.08));
+    box-shadow: 0 0 20px rgba(167,139,250,.25);
+  }
+  .candidate.dying { opacity: 0; transform: scale(.85); }
+  .candidate .snippet {
+    font-family: ui-monospace, monospace;
+    font-size: 11px; color: #cbd5e1;
+    line-height: 1.3; margin-bottom: 6px;
+    word-break: break-word;
+  }
+  .candidate .score {
+    font-size: 18px; font-weight: 700; color: #38bdf8;
+    font-family: ui-monospace, monospace;
+  }
+  .candidate.elite .score { color: #34d399; }
+  .candidate .badge {
+    position: absolute; top: 4px; right: 4px;
+    font-size: 9px; padding: 2px 5px; border-radius: 4px;
+    background: rgba(167,139,250,.25); color: #c4b5fd;
+  }
+  .candidate .badge.elite-tag { background: rgba(52,211,153,.25); color: #6ee7b7; }
+
+  /* Evolution chart */
+  svg.evo-chart { width: 100%; height: 180px; display: block; }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 4px; }
+  @media (max-width: 640px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat {
+    background: rgba(15,23,42,.6);
+    border: 1px solid #1e293b;
+    padding: 14px 12px; border-radius: 10px; text-align: center;
+  }
+  .stat .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; }
+  .stat .value {
+    font-size: 22px; font-weight: 700; margin-top: 6px; color: #38bdf8;
+    font-family: ui-monospace, monospace;
+  }
+  .stat .value.good { color: #34d399; }
+  .stat .sub { font-size: 11px; color: #64748b; margin-top: 3px; }
+
+  /* Concept table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td {
+    text-align: left; padding: 9px 10px;
+    border-bottom: 1px solid rgba(148,163,184,.1);
+  }
+  th { color: #94a3b8; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .3px; }
+  td .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 6px;
+    background: rgba(167,139,250,.15); color: #c4b5fd; font-size: 12px;
+    font-family: ui-monospace, monospace;
+  }
+  td .arrow { color: #475569; padding: 0 8px; }
+
+  .viz-panel {
+    background: rgba(15,23,42,.5);
+    border: 1px solid rgba(148,163,184,.1);
+    border-radius: 12px; padding: 14px;
+    margin-top: 6px;
+  }
+  .viz-panel h3 {
+    font-size: 13px; color: #94a3b8; margin-bottom: 10px;
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+
+  footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 28px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>🧬 AlphaEvolve 演化搜尋模擬器</h1>
+  <p class="subtitle">比較 LLM 引導 vs 隨機變異，看 50 代後算法品質的差距。任務：最小化 sort(arr) 的比較次數。</p>
+
+  <!-- Controls -->
+  <div class="card">
+    <h2>🎮 控制台</h2>
+
+    <div class="slider-group">
+      <div class="slider-label">
+        <span>演化代數</span>
+        <span class="value" id="genLabel">20 代</span>
+      </div>
+      <input type="range" id="genSlider" min="1" max="50" step="1" value="20">
+    </div>
+
+    <div class="slider-group">
+      <div class="slider-label">
+        <span>精英保留 %（每代頂尖比例）</span>
+        <span class="value" id="elitismLabel">25%</span>
+      </div>
+      <input type="range" id="elitismSlider" min="0" max="50" step="5" value="25">
+    </div>
+
+    <div class="slider-label"><span>變異策略</span></div>
+    <div class="radio-row">
+      <div class="radio-pill" data-strategy="random">
+        🎲 Random
+        <div class="hint">傳統 GA：隨機亂改</div>
+      </div>
+      <div class="radio-pill active" data-strategy="llm">
+        🧠 LLM-guided
+        <div class="hint">AlphaEvolve：Gemini 提案</div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button id="evolveBtn">🚀 開始演化</button>
+      <button class="secondary" id="resetBtn">🔄 重置</button>
+    </div>
+
+    <div class="preset-row">
+      <span class="preset" data-gen="10">快速（10 代）</span>
+      <span class="preset" data-gen="50">深度（50 代）</span>
+    </div>
+  </div>
+
+  <!-- Visualization -->
+  <div class="card">
+    <h2>📊 視覺化</h2>
+    <h3 style="font-size:13px;color:#94a3b8;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">候選池（8 個個體）</h3>
+    <div class="pop-grid" id="popGrid"></div>
+
+    <div class="viz-panel">
+      <h3>代數演化曲線（Top-1 score）</h3>
+      <svg class="evo-chart" id="evoChart" viewBox="0 0 360 180" preserveAspectRatio="none"></svg>
+    </div>
+  </div>
+
+  <!-- Live metrics -->
+  <div class="card">
+    <h2>📐 即時指標</h2>
+    <div class="stats">
+      <div class="stat">
+        <div class="label">當前代數</div>
+        <div class="value" id="curGen">0</div>
+        <div class="sub">/ <span id="totGen">20</span> 代</div>
+      </div>
+      <div class="stat">
+        <div class="label">Top-1 score</div>
+        <div class="value good" id="top1">—</div>
+        <div class="sub">越高越好</div>
+      </div>
+      <div class="stat">
+        <div class="label">Top-3 平均</div>
+        <div class="value" id="top3">—</div>
+        <div class="sub">前 3 名平均</div>
+      </div>
+      <div class="stat">
+        <div class="label">相較第 1 代改進</div>
+        <div class="value" id="improve">—</div>
+        <div class="sub">累積進步幅度</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Concept mapping -->
+  <div class="card">
+    <h2>📚 概念對照</h2>
+    <table>
+      <thead>
+        <tr><th>畫面元素</th><th></th><th>AlphaEvolve 概念</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="pill">8 格候選池</span></td>
+          <td class="arrow">↔</td>
+          <td>種群（Population）— 每代維護的演算法群體</td>
+        </tr>
+        <tr>
+          <td><span class="pill">紫色 LLM badge</span></td>
+          <td class="arrow">↔</td>
+          <td>LLM 作為智慧變異算子 — Gemini 提案語義性改進</td>
+        </tr>
+        <tr>
+          <td><span class="pill">綠色 elite 邊框</span></td>
+          <td class="arrow">↔</td>
+          <td>精英保留（Elitism）— 防止遺忘歷史最優解</td>
+        </tr>
+        <tr>
+          <td><span class="pill">演化曲線</span></td>
+          <td class="arrow">↔</td>
+          <td>累積改進 — 多輪迭代的指數型效應</td>
+        </tr>
+        <tr>
+          <td><span class="pill">LLM-guided vs Random</span></td>
+          <td class="arrow">↔</td>
+          <td>智慧搜尋 vs 盲目搜尋 — AlphaEvolve 的核心優勢</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>
+    本模擬器為教學示意：分數採啟發式評分函數（不真正執行排序），LLM-guided 模式以「智慧偏置 + 高斯擾動」模擬<br>
+    Gemini 的語義性突變，random 模式為純均勻隨機。實際 AlphaEvolve 用真正的 LLM + 程式評估器。
+  </footer>
+</div>
+
+<script>
+  // Pseudo "algorithm snippets" pool — abstract sort building blocks
+  const SNIPPETS = [
+    'swap if a>b',
+    'bubble sweep',
+    'insertion shift',
+    'selection min',
+    'merge halves',
+    'pivot at mid',
+    'pivot random',
+    'three-way split',
+    'heap sift-down',
+    'binary insert',
+    'gallop merge',
+    'tim-merge runs',
+    'block partition',
+    'introsort hybrid',
+    'radix bucket',
+    'shell gap step',
+  ];
+
+  const POP_SIZE = 8;
+  let population = [];   // [{snippet, score, age, fromLLM}]
+  let history = [];      // top-1 per generation
+  let curGen = 0;
+  let running = false;
+  let strategy = 'llm';
+
+  const genSlider = document.getElementById('genSlider');
+  const elitismSlider = document.getElementById('elitismSlider');
+  const genLabel = document.getElementById('genLabel');
+  const elitismLabel = document.getElementById('elitismLabel');
+  const evolveBtn = document.getElementById('evolveBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  function randSnippet() {
+    return SNIPPETS[Math.floor(Math.random() * SNIPPETS.length)];
+  }
+  // Deterministic-ish scoring: each snippet has a "true quality" baseline
+  // (hidden from learner) — composite ones score higher.
+  const QUALITY_MAP = {
+    'swap if a>b':        20,
+    'bubble sweep':       28,
+    'insertion shift':    42,
+    'selection min':      32,
+    'merge halves':       70,
+    'pivot at mid':       65,
+    'pivot random':       62,
+    'three-way split':    78,
+    'heap sift-down':     72,
+    'binary insert':      55,
+    'gallop merge':       82,
+    'tim-merge runs':     88,
+    'block partition':    80,
+    'introsort hybrid':   92,
+    'radix bucket':       85,
+    'shell gap step':     58,
+  };
+  function scoreOf(snippet) {
+    const base = QUALITY_MAP[snippet] || 30;
+    // small noise
+    return Math.min(100, Math.max(0, base + (Math.random() - 0.5) * 8));
+  }
+
+  function initPopulation() {
+    population = [];
+    for (let i = 0; i < POP_SIZE; i++) {
+      const sn = randSnippet();
+      population.push({ snippet: sn, score: scoreOf(sn), age: 0, fromLLM: false });
+    }
+    history = [];
+    curGen = 0;
+  }
+
+  // Mutation operators
+  function mutateRandom() {
+    return randSnippet();
+  }
+  function mutateLLM(parent) {
+    // "smart" mutation: biased toward higher-quality snippets, with slight nudge from parent
+    // pick from top-quality half of pool, occasionally explore lower
+    const ranked = SNIPPETS.slice().sort((a,b) => (QUALITY_MAP[b]||0) - (QUALITY_MAP[a]||0));
+    if (Math.random() < 0.75) {
+      // exploit: pick from top half
+      return ranked[Math.floor(Math.random() * Math.ceil(ranked.length / 2))];
+    } else {
+      // explore: full pool
+      return ranked[Math.floor(Math.random() * ranked.length)];
+    }
+  }
+
+  function evolveStep() {
+    curGen++;
+    // sort by score
+    population.sort((a,b) => b.score - a.score);
+    const eliteCount = Math.max(1, Math.round(POP_SIZE * (+elitismSlider.value) / 100));
+    const elites = population.slice(0, eliteCount).map(c => ({ ...c, age: c.age + 1 }));
+    const fresh = [];
+    for (let i = eliteCount; i < POP_SIZE; i++) {
+      const parent = elites[i % elites.length];
+      const useLLM = (strategy === 'llm');
+      const newSnippet = useLLM ? mutateLLM(parent) : mutateRandom();
+      fresh.push({
+        snippet: newSnippet,
+        score: scoreOf(newSnippet),
+        age: 0,
+        fromLLM: useLLM,
+      });
+    }
+    population = elites.concat(fresh);
+    population.sort((a,b) => b.score - a.score);
+    history.push(population[0].score);
+    renderAll();
+  }
+
+  function renderPopulation() {
+    const grid = document.getElementById('popGrid');
+    grid.innerHTML = '';
+    const eliteCount = Math.max(1, Math.round(POP_SIZE * (+elitismSlider.value) / 100));
+    population.forEach((c, idx) => {
+      const div = document.createElement('div');
+      const isElite = idx < eliteCount;
+      const isFresh = c.age === 0 && curGen > 0;
+      let cls = 'candidate';
+      if (isElite) cls += ' elite';
+      else if (isFresh) cls += ' fresh';
+      div.className = cls;
+      const badge = isElite ? '<span class="badge elite-tag">ELITE</span>'
+                   : (c.fromLLM ? '<span class="badge">LLM</span>' : (curGen > 0 ? '<span class="badge" style="background:rgba(148,163,184,.2);color:#94a3b8">RAND</span>' : ''));
+      div.innerHTML = `
+        ${badge}
+        <div class="snippet">${c.snippet}</div>
+        <div class="score">${c.score.toFixed(1)}</div>
+      `;
+      grid.appendChild(div);
+    });
+  }
+
+  function renderChart() {
+    const svg = document.getElementById('evoChart');
+    const W = 360, H = 180;
+    const padL = 32, padR = 12, padT = 12, padB = 24;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const totGen = +genSlider.value;
+
+    // y axis: 0-100 score
+    const sx = (i) => padL + (i / Math.max(1, totGen)) * plotW;
+    const sy = (v) => padT + plotH - (v / 100) * plotH;
+
+    let grid = '';
+    for (let v = 0; v <= 100; v += 25) {
+      const y = sy(v);
+      grid += `<line x1="${padL}" y1="${y}" x2="${padL+plotW}" y2="${y}" stroke="#1e293b" stroke-width="1"/>`;
+      grid += `<text x="${padL-4}" y="${y+3}" fill="#64748b" font-size="9" text-anchor="end">${v}</text>`;
+    }
+    for (let g = 0; g <= totGen; g += Math.max(1, Math.floor(totGen / 5))) {
+      const x = sx(g);
+      grid += `<line x1="${x}" y1="${padT}" x2="${x}" y2="${padT+plotH}" stroke="#1e293b" stroke-width="1"/>`;
+      grid += `<text x="${x}" y="${padT+plotH+14}" fill="#64748b" font-size="9" text-anchor="middle">${g}</text>`;
+    }
+
+    let path = '';
+    history.forEach((v, i) => {
+      const x = sx(i + 1);
+      const y = sy(v);
+      path += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1) + ' ';
+    });
+
+    let area = '';
+    if (history.length > 0) {
+      area = 'M' + sx(1) + ',' + sy(0) + ' ';
+      history.forEach((v, i) => {
+        area += 'L' + sx(i + 1) + ',' + sy(v) + ' ';
+      });
+      area += 'L' + sx(history.length) + ',' + sy(0) + ' Z';
+    }
+
+    const color = strategy === 'llm' ? '#a78bfa' : '#fb923c';
+    const areaColor = strategy === 'llm' ? 'rgba(167,139,250,.15)' : 'rgba(251,146,60,.12)';
+
+    svg.innerHTML = `
+      ${grid}
+      <text x="${padL-22}" y="${padT-2}" fill="#94a3b8" font-size="10">Score</text>
+      <text x="${padL+plotW}" y="${padT+plotH+20}" fill="#94a3b8" font-size="10" text-anchor="end">代數</text>
+      <path d="${area}" fill="${areaColor}"/>
+      <path d="${path}" stroke="${color}" stroke-width="2" fill="none"/>
+      ${history.map((v,i) => `<circle cx="${sx(i+1)}" cy="${sy(v)}" r="2.5" fill="${color}"/>`).join('')}
+    `;
+  }
+
+  function renderStats() {
+    document.getElementById('curGen').textContent = curGen;
+    document.getElementById('totGen').textContent = +genSlider.value;
+    const sorted = population.slice().sort((a,b) => b.score - a.score);
+    const top1 = sorted[0] ? sorted[0].score : 0;
+    const top3 = sorted.slice(0, 3).reduce((a,b) => a + b.score, 0) / 3;
+    document.getElementById('top1').textContent = top1.toFixed(1);
+    document.getElementById('top3').textContent = top3.toFixed(1);
+    const base = history[0] || top1;
+    const improvement = base > 0 ? ((top1 - base) / base) * 100 : 0;
+    document.getElementById('improve').textContent = (improvement >= 0 ? '+' : '') + improvement.toFixed(1) + '%';
+  }
+
+  function renderAll() {
+    renderPopulation();
+    renderChart();
+    renderStats();
+  }
+
+  async function runEvolution() {
+    if (running) return;
+    running = true;
+    evolveBtn.disabled = true;
+    resetBtn.disabled = true;
+    initPopulation();
+    // record gen-0 baseline
+    population.sort((a,b) => b.score - a.score);
+    history.push(population[0].score);
+    renderAll();
+    const totGen = +genSlider.value;
+    for (let g = 0; g < totGen; g++) {
+      await new Promise(r => setTimeout(r, 500));
+      evolveStep();
+    }
+    running = false;
+    evolveBtn.disabled = false;
+    resetBtn.disabled = false;
+  }
+
+  function reset() {
+    if (running) return;
+    initPopulation();
+    renderAll();
+  }
+
+  // Wire up
+  genSlider.addEventListener('input', () => {
+    genLabel.textContent = genSlider.value + ' 代';
+    document.getElementById('totGen').textContent = genSlider.value;
+    renderChart();
+  });
+  elitismSlider.addEventListener('input', () => {
+    elitismLabel.textContent = elitismSlider.value + '%';
+    renderPopulation();
+  });
+  document.querySelectorAll('.radio-pill').forEach(el => {
+    el.addEventListener('click', () => {
+      if (running) return;
+      document.querySelectorAll('.radio-pill').forEach(p => p.classList.remove('active'));
+      el.classList.add('active');
+      strategy = el.dataset.strategy;
+    });
+  });
+  document.querySelectorAll('.preset').forEach(el => {
+    el.addEventListener('click', () => {
+      if (running) return;
+      genSlider.value = el.dataset.gen;
+      genSlider.dispatchEvent(new Event('input'));
+    });
+  });
+  evolveBtn.addEventListener('click', runEvolution);
+  resetBtn.addEventListener('click', reset);
+
+  // Initial render
+  initPopulation();
+  population.sort((a,b) => b.score - a.score);
+  renderAll();
+</script>
+</body>
+</html>

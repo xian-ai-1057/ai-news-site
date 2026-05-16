@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mem0 圖記憶視覺化</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang TC",
+                 "Microsoft JhengHei", sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #f1f5f9;
+    min-height: 100vh;
+    padding: 24px;
+    line-height: 1.6;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  h1 {
+    font-size: 26px; margin-bottom: 6px;
+    background: linear-gradient(135deg,#38bdf8,#a78bfa);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: #94a3b8; margin-bottom: 24px; font-size: 14px; }
+
+  .card {
+    background: rgba(30,41,59,.7); backdrop-filter: blur(8px);
+    border: 1px solid rgba(148,163,184,.15);
+    border-radius: 16px; padding: 22px; margin-bottom: 20px;
+  }
+  .card h2 { font-size: 17px; margin-bottom: 14px; color: #e2e8f0; }
+
+  .input-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  input[type="text"] {
+    flex: 1; min-width: 200px;
+    background: #0f172a; color: #f1f5f9;
+    border: 1px solid #334155; border-radius: 10px;
+    padding: 11px 14px; font-size: 15px;
+    font-family: inherit;
+  }
+  input[type="text"]:focus { outline: none; border-color: #38bdf8; }
+  button {
+    background: linear-gradient(135deg,#38bdf8,#6366f1);
+    color: white; border: none; border-radius: 10px;
+    padding: 11px 22px; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: transform .15s, box-shadow .15s;
+    font-family: inherit;
+  }
+  button:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(56,189,248,.3); }
+  button:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
+  button.secondary { background: rgba(148,163,184,.15); color: #cbd5e1; }
+
+  .preset-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .preset {
+    background: rgba(167,139,250,.1); color: #c4b5fd;
+    border: 1px solid rgba(167,139,250,.3);
+    padding: 5px 11px; border-radius: 999px;
+    font-size: 12px; cursor: pointer;
+  }
+  .preset:hover { background: rgba(167,139,250,.2); }
+
+  /* Dialog log */
+  .dialog-log {
+    background: rgba(15,23,42,.6);
+    border: 1px solid #1e293b;
+    border-radius: 10px; padding: 12px;
+    max-height: 160px; overflow-y: auto;
+    font-size: 13px; margin-bottom: 10px;
+  }
+  .dialog-turn {
+    padding: 6px 10px; margin-bottom: 4px;
+    border-left: 3px solid #475569;
+    background: rgba(15,23,42,.4); border-radius: 4px;
+    color: #cbd5e1;
+  }
+  .dialog-turn.new {
+    border-left-color: #38bdf8;
+    animation: fadeIn .4s ease;
+  }
+  .dialog-turn .role { color: #7dd3fc; font-weight: 600; margin-right: 6px; }
+  .dialog-turn .triplets {
+    color: #94a3b8; font-size: 11px; margin-top: 4px;
+    font-family: ui-monospace, monospace;
+  }
+  .dialog-turn .triplets .t {
+    display: inline-block;
+    background: rgba(56,189,248,.1);
+    padding: 1px 6px; margin: 2px 4px 0 0; border-radius: 4px;
+    color: #7dd3fc;
+  }
+
+  /* Graph */
+  .graph-wrap {
+    background: rgba(15,23,42,.5);
+    border-radius: 10px; padding: 8px;
+    position: relative;
+  }
+  svg { display: block; width: 100%; height: 380px; }
+  .node-circle { transition: all .4s ease; }
+  .node-label {
+    font-size: 11px; pointer-events: none;
+    text-anchor: middle; font-weight: 600;
+  }
+  .edge {
+    stroke: #475569; stroke-width: 1.5;
+    transition: all .4s ease;
+  }
+  .edge-label {
+    font-size: 10px; fill: #64748b;
+    text-anchor: middle; pointer-events: none;
+    font-family: ui-monospace, monospace;
+  }
+  .node-appear { animation: nodeIn .5s ease; }
+  .highlighted .node-circle { stroke: #fbbf24 !important; stroke-width: 3 !important; filter: drop-shadow(0 0 8px rgba(251,191,36,.6)); }
+  .highlighted-edge { stroke: #fbbf24 !important; stroke-width: 3 !important; }
+  .dim { opacity: .2; }
+
+  @keyframes nodeIn {
+    0% { transform: scale(0); opacity: 0; }
+    60% { transform: scale(1.3); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Legend */
+  .legend {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    margin-top: 10px; font-size: 12px; color: #94a3b8;
+  }
+  .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+
+  /* Query result */
+  .query-result {
+    background: rgba(56,189,248,.08);
+    border-left: 3px solid #38bdf8;
+    padding: 12px 14px; border-radius: 6px;
+    font-size: 14px; color: #cbd5e1; margin-top: 12px;
+  }
+  .query-result strong { color: #7dd3fc; }
+  .compare-bars { display: flex; gap: 10px; margin-top: 10px; }
+  .compare-bar {
+    flex: 1; background: rgba(15,23,42,.6); padding: 10px; border-radius: 8px;
+    border: 1px solid #1e293b;
+  }
+  .compare-bar .lbl { font-size: 11px; color: #94a3b8; }
+  .compare-bar .val { font-size: 18px; font-weight: 700; margin-top: 2px; }
+  .compare-bar.mem0 { border-color: rgba(56,189,248,.4); }
+  .compare-bar.mem0 .val { color: #38bdf8; }
+  .compare-bar.full { border-color: rgba(248,113,113,.4); }
+  .compare-bar.full .val { color: #f87171; }
+  .bar-fill {
+    height: 6px; background: #1e293b; border-radius: 3px; margin-top: 6px;
+    overflow: hidden;
+  }
+  .bar-fill > div { height: 100%; transition: width .6s ease; border-radius: 3px; }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; }
+  .stat {
+    background: rgba(15,23,42,.6);
+    border: 1px solid #1e293b;
+    padding: 12px; border-radius: 10px; text-align: center;
+  }
+  .stat .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; }
+  .stat .value { font-size: 22px; font-weight: 700; margin-top: 4px; color: #38bdf8; }
+  .stat .sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+  /* Concept mapping */
+  .concept-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .concept {
+    background: rgba(15,23,42,.5);
+    border: 1px solid #1e293b;
+    border-radius: 8px; padding: 10px 12px;
+    font-size: 13px; color: #cbd5e1;
+  }
+  .concept .viz { color: #fbbf24; font-weight: 600; }
+  .concept .arrow { color: #475569; margin: 0 6px; }
+  .concept .concept-name { color: #a78bfa; font-weight: 600; }
+
+  footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 28px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>🧠 Mem0 圖記憶視覺化</h1>
+  <p class="subtitle">看對話如何逐步建構知識圖、查詢時如何只取相關子圖，把 token 用量從整段歷史壓到 13%。</p>
+
+  <!-- Controls -->
+  <div class="card">
+    <h2>① 對話注入控制台</h2>
+    <div class="input-row">
+      <button id="nextBtn" onclick="nextTurn()">▶ 下一輪對話</button>
+      <button class="secondary" onclick="resetAll()">🔄 重設圖</button>
+      <span style="flex:1"></span>
+      <span style="color:#94a3b8; font-size:13px; align-self:center;">進度：<span id="progress">0 / 5</span></span>
+    </div>
+    <div class="dialog-log" id="dialogLog">
+      <div style="color:#64748b; font-size:13px; text-align:center; padding:14px;">
+        尚未注入任何對話。按「下一輪對話」開始建構圖。
+      </div>
+    </div>
+  </div>
+
+  <!-- Graph -->
+  <div class="card">
+    <h2>② 知識圖（人物 / 地點 / 物件）</h2>
+    <div class="graph-wrap">
+      <svg id="graph" viewBox="0 0 920 380" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="legend">
+      <span><span class="legend-dot" style="background:#38bdf8"></span>人物 (Person)</span>
+      <span><span class="legend-dot" style="background:#a78bfa"></span>地點 (Place)</span>
+      <span><span class="legend-dot" style="background:#fb923c"></span>物件 / 事件 (Thing/Event)</span>
+      <span><span class="legend-dot" style="background:#fbbf24"></span>檢索高亮 (Retrieved subgraph)</span>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="label">節點數</div>
+        <div class="value" id="nodeCount">0</div>
+        <div class="sub">entities</div>
+      </div>
+      <div class="stat">
+        <div class="label">邊數</div>
+        <div class="value" id="edgeCount">0</div>
+        <div class="sub">relations</div>
+      </div>
+      <div class="stat">
+        <div class="label">Token 節省</div>
+        <div class="value" id="tokenSave">—</div>
+        <div class="sub">vs. 整段歷史</div>
+      </div>
+      <div class="stat">
+        <div class="label">檢索延遲</div>
+        <div class="value" id="latency">—</div>
+        <div class="sub">milliseconds</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Query simulator -->
+  <div class="card">
+    <h2>③ Query 模擬器</h2>
+    <div class="input-row">
+      <input type="text" id="queryInput" placeholder="例如：太太能吃花生嗎？" value="太太能吃花生嗎？">
+      <button onclick="runQuery()">🔍 檢索</button>
+    </div>
+    <div class="preset-row">
+      <span class="preset" onclick="setQuery('太太能吃花生嗎？')">太太能吃花生嗎？</span>
+      <span class="preset" onclick="setQuery('Alice 上次去哪裡玩？')">Alice 上次去哪裡玩？</span>
+      <span class="preset" onclick="setQuery('下個月計畫帶誰去哪？')">下個月計畫帶誰去哪？</span>
+    </div>
+    <div class="query-result" id="queryResult">
+      先按「下一輪對話」注入幾段對話後，再來試試檢索。
+    </div>
+  </div>
+
+  <!-- Concept mapping -->
+  <div class="card">
+    <h2>💡 視覺元素 ↔ Mem0 概念對照</h2>
+    <div class="concept-grid">
+      <div class="concept"><span class="viz">節點 + 邊</span><span class="arrow">↔</span><span class="concept-name">圖記憶結構</span><br>
+        <span style="color:#94a3b8; font-size:12px;">關係是第一級公民，不是便條紙的隱含相鄰</span></div>
+      <div class="concept"><span class="viz">fade-in 三元組</span><span class="arrow">↔</span><span class="concept-name">自動抽取 Extract</span><br>
+        <span style="color:#94a3b8; font-size:12px;">每輪對話用 LLM + function calling 結構化抽取</span></div>
+      <div class="concept"><span class="viz">高亮子圖</span><span class="arrow">↔</span><span class="concept-name">語義檢索 Retrieve</span><br>
+        <span style="color:#94a3b8; font-size:12px;">只取與 query 相關的最小子圖序列化注入 prompt</span></div>
+      <div class="concept"><span class="viz">Token 節省 %</span><span class="arrow">↔</span><span class="concept-name">跨 session 效率</span><br>
+        <span style="color:#94a3b8; font-size:12px;">論文回報相較全 context 約節省 90%</span></div>
+    </div>
+  </div>
+
+  <footer>
+    本模擬器為教學示意，三元組抽取以預先腳本展示；真實 Mem0 使用 GPT-4o-mini + function calling 動態抽取 entity + relation triplets，並存入 Neo4j。
+  </footer>
+</div>
+
+<script>
+  // Pre-scripted 5 dialog turns + their extracted triplets and entity types
+  // Node types: person | place | thing
+  const TURNS = [
+    {
+      text: "我叫 Alice，住在台北",
+      triplets: [
+        { s: "Alice", r: "居住於", o: "台北",
+          sType: "person", oType: "place" }
+      ]
+    },
+    {
+      text: "我太太對花生過敏",
+      triplets: [
+        { s: "Alice", r: "配偶", o: "太太",
+          sType: "person", oType: "person" },
+        { s: "太太", r: "過敏", o: "花生",
+          sType: "person", oType: "thing" }
+      ]
+    },
+    {
+      text: "上週去日本京都玩",
+      triplets: [
+        { s: "Alice", r: "旅行", o: "京都",
+          sType: "person", oType: "place" }
+      ]
+    },
+    {
+      text: "在那邊吃了豆腐料理",
+      triplets: [
+        { s: "京都", r: "飲食", o: "豆腐",
+          sType: "place", oType: "thing" }
+      ]
+    },
+    {
+      text: "下個月想再帶太太去溫泉",
+      triplets: [
+        { s: "Alice", r: "計畫", o: "溫泉",
+          sType: "person", oType: "thing" },
+        { s: "Alice", r: "同行", o: "太太",
+          sType: "person", oType: "person" }
+      ]
+    }
+  ];
+
+  // Fixed positions for nodes — pseudo spring layout, looks tidy
+  const POSITIONS = {
+    "Alice":  { x: 200, y: 190 },
+    "台北":   { x: 80,  y: 80 },
+    "太太":   { x: 360, y: 110 },
+    "花生":   { x: 510, y: 60 },
+    "京都":   { x: 420, y: 270 },
+    "豆腐":   { x: 600, y: 320 },
+    "溫泉":   { x: 720, y: 200 },
+  };
+
+  const TYPE_COLORS = {
+    person: "#38bdf8",
+    place:  "#a78bfa",
+    thing:  "#fb923c"
+  };
+
+  let state = {
+    turnIdx: 0,
+    nodes: new Map(),   // name -> {type, x, y}
+    edges: [],          // {s,r,o}
+    highlighted: { nodes: new Set(), edges: new Set() }
+  };
+
+  function ensureNode(name, type){
+    if(state.nodes.has(name)) return false;
+    const pos = POSITIONS[name] || { x: 100 + Math.random()*700, y: 60 + Math.random()*260 };
+    state.nodes.set(name, { type, x: pos.x, y: pos.y, isNew: true });
+    return true;
+  }
+
+  function nextTurn(){
+    if(state.turnIdx >= TURNS.length) return;
+    const t = TURNS[state.turnIdx];
+    // mark all existing nodes as not new
+    for(const n of state.nodes.values()) n.isNew = false;
+    // add triplets
+    for(const tr of t.triplets){
+      ensureNode(tr.s, tr.sType);
+      ensureNode(tr.o, tr.oType);
+      state.edges.push({ s: tr.s, r: tr.r, o: tr.o, isNew: true });
+    }
+    // clear highlight on new turn
+    state.highlighted = { nodes: new Set(), edges: new Set() };
+    state.turnIdx++;
+    renderLog();
+    renderGraph();
+    renderStats();
+    document.getElementById('progress').textContent = state.turnIdx + " / " + TURNS.length;
+    document.getElementById('nextBtn').disabled = state.turnIdx >= TURNS.length;
+    // un-flag new edges after animation
+    setTimeout(()=>{ state.edges.forEach(e=>e.isNew=false); }, 600);
+  }
+
+  function resetAll(){
+    state = { turnIdx: 0, nodes: new Map(), edges: [], highlighted: { nodes: new Set(), edges: new Set() } };
+    document.getElementById('progress').textContent = "0 / " + TURNS.length;
+    document.getElementById('nextBtn').disabled = false;
+    document.getElementById('dialogLog').innerHTML =
+      '<div style="color:#64748b; font-size:13px; text-align:center; padding:14px;">' +
+      '尚未注入任何對話。按「下一輪對話」開始建構圖。</div>';
+    document.getElementById('queryResult').innerHTML = '先按「下一輪對話」注入幾段對話後，再來試試檢索。';
+    renderGraph();
+    renderStats();
+  }
+
+  function renderLog(){
+    const log = document.getElementById('dialogLog');
+    log.innerHTML = '';
+    for(let i=0; i<state.turnIdx; i++){
+      const t = TURNS[i];
+      const div = document.createElement('div');
+      div.className = 'dialog-turn' + (i === state.turnIdx-1 ? ' new' : '');
+      const trips = t.triplets.map(tr =>
+        `<span class="t">(${tr.s}, ${tr.r}, ${tr.o})</span>`
+      ).join('');
+      div.innerHTML = `<span class="role">user:</span>${t.text}
+        <div class="triplets">→ 抽取：${trips}</div>`;
+      log.appendChild(div);
+    }
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function renderGraph(){
+    const svg = document.getElementById('graph');
+    svg.innerHTML = '';
+
+    const hasHighlight = state.highlighted.nodes.size > 0;
+
+    // edges first
+    state.edges.forEach((e, idx) => {
+      const a = state.nodes.get(e.s);
+      const b = state.nodes.get(e.o);
+      if(!a || !b) return;
+      const key = idx;
+      const isHi = state.highlighted.edges.has(key);
+      const dim = hasHighlight && !isHi;
+
+      const line = document.createElementNS("http://www.w3.org/2000/svg","line");
+      line.setAttribute("x1", a.x);
+      line.setAttribute("y1", a.y);
+      line.setAttribute("x2", b.x);
+      line.setAttribute("y2", b.y);
+      line.setAttribute("class", "edge" + (isHi ? " highlighted-edge" : "") + (dim ? " dim" : ""));
+      if(e.isNew) line.style.animation = "fadeIn .5s ease";
+      svg.appendChild(line);
+
+      // edge label
+      const mx = (a.x+b.x)/2, my = (a.y+b.y)/2;
+      const label = document.createElementNS("http://www.w3.org/2000/svg","text");
+      label.setAttribute("x", mx);
+      label.setAttribute("y", my - 4);
+      label.setAttribute("class", "edge-label" + (dim ? " dim" : ""));
+      label.textContent = e.r;
+      svg.appendChild(label);
+    });
+
+    // nodes
+    for(const [name, node] of state.nodes){
+      const isHi = state.highlighted.nodes.has(name);
+      const dim = hasHighlight && !isHi;
+
+      const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+      g.setAttribute("class", (isHi ? "highlighted " : "") + (dim ? "dim " : "") + (node.isNew ? "node-appear" : ""));
+
+      const circle = document.createElementNS("http://www.w3.org/2000/svg","circle");
+      circle.setAttribute("cx", node.x);
+      circle.setAttribute("cy", node.y);
+      circle.setAttribute("r", 28);
+      circle.setAttribute("fill", TYPE_COLORS[node.type] || "#64748b");
+      circle.setAttribute("fill-opacity", "0.85");
+      circle.setAttribute("stroke", "#0f172a");
+      circle.setAttribute("stroke-width", "2");
+      circle.setAttribute("class", "node-circle");
+      g.appendChild(circle);
+
+      const text = document.createElementNS("http://www.w3.org/2000/svg","text");
+      text.setAttribute("x", node.x);
+      text.setAttribute("y", node.y + 4);
+      text.setAttribute("class", "node-label");
+      text.setAttribute("fill", "#0f172a");
+      text.textContent = name;
+      g.appendChild(text);
+
+      svg.appendChild(g);
+    }
+  }
+
+  function renderStats(){
+    document.getElementById('nodeCount').textContent = state.nodes.size;
+    document.getElementById('edgeCount').textContent = state.edges.length;
+    if(state.edges.length > 0){
+      // Token saving estimate: full history token ~ each turn 30, mem0 ~ subgraph 4 tokens/edge
+      const fullTokens = state.turnIdx * 30;
+      const mem0Tokens = Math.max(8, state.edges.length * 3);
+      const save = Math.round((1 - mem0Tokens/fullTokens) * 100);
+      document.getElementById('tokenSave').textContent = save + "%";
+      document.getElementById('latency').textContent = (8 + state.edges.length * 1.2).toFixed(0) + " ms";
+    } else {
+      document.getElementById('tokenSave').textContent = "—";
+      document.getElementById('latency').textContent = "—";
+    }
+  }
+
+  // Query matching: super lightweight keyword + entity contains
+  function runQuery(){
+    if(state.nodes.size === 0){
+      document.getElementById('queryResult').innerHTML = '請先注入至少一輪對話。';
+      return;
+    }
+    const q = document.getElementById('queryInput').value.trim();
+    if(!q){ return; }
+
+    // find candidate nodes: any node name appearing in query (loose contain)
+    const matchedNodes = new Set();
+    for(const name of state.nodes.keys()){
+      if(q.includes(name) || keywordMatch(q, name)) matchedNodes.add(name);
+    }
+
+    // expand: include edges where both endpoints relate, plus neighbors of matched nodes (1-hop)
+    const matchedEdges = new Set();
+    const finalNodes = new Set(matchedNodes);
+    state.edges.forEach((e, idx) => {
+      if(matchedNodes.has(e.s) || matchedNodes.has(e.o)){
+        matchedEdges.add(idx);
+        finalNodes.add(e.s);
+        finalNodes.add(e.o);
+      }
+    });
+
+    if(finalNodes.size === 0){
+      // fallback to keyword on edge labels
+      state.edges.forEach((e, idx) => {
+        if(q.includes(e.r)){
+          matchedEdges.add(idx);
+          finalNodes.add(e.s); finalNodes.add(e.o);
+        }
+      });
+    }
+
+    state.highlighted.nodes = finalNodes;
+    state.highlighted.edges = matchedEdges;
+    renderGraph();
+
+    // build answer narrative + token compare
+    const subgraphEdges = state.edges.filter((_,i)=> matchedEdges.has(i));
+    const mem0Tokens = Math.max(6, subgraphEdges.length * 4 + finalNodes.size * 2);
+    const fullTokens = state.turnIdx * 30 + 20;
+    const save = Math.max(0, Math.round((1 - mem0Tokens/fullTokens) * 100));
+
+    let triples = subgraphEdges.map(e=>`(${e.s}, ${e.r}, ${e.o})`).join("、");
+    if(!triples) triples = "（找不到匹配子圖，可能是還沒注入相關 turn）";
+
+    document.getElementById('queryResult').innerHTML = `
+      <strong>查詢：</strong> ${q}<br>
+      <strong>命中子圖：</strong> ${triples}<br>
+      <strong>節點：</strong> ${[...finalNodes].join("、") || "（無）"}
+      <div class="compare-bars">
+        <div class="compare-bar mem0">
+          <div class="lbl">Mem0 注入</div>
+          <div class="val">${mem0Tokens} token</div>
+          <div class="bar-fill"><div style="width:${(mem0Tokens/fullTokens)*100}%; background:#38bdf8"></div></div>
+        </div>
+        <div class="compare-bar full">
+          <div class="lbl">整段歷史注入</div>
+          <div class="val">${fullTokens} token</div>
+          <div class="bar-fill"><div style="width:100%; background:#f87171"></div></div>
+        </div>
+        <div class="compare-bar" style="border-color:rgba(167,139,250,.4)">
+          <div class="lbl">節省</div>
+          <div class="val" style="color:#a78bfa">${save}%</div>
+          <div class="bar-fill"><div style="width:${save}%; background:#a78bfa"></div></div>
+        </div>
+      </div>
+    `;
+  }
+
+  function keywordMatch(q, name){
+    // light synonyms
+    const syn = {
+      "Alice": ["我","你","alice"],
+      "太太": ["老婆","太太","妻子","wife"],
+      "京都": ["京都","日本","kyoto","japan"],
+      "台北": ["台北","taipei"],
+      "花生": ["花生","peanut"],
+      "豆腐": ["豆腐","tofu"],
+      "溫泉": ["溫泉","泡湯","onsen"]
+    };
+    const list = syn[name] || [];
+    return list.some(k => q.toLowerCase().includes(k.toLowerCase()));
+  }
+
+  function setQuery(q){
+    document.getElementById('queryInput').value = q;
+    runQuery();
+  }
+
+  // init
+  renderGraph();
+  renderStats();
+  document.getElementById('queryInput').addEventListener('keydown', e=>{
+    if(e.key === 'Enter') runQuery();
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2026 MoE 模型儀表板</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang TC",
+                 "Microsoft JhengHei", sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #f1f5f9;
+    min-height: 100vh;
+    padding: 24px;
+    line-height: 1.6;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  h1 {
+    font-size: 26px; margin-bottom: 6px;
+    background: linear-gradient(135deg,#38bdf8,#a78bfa);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: #94a3b8; margin-bottom: 24px; font-size: 14px; }
+
+  .card {
+    background: rgba(30,41,59,.7); backdrop-filter: blur(8px);
+    border: 1px solid rgba(148,163,184,.15);
+    border-radius: 16px; padding: 22px; margin-bottom: 20px;
+  }
+  .card h2 { font-size: 17px; margin-bottom: 14px; color: #e2e8f0; }
+  .card h3 { font-size: 14px; margin: 14px 0 8px; color: #cbd5e1; font-weight: 600; }
+
+  /* Chip row (metric switcher) */
+  .chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .chip {
+    background: rgba(56,189,248,.08); color: #7dd3fc;
+    border: 1px solid rgba(56,189,248,.25);
+    padding: 7px 14px; border-radius: 999px;
+    font-size: 13px; cursor: pointer;
+    transition: all .2s;
+  }
+  .chip:hover { background: rgba(56,189,248,.18); }
+  .chip.active {
+    background: linear-gradient(135deg, rgba(56,189,248,.3), rgba(99,102,241,.25));
+    color: #f0f9ff;
+    border-color: #38bdf8;
+    box-shadow: 0 0 12px rgba(56,189,248,.25);
+  }
+
+  /* Toggle */
+  .toggle-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; color: #cbd5e1; }
+  .switch { position: relative; display: inline-block; width: 42px; height: 22px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider-sw {
+    position: absolute; cursor: pointer; inset: 0;
+    background: #334155; border-radius: 22px; transition: .25s;
+  }
+  .slider-sw::before {
+    position: absolute; content: ""; height: 16px; width: 16px;
+    left: 3px; top: 3px; background: #f1f5f9;
+    border-radius: 50%; transition: .25s;
+  }
+  input:checked + .slider-sw { background: linear-gradient(135deg,#38bdf8,#6366f1); }
+  input:checked + .slider-sw::before { transform: translateX(20px); }
+
+  /* Slider */
+  .slider-row { margin-top: 14px; }
+  .slider-row label {
+    display: flex; justify-content: space-between;
+    font-size: 13px; color: #cbd5e1; margin-bottom: 6px;
+  }
+  .slider-row label .val { color: #7dd3fc; font-family: ui-monospace, monospace; }
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 6px; background: #334155;
+    border-radius: 3px; outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: linear-gradient(135deg,#38bdf8,#6366f1);
+    cursor: pointer; box-shadow: 0 0 8px rgba(56,189,248,.4);
+  }
+
+  /* Bar chart */
+  .bar-row {
+    display: grid;
+    grid-template-columns: 140px 1fr 110px;
+    gap: 12px;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px dashed rgba(148,163,184,.1);
+  }
+  .bar-row:last-child { border-bottom: none; }
+  .bar-name { font-size: 13px; color: #cbd5e1; font-weight: 600; }
+  .bar-name .tag {
+    display: inline-block; font-size: 10px;
+    background: rgba(167,139,250,.15); color: #c4b5fd;
+    padding: 1px 6px; border-radius: 4px; margin-left: 4px;
+    font-weight: 500;
+  }
+  .bar-name .tag.dense {
+    background: rgba(251,146,60,.15); color: #fdba74;
+  }
+  .bar-track {
+    position: relative; height: 22px;
+    background: rgba(15,23,42,.6);
+    border-radius: 6px; overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #38bdf8, #a78bfa);
+    border-radius: 6px;
+    transition: width .6s cubic-bezier(.2,.8,.2,1);
+    box-shadow: 0 0 8px rgba(56,189,248,.25) inset;
+  }
+  .bar-fill.dense {
+    background: linear-gradient(90deg, #fb923c, #f97316);
+    box-shadow: 0 0 8px rgba(251,146,60,.25) inset;
+  }
+  .bar-fill.selected {
+    background: linear-gradient(90deg, #34d399, #6366f1);
+    box-shadow: 0 0 12px rgba(52,211,153,.4) inset;
+  }
+  .bar-val {
+    font-size: 12px; color: #94a3b8;
+    font-family: ui-monospace, monospace;
+    text-align: right;
+  }
+  .bar-row.clickable { cursor: pointer; }
+  .bar-row.clickable:hover .bar-name { color: #f0f9ff; }
+  .bar-row.selected .bar-name { color: #6ee7b7; }
+
+  /* Metrics */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+  .stat {
+    background: rgba(15,23,42,.6);
+    border: 1px solid #1e293b;
+    padding: 12px; border-radius: 10px; text-align: center;
+  }
+  .stat .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; }
+  .stat .value { font-size: 20px; font-weight: 700; margin-top: 4px; color: #38bdf8; }
+  .stat .sub { font-size: 10px; color: #64748b; margin-top: 2px; }
+
+  /* What-if */
+  .whatif-results {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 8px; margin-top: 12px;
+  }
+  .whatif-card {
+    background: rgba(15,23,42,.5);
+    border: 1px solid rgba(167,139,250,.2);
+    padding: 10px 12px; border-radius: 8px;
+  }
+  .whatif-card .m { font-size: 12px; color: #cbd5e1; }
+  .whatif-card .eq { font-size: 16px; color: #c4b5fd; font-weight: 600; margin-top: 2px; }
+  .whatif-card .note { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+  /* Concept mapping */
+  .concept-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .concept {
+    background: rgba(56,189,248,.06);
+    border-left: 3px solid #38bdf8;
+    padding: 10px 12px; border-radius: 6px;
+    font-size: 13px; color: #cbd5e1;
+  }
+  .concept strong { color: #7dd3fc; display: block; margin-bottom: 4px; }
+
+  footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 28px; }
+  .small { font-size: 11px; color: #64748b; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>📊 2026 MoE 模型儀表板</h1>
+  <p class="subtitle">橫向比較四大中國開放 MoE 模型 vs 密集對照組，看為什麼 MoE 在 2026 成為主流。點長條切換選中模型，看右側指標即時變化。</p>
+
+  <!-- Control panel -->
+  <div class="card">
+    <h2>① 指標控制台</h2>
+    <div class="chip-row" id="metricChips"></div>
+    <div class="toggle-row">
+      <label class="switch">
+        <input type="checkbox" id="showDense" checked>
+        <span class="slider-sw"></span>
+      </label>
+      <span>顯示密集對照組（Llama 3.1 405B）</span>
+    </div>
+    <div class="slider-row">
+      <label>
+        <span>What-if 滑桿：假設你只能負擔 <strong>Active 參數 = </strong></span>
+        <span class="val"><span id="activeVal">32</span> B</span>
+      </label>
+      <input type="range" id="activeSlider" min="5" max="80" value="32" step="1">
+      <div class="small">基於各模型的稀疏比，反推「等價的 Total 參數可以蓋多大」。</div>
+    </div>
+  </div>
+
+  <!-- Bar chart -->
+  <div class="card">
+    <h2>② <span id="chartTitle">總參數 (Total, B)</span></h2>
+    <div id="barChart"></div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="label">選中模型</div>
+        <div class="value" id="selName" style="font-size:15px">DeepSeek-V3</div>
+        <div class="sub" id="selType">MoE</div>
+      </div>
+      <div class="stat">
+        <div class="label">稀疏比 (Total/Active)</div>
+        <div class="value" id="sparseRatio">18.1×</div>
+        <div class="sub">數字越大 = 越稀疏</div>
+      </div>
+      <div class="stat">
+        <div class="label">推理成本（vs Llama405B）</div>
+        <div class="value" id="inferCost">9%</div>
+        <div class="sub">越低越便宜</div>
+      </div>
+      <div class="stat">
+        <div class="label">訓練成本節省</div>
+        <div class="value" id="trainSave">82%</div>
+        <div class="sub">相對等效密集</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- What-if results -->
+  <div class="card">
+    <h2>③ What-if：給定 Active 參數，各家能蓋多大的「等效知識容量」</h2>
+    <div class="whatif-results" id="whatifResults"></div>
+    <div class="small">背後直覺：MoE 的 Total/Active 倍率（稀疏比）決定了「同樣的推理預算下，能塞多少額外知識」。倍率越大 = 同樣推理成本下知識容量越大。</div>
+  </div>
+
+  <!-- Concept mapping -->
+  <div class="card">
+    <h2>④ 概念對照：互動 ↔ 為什麼 MoE 成為主流</h2>
+    <div class="concept-grid">
+      <div class="concept">
+        <strong>Total vs Active 差距大</strong>
+        ↔ <em>稀疏激活</em>：模型擁有龐大知識上限，但每個 token 只動其中一小部分專家。
+      </div>
+      <div class="concept">
+        <strong>推理 FLOPs 低</strong>
+        ↔ <em>為何能跑得快</em>：每 token 只算 active 那幾個專家的矩陣乘，FLOPs 大幅下降。
+      </div>
+      <div class="concept">
+        <strong>訓練成本低</strong>
+        ↔ <em>為何能燒得起</em>：訓練同樣以 active 參數為主導，讓中小團隊能挑戰兆級模型。
+      </div>
+      <div class="concept">
+        <strong>四家全採 MoE</strong>
+        ↔ <em>為何成為主流</em>：唯一同時滿足「知識廣度」與「推理可負擔」的成熟解法。
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    本儀表板數字為 2026 教學示意（部分推估），用以呈現 MoE 與密集模型的差距級別。<br>
+    真實 FLOPs/成本受 hardware、context length、batch size 等多因素影響。
+  </footer>
+</div>
+
+<script>
+  // Educational figures (2026, order-of-magnitude — not precise)
+  const MODELS = [
+    { id:'ds',     name:'DeepSeek-V3', type:'MoE',   total:671,  active:37,  infer:9,  train:18 },
+    { id:'qwen',   name:'Qwen3-MoE',   type:'MoE',   total:235,  active:22,  infer:5,  train:11 },
+    { id:'glm',    name:'GLM-4.5',     type:'MoE',   total:355,  active:32,  infer:8,  train:15 },
+    { id:'kimi',   name:'Kimi-K2',     type:'MoE',   total:1000, active:32,  infer:8,  train:22 },
+    { id:'llama',  name:'Llama 3.1 405B', type:'Dense', total:405, active:405, infer:100, train:100 },
+  ];
+
+  const METRICS = [
+    { key:'total',  label:'總參數 (Total, B)',          unit:'B',    fmt:v=>v.toFixed(0)+' B' },
+    { key:'active', label:'啟用參數 (Active, B)',       unit:'B',    fmt:v=>v.toFixed(0)+' B' },
+    { key:'infer',  label:'單 token 推理 FLOPs (相對 Llama=100)', unit:'',  fmt:v=>v.toFixed(0) },
+    { key:'train',  label:'估算訓練成本 (相對 Llama=100)',  unit:'',  fmt:v=>v.toFixed(0) },
+  ];
+
+  let currentMetric = 'total';
+  let selectedId = 'ds';
+  let showDense = true;
+
+  function renderChips(){
+    const row = document.getElementById('metricChips');
+    row.innerHTML = '';
+    METRICS.forEach(m=>{
+      const c = document.createElement('span');
+      c.className = 'chip' + (m.key===currentMetric ? ' active' : '');
+      c.textContent = m.label;
+      c.onclick = ()=>{ currentMetric = m.key; renderChips(); renderChart(); };
+      row.appendChild(c);
+    });
+    document.getElementById('chartTitle').textContent = METRICS.find(x=>x.key===currentMetric).label;
+  }
+
+  function renderChart(){
+    const chart = document.getElementById('barChart');
+    chart.innerHTML = '';
+    const visible = MODELS.filter(m => showDense || m.type !== 'Dense');
+    const metric = METRICS.find(x=>x.key===currentMetric);
+    const max = Math.max(...visible.map(m=>m[currentMetric]));
+    visible.forEach(m=>{
+      const row = document.createElement('div');
+      row.className = 'bar-row clickable' + (m.id===selectedId ? ' selected' : '');
+      const isDense = m.type === 'Dense';
+      const isSel = m.id === selectedId;
+      const pct = Math.max(2, (m[currentMetric] / max) * 100);
+      row.innerHTML = `
+        <div class="bar-name">${m.name}<span class="tag ${isDense?'dense':''}">${m.type}</span></div>
+        <div class="bar-track">
+          <div class="bar-fill ${isSel?'selected':(isDense?'dense':'')}" style="width:${pct}%"></div>
+        </div>
+        <div class="bar-val">${metric.fmt(m[currentMetric])}</div>
+      `;
+      row.onclick = ()=>{ selectedId = m.id; renderChart(); renderStats(); renderWhatIf(); };
+      chart.appendChild(row);
+    });
+  }
+
+  function renderStats(){
+    const m = MODELS.find(x=>x.id===selectedId);
+    document.getElementById('selName').textContent = m.name;
+    document.getElementById('selType').textContent = m.type;
+    const sparse = m.active>0 ? (m.total / m.active) : 1;
+    document.getElementById('sparseRatio').textContent = sparse.toFixed(1) + '×';
+    document.getElementById('inferCost').textContent = m.infer + '%';
+    // train save vs equivalent-knowledge dense: rough proxy = 100 - train when MoE
+    const save = m.type==='Dense' ? 0 : Math.round(100 - m.train);
+    document.getElementById('trainSave').textContent = save + '%';
+  }
+
+  function renderWhatIf(){
+    const active = parseInt(document.getElementById('activeSlider').value, 10);
+    document.getElementById('activeVal').textContent = active;
+    const grid = document.getElementById('whatifResults');
+    grid.innerHTML = '';
+    MODELS.forEach(m=>{
+      const ratio = m.active>0 ? (m.total / m.active) : 1;
+      const equivTotal = active * ratio;
+      const card = document.createElement('div');
+      card.className = 'whatif-card';
+      card.innerHTML = `
+        <div class="m">${m.name} <span style="color:#64748b">(比 ${ratio.toFixed(1)}×)</span></div>
+        <div class="eq">≈ ${equivTotal.toFixed(0)} B Total</div>
+        <div class="note">用同款架構，給 ${active}B active 可蓋出的等效模型大小</div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  // wire up
+  document.getElementById('showDense').addEventListener('change', e=>{
+    showDense = e.target.checked;
+    renderChart();
+  });
+  document.getElementById('activeSlider').addEventListener('input', renderWhatIf);
+
+  // initial
+  renderChips();
+  renderChart();
+  renderStats();
+  renderWhatIf();
+</script>
+</body>
+</html>

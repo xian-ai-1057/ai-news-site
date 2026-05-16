@@ -117,6 +117,12 @@ graph TD
 4. **進階**：Information-directed sampling、POMDPs（部分觀察 MDP）——理論基礎。
 5. **實作**：在 LangGraph 中加一個 confidence-aware exit node，作為簡化版實驗。
 
+## 🎮 互動式學習工具
+
+➡️ **[開啟 Bayes 假設追蹤器](Interactive/bayes-agent-hypothesis-tracker.html)**
+
+在「客戶投訴 APP 用不到」的偵探情境裡，動手選擇下一個檢查動作，即時看見 5 個假設的後驗機率重新洗牌、熵下降曲線收斂；切換「貪心」與「Bayes 最優」策略，直觀體會「以資訊增益選工具」省下幾步。
+
 ## 🎬 推薦影片（依難度排序）
 
 | 難度 | 影片標題 | 頻道 | 為什麼推薦 |

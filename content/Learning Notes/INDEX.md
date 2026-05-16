@@ -20,24 +20,25 @@ updated: 2026-05-16
 
 | 日期 | 主題 | 難度 | 領域 | 互動工具 |
 |---|---|---|---|---|
-| 2026-05-16 | [[2026-05-16-學習-多模態強化學習代理驗證\|多模態強化學習代理驗證（Argos）]] | 中階 | 多模態AI / 強化學習 / 幻覺控制 | — |
-| 2026-05-16 | [[2026-05-16-學習-多模型代理安全掃描系統\|多模型代理安全掃描系統（MDASH）]] | 中階 | 資安 / Agent系統 / 漏洞發現 | — |
-| 2026-05-15 | [[2026-05-15-學習-Subquadratic 稀疏注意力架構\|Subquadratic 稀疏注意力架構]] | 中階 | 模型架構 / 長上下文 | — |
-| 2026-05-15 | [[2026-05-15-學習-AlphaEvolve 進化演算法與 LLM 結合\|AlphaEvolve：進化演算法 × LLM]] | 中階 | 演算法發現 / 科學 AI | — |
-| 2026-05-15 | [[2026-05-15-學習-混合專家架構 MoE 為何成為主流\|混合專家架構（MoE）主流化]] | 入門 | 模型架構 | — |
-| 2026-05-14 | [[2026-05-14-學習-Qwen3 雙模式統一推理\|Qwen3 雙模式統一推理]] | 中階 | 模型架構 / 推理模型 | — |
-| 2026-05-14 | [[2026-05-14-學習-Mem0 圖記憶架構\|Mem0 圖記憶架構]] | 中階 | Agent / 長期記憶 | — |
-| 2026-05-14 | [[2026-05-14-學習-推測解碼與 TLT 訓練加速\|推測解碼與 TLT 訓練加速]] | 進階 | 訓練優化 / 推測解碼 | — |
+| 2026-05-16 | [[2026-05-16-學習-DFlash 區塊擴散推測解碼\|DFlash：區塊擴散推測解碼]] | 中階 | 推理加速 / 推測解碼 | [🎮 DFlash 模擬器](Interactive/block-diffusion-speculative-decoder.html) |
+| 2026-05-16 | [[2026-05-16-學習-Attractor Models 固定點潛在精煉架構\|Attractor Models：固定點潛在精煉架構]] | 進階 | 模型架構 / 動態系統 | [🎮 Attractor 探索器](Interactive/attractor-fixed-point-explorer.html) |
+| 2026-05-15 | [[2026-05-15-學習-Subquadratic 稀疏注意力架構\|Subquadratic 稀疏注意力架構]] | 中階 | 模型架構 / 長上下文 | [🎮 SSA 成本計算器](Interactive/subq-sparse-attention-cost-calculator.html) |
+| 2026-05-15 | [[2026-05-15-學習-AlphaEvolve 進化演算法與 LLM 結合\|AlphaEvolve：進化演算法 × LLM]] | 中階 | 演算法發現 / 科學 AI | [🎮 AlphaEvolve 演化器](Interactive/alpha-evolve-algorithm-discovery-simulator.html) |
+| 2026-05-15 | [[2026-05-15-學習-混合專家架構 MoE 為何成為主流\|混合專家架構（MoE）主流化]] | 入門 | 模型架構 | [🎮 2026 MoE 儀表板](Interactive/moe-mainstream-2026-dashboard.html) |
+| 2026-05-14 | [[2026-05-14-學習-Qwen3 雙模式統一推理\|Qwen3 雙模式統一推理]] | 中階 | 模型架構 / 推理模型 | [🎮 Qwen3 雙模式](Interactive/qwen3-dual-mode-toggle.html) |
+| 2026-05-14 | [[2026-05-14-學習-Mem0 圖記憶架構\|Mem0 圖記憶架構]] | 中階 | Agent / 長期記憶 | [🎮 Mem0 圖記憶](Interactive/mem0-graph-memory-visualizer.html) |
+| 2026-05-14 | [[2026-05-14-學習-推測解碼與 TLT 訓練加速\|推測解碼與 TLT 訓練加速]] | 進階 | 訓練優化 / 推測解碼 | [🎮 TLT 模擬器](Interactive/tlt-speculative-decoding-simulator.html) |
 | 2026-05-13 | [[2026-05-13-學習-Recursive Language Models 遞迴語言模型\|遞迴語言模型 (RLM)]] | 中階 | 推論架構 / 長上下文 | [🎮 RLM Explorer](Interactive/rlm-recursive-explorer.html) |
 | 2026-05-13 | [[2026-05-13-學習-Mixture of Experts MoE 入門\|Mixture of Experts (MoE)]] | 入門 | 模型架構 | [🎮 MoE Simulator](Interactive/moe-router-simulator.html) |
-| 2026-05-13 | [[2026-05-13-學習-Bayes-consistent Agent 編排\|Bayes-consistent Agent 編排]] | 中階 | Agent / 不確定性 | — |
-| 2026-05-13 | [[2026-05-13-學習-LLM Agent 技能演化框架\|LLM Agent 技能演化（Evolving-RL / SkillOS）]] | 中階 | Agent / 持續學習 | — |
+| 2026-05-13 | [[2026-05-13-學習-Bayes-consistent Agent 編排\|Bayes-consistent Agent 編排]] | 中階 | Agent / 不確定性 | [🎮 Bayes 假設追蹤](Interactive/bayes-agent-hypothesis-tracker.html) |
+| 2026-05-13 | [[2026-05-13-學習-LLM Agent 技能演化框架\|LLM Agent 技能演化（Evolving-RL / SkillOS）]] | 中階 | Agent / 持續學習 | [🎮 Skill 技能庫](Interactive/skill-evolution-library-demo.html) |
 
 ---
 
 ## 🗺️ 依主題分類
 
 ### 模型架構（怎麼把模型蓋大、蓋好）
+- [[2026-05-16-學習-Attractor Models 固定點潛在精煉架構|Attractor Models：固定點潛在精煉]] — ICLR 2026，困惑度改善 46.6%，打破 Transformer 固定深度限制
 - [[2026-05-15-學習-Subquadratic 稀疏注意力架構|Subquadratic 稀疏注意力（SSA）]] — 打破 Transformer 二次方縮放，支援 1200 萬 Token 上下文
 - [[2026-05-15-學習-混合專家架構 MoE 為何成為主流|混合專家架構（MoE）主流化]] — 2026年四大中國開放模型全採 MoE 的原因
 - [[2026-05-14-學習-Qwen3 雙模式統一推理|Qwen3 雙模式統一推理]] — 把「快答」與「慢想」整合進單一權重
@@ -49,11 +50,11 @@ updated: 2026-05-16
 ### 推論流程（怎麼讓 LLM 更聰明地用上下文）
 - [[2026-05-13-學習-Recursive Language Models 遞迴語言模型|遞迴語言模型 (RLM)]] — LLM 對長文件遞迴展開的新典範
 
+### 推理加速（怎麼讓 LLM 生成更快、推理成本更低）
+- [[2026-05-16-學習-DFlash 區塊擴散推測解碼|DFlash：區塊擴散推測解碼]] — 以擴散模型替換自回歸草稿模型，6 倍無損加速
+
 ### 訓練優化（怎麼讓模型訓練得更快更便宜）
 - [[2026-05-14-學習-推測解碼與 TLT 訓練加速|推測解碼與 TLT 訓練加速]] — 用閒置 GPU 訓 drafter，把推理模型訓練速度翻倍
-
-### 多模態AI / 視覺推理（怎麼讓 AI 真正「看到」而非「猜測」）
-- [[2026-05-16-學習-多模態強化學習代理驗證|多模態強化學習代理驗證（Argos）]] — 閘控聚合驗證框架，從根本解決視覺幻覺問題
 
 ### 資安 / AI 漏洞發現（怎麼用 AI 找程式碼中的漏洞）
 - [[2026-05-16-學習-多模型代理安全掃描系統|多模型代理安全掃描系統（MDASH）]] — 100+ 專用 Agent 協作，CyberGym 全球第一
@@ -72,8 +73,7 @@ updated: 2026-05-16
 - [[2026-05-13-學習-Mixture of Experts MoE 入門|Mixture of Experts (MoE)]] — 用「綜合醫院 vs 分診台」類比即可理解
 
 ### 中階（建議先讀 Transformer 與 LLM 基礎）
-- [[2026-05-16-學習-多模態強化學習代理驗證|多模態強化學習代理驗證（Argos）]]
-- [[2026-05-16-學習-多模型代理安全掃描系統|多模型代理安全掃描系統（MDASH）]]
+- [[2026-05-16-學習-DFlash 區塊擴散推測解碼|DFlash：區塊擴散推測解碼]]
 - [[2026-05-15-學習-Subquadratic 稀疏注意力架構|Subquadratic 稀疏注意力（SSA）]]
 - [[2026-05-15-學習-AlphaEvolve 進化演算法與 LLM 結合|AlphaEvolve：進化演算法 × LLM]]
 - [[2026-05-14-學習-Qwen3 雙模式統一推理|Qwen3 雙模式統一推理]]
@@ -83,6 +83,7 @@ updated: 2026-05-16
 - [[2026-05-13-學習-LLM Agent 技能演化框架|LLM Agent 技能演化]]
 
 ### 進階（需要強數學或工程背景）
+- [[2026-05-16-學習-Attractor Models 固定點潛在精煉架構|Attractor Models：固定點潛在精煉]] — 隱式微分 + 固定點求解，需要線性代數與微積分背景
 - [[2026-05-14-學習-推測解碼與 TLT 訓練加速|推測解碼與 TLT 訓練加速]] — 訓練側的推測解碼，涉及 RL rollout 與集群排程
 
 ---
@@ -121,6 +122,16 @@ updated: 2026-05-16
 
 | 工具 | 涵蓋概念 | 開啟方式 |
 |---|---|---|
+| [Attractor 固定點探索器](Interactive/attractor-fixed-point-explorer.html) | 固定點收斂、隱式微分、自適應深度 | 右鍵連結 → Open in default app |
+| [DFlash 區塊擴散模擬器](Interactive/block-diffusion-speculative-decoder.html) | 區塊擴散並行、條件對齊、無損加速 | 右鍵連結 → Open in default app |
+| [稀疏注意力成本計算器](Interactive/subq-sparse-attention-cost-calculator.html) | O(n²) vs O(n log n)、稀疏 mask、長上下文 | 右鍵連結 → Open in default app |
+| [AlphaEvolve 演化搜尋模擬器](Interactive/alpha-evolve-algorithm-discovery-simulator.html) | 進化框架、LLM 變異算子、隨機 vs 智慧搜尋 | 右鍵連結 → Open in default app |
+| [2026 MoE 模型儀表板](Interactive/moe-mainstream-2026-dashboard.html) | 稀疏激活產業趨勢、Active vs Total、推理成本 | 右鍵連結 → Open in default app |
+| [Qwen3 雙模式 Demo](Interactive/qwen3-dual-mode-toggle.html) | 單權重雙模式、thinking budget、延遲 vs 品質 | 右鍵連結 → Open in default app |
+| [Mem0 圖記憶視覺化](Interactive/mem0-graph-memory-visualizer.html) | 三元組抽取、圖檢索、token 節省 | 右鍵連結 → Open in default app |
+| [TLT 推測解碼模擬器](Interactive/tlt-speculative-decoding-simulator.html) | Drafter/Target 分工、lookahead、閒置 GPU 復用 | 右鍵連結 → Open in default app |
+| [Bayes 假設追蹤器](Interactive/bayes-agent-hypothesis-tracker.html) | 後驗更新、資訊增益、熵閾值停止 | 右鍵連結 → Open in default app |
+| [Skill 技能庫 Demo](Interactive/skill-evolution-library-demo.html) | 技能萃取、複用機制、持續學習曲線 | 右鍵連結 → Open in default app |
 | [MoE 路由器互動模擬器](Interactive/moe-router-simulator.html) | 路由器、Top-K 選擇、Active vs Total params | 右鍵連結 → Open in default app |
 | [RLM 遞迴查詢視覺化](Interactive/rlm-recursive-explorer.html) | 階層展開、token 節省、規劃決策 | 右鍵連結 → Open in default app |
 

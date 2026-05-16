@@ -123,6 +123,12 @@ RAG 在模型外部進行資訊篩選，稀疏注意力在模型內部進行。R
 3. **再讀**：本文（SubQ 的 SiliconANGLE 報導）
 4. **進階**：BigBird、Flash Attention（高效注意力計算），以及 Mamba（State Space Model，另一條脫離 Transformer 的路線）
 
+## 🎮 互動式學習工具
+
+➡️ **[開啟 稀疏注意力成本計算器](Interactive/subq-sparse-attention-cost-calculator.html)**
+
+拖動序列長度與稀疏度滑桿，同時觀察 12×12 注意力 mask 的點亮模式與 log-log 成本曲線，直觀感受 O(N²) 在百萬 token 規模下為何瞬間爆炸，而 O(N log N) 為何讓 12M 上下文成本可行。
+
 ## 🔗 延伸閱讀
 - 原文連結：[Subquadratic launches with $29M](https://siliconangle.com/2026/05/05/subquadratic-launches-29m-bring-12m-token-context-windows-ai/)
 - 對應新聞筆記：[[2026-05-15-SubQ Subquadratic LLM 架構突破]]

@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DFlash 區塊擴散推測解碼模擬器</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang TC",
+                 "Microsoft JhengHei", sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #f1f5f9;
+    min-height: 100vh;
+    padding: 24px;
+    line-height: 1.6;
+  }
+  .container { max-width: 960px; margin: 0 auto; }
+  h1 {
+    font-size: 26px; margin-bottom: 6px;
+    background: linear-gradient(135deg,#38bdf8,#a78bfa);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: #94a3b8; margin-bottom: 24px; font-size: 14px; }
+
+  .card {
+    background: rgba(30,41,59,.7); backdrop-filter: blur(8px);
+    border: 1px solid rgba(148,163,184,.15);
+    border-radius: 16px; padding: 22px; margin-bottom: 20px;
+  }
+  .card h2 { font-size: 17px; margin-bottom: 14px; color: #e2e8f0; }
+
+  /* Controls */
+  .control-row {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 12px; flex-wrap: wrap;
+  }
+  .control-row label { font-size: 13px; color: #cbd5e1; min-width: 150px; }
+  input[type="range"] {
+    flex: 1; min-width: 200px;
+    accent-color: #38bdf8;
+  }
+  .range-val {
+    font-family: ui-monospace, monospace; color: #7dd3fc;
+    min-width: 36px; text-align: right; font-size: 13px;
+  }
+
+  button {
+    background: linear-gradient(135deg,#38bdf8,#6366f1);
+    color: white; border: none; border-radius: 10px;
+    padding: 11px 22px; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: transform .15s, box-shadow .15s;
+    font-family: inherit;
+  }
+  button:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(56,189,248,.3); }
+  button.secondary {
+    background: rgba(148,163,184,.15); color: #cbd5e1;
+  }
+  button:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .preset-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .preset {
+    background: rgba(56,189,248,.1); color: #7dd3fc;
+    border: 1px solid rgba(56,189,248,.3);
+    padding: 5px 11px; border-radius: 999px;
+    font-size: 12px; cursor: pointer;
+  }
+  .preset:hover { background: rgba(56,189,248,.2); }
+
+  /* Tracks */
+  .track-wrap { margin-bottom: 18px; }
+  .track-title {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .track-title .name { font-size: 14px; color: #e2e8f0; font-weight: 600; }
+  .track-title .timer {
+    font-family: ui-monospace, monospace; font-size: 12px; color: #94a3b8;
+  }
+  .track {
+    display: flex; gap: 4px; padding: 10px;
+    background: rgba(15,23,42,.55);
+    border: 1px solid rgba(148,163,184,.1);
+    border-radius: 10px; min-height: 60px; align-items: center;
+    overflow-x: auto;
+  }
+  .cell {
+    flex: 1; min-width: 42px;
+    aspect-ratio: 1;
+    background: rgba(15,23,42,.7);
+    border: 1.5px solid #334155;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-family: ui-monospace, monospace;
+    color: #475569;
+    transition: all .25s ease;
+    position: relative;
+  }
+  .cell.pending { color: #64748b; }
+  .cell.denoising {
+    border-color: #a78bfa;
+    background: rgba(167,139,250,.15);
+    color: #c4b5fd;
+    animation: pulse 0.25s ease-in-out infinite alternate;
+  }
+  .cell.lit {
+    border-color: #38bdf8;
+    background: linear-gradient(135deg, rgba(56,189,248,.25), rgba(99,102,241,.18));
+    color: #f0f9ff; font-weight: 600;
+    box-shadow: 0 0 14px rgba(56,189,248,.4);
+    transform: scale(1.03);
+  }
+  .cell.rejected {
+    border-color: #f87171;
+    background: rgba(248,113,113,.18);
+    color: #fecaca;
+    text-decoration: line-through;
+  }
+  @keyframes pulse {
+    from { opacity: 0.55; }
+    to   { opacity: 1; }
+  }
+  .verify-box {
+    margin-left: 8px; padding: 8px 12px;
+    background: linear-gradient(135deg, rgba(34,197,94,.18), rgba(16,185,129,.12));
+    border: 1.5px dashed #34d399;
+    border-radius: 8px; font-size: 11px; color: #6ee7b7;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-width: 78px; min-height: 56px; text-align: center;
+    transition: all .25s;
+  }
+  .verify-box.active {
+    background: linear-gradient(135deg, rgba(34,197,94,.4), rgba(16,185,129,.3));
+    box-shadow: 0 0 18px rgba(52,211,153,.4);
+  }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 700px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat {
+    background: rgba(15,23,42,.6);
+    border: 1px solid #1e293b;
+    padding: 12px; border-radius: 10px; text-align: center;
+  }
+  .stat .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; }
+  .stat .value { font-size: 22px; font-weight: 700; margin-top: 4px; color: #38bdf8;
+                 font-family: ui-monospace, monospace; }
+  .stat .sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .stat.purple .value { color: #a78bfa; }
+  .stat.amber .value { color: #fbbf24; }
+  .stat.emerald .value { color: #34d399; }
+
+  /* Concept mapping */
+  .map-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .map-table td { padding: 9px 8px; border-bottom: 1px solid rgba(148,163,184,.1); vertical-align: top; }
+  .map-table tr:last-child td { border-bottom: none; }
+  .map-left { color: #7dd3fc; font-weight: 600; width: 38%; }
+  .map-arrow { color: #475569; width: 24px; text-align: center; }
+  .map-right { color: #cbd5e1; }
+  .note-back {
+    margin-top: 14px; padding: 10px 14px;
+    background: rgba(167,139,250,.08);
+    border-left: 3px solid #a78bfa; border-radius: 6px;
+    font-size: 13px; color: #cbd5e1;
+  }
+
+  footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 28px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>⚡ DFlash 區塊擴散推測解碼模擬器</h1>
+  <p class="subtitle">對比自回歸 vs 區塊擴散兩種 drafter，感受並行 token 生成的威力。對應筆記中「草稿模型 × 區塊擴散」核心機制。</p>
+
+  <!-- Control -->
+  <div class="card">
+    <h2>🎮 控制台</h2>
+
+    <div class="control-row">
+      <label>區塊長度 K（草稿數）</label>
+      <input type="range" id="kSlider" min="2" max="20" value="5">
+      <span class="range-val" id="kVal">5</span>
+    </div>
+
+    <div class="control-row">
+      <label>擴散去噪步數</label>
+      <input type="range" id="dSlider" min="1" max="5" value="3">
+      <span class="range-val" id="dVal">3</span>
+    </div>
+
+    <div class="control-row">
+      <button id="startBtn" onclick="startSim()">▶ 開始模擬</button>
+      <button class="secondary" onclick="resetTracks()">⟲ 重設</button>
+    </div>
+
+    <div class="preset-row">
+      <span class="preset" onclick="setPreset(5, 3)">K=5（典型）</span>
+      <span class="preset" onclick="setPreset(1, 1)">K=1（無加速基線）</span>
+      <span class="preset" onclick="setPreset(20, 3)">K=20（極限並行）</span>
+    </div>
+  </div>
+
+  <!-- Tracks visualization -->
+  <div class="card">
+    <h2>📊 視覺化：兩條時間軸跑道</h2>
+
+    <div class="track-wrap">
+      <div class="track-title">
+        <span class="name">🐢 上跑道｜自回歸 Drafter（Baseline）</span>
+        <span class="timer" id="topTimer">0 ms</span>
+      </div>
+      <div class="track" id="trackTop"></div>
+    </div>
+
+    <div class="track-wrap">
+      <div class="track-title">
+        <span class="name">🚀 下跑道｜區塊擴散 Drafter（DFlash）</span>
+        <span class="timer" id="botTimer">0 ms</span>
+      </div>
+      <div class="track" id="trackBot"></div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="card">
+    <h2>📐 即時指標</h2>
+    <div class="stats">
+      <div class="stat">
+        <div class="label">自回歸總時間</div>
+        <div class="value" id="statAR">— ms</div>
+        <div class="sub">K × 草稿延遲 + 驗證</div>
+      </div>
+      <div class="stat purple">
+        <div class="label">DFlash 總時間</div>
+        <div class="value" id="statDF">— ms</div>
+        <div class="sub">D 步去噪 + 驗證</div>
+      </div>
+      <div class="stat amber">
+        <div class="label">加速倍率</div>
+        <div class="value" id="statSpd">—×</div>
+        <div class="sub">自回歸 ÷ DFlash</div>
+      </div>
+      <div class="stat emerald">
+        <div class="label">Drafter 接受率</div>
+        <div class="value" id="statAcc">—%</div>
+        <div class="sub">投機驗證通過比例</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Concept mapping -->
+  <div class="card">
+    <h2>📚 概念對照：互動元件 ↔ 筆記原理</h2>
+    <table class="map-table">
+      <tr>
+        <td class="map-left">兩條跑道並排</td>
+        <td class="map-arrow">↔</td>
+        <td class="map-right">自回歸 vs 擴散草稿模型的根本差異：串行逐 token vs 並行整批</td>
+      </tr>
+      <tr>
+        <td class="map-left">下跑道 K 格「同時亮起」</td>
+        <td class="map-arrow">↔</td>
+        <td class="map-right">區塊擴散模型在單次前向中對 K 個 masked positions 並行去噪</td>
+      </tr>
+      <tr>
+        <td class="map-left">「3 步閃爍」動畫</td>
+        <td class="map-arrow">↔</td>
+        <td class="map-right">條件擴散採樣：以目標模型 hidden states 為條件，迭代 D 步去噪</td>
+      </tr>
+      <tr>
+        <td class="map-left">右側 Target Verify 方框</td>
+        <td class="map-arrow">↔</td>
+        <td class="map-right">目標模型批次驗證（一次 forward 算 K 個 token 的條件機率）</td>
+      </tr>
+      <tr>
+        <td class="map-left">「接受率」指標</td>
+        <td class="map-arrow">↔</td>
+        <td class="map-right">投機採樣（speculative sampling）的無損驗證——拒絕者重抽，總分佈不變</td>
+      </tr>
+    </table>
+    <div class="note-back">
+      ← 回到學習筆記，比對「重點原理」第 2、4 點與 mermaid 流程圖，可看到本 demo 動態重現了論文圖示的並行加速效果。
+    </div>
+  </div>
+
+  <footer>
+    示意：時間參數採用合理的相對量級（草稿步 ~40ms、去噪步 ~25ms、驗證 ~50ms），<br>
+    並非真實硬體量測值。真實加速倍率視模型大小、batch size、GPU 而異。
+  </footer>
+</div>
+
+<script>
+  const STEP_AR_MS   = 40;   // per-token AR drafter latency
+  const STEP_DENOISE = 25;   // per denoising step
+  const VERIFY_MS    = 50;   // target verify cost
+  const ANIM_SCALE   = 4;    // slow down for visibility
+
+  const state = {
+    K: 5,
+    D: 3,
+    running: false,
+    timers: [],
+  };
+
+  function clearTimers(){
+    state.timers.forEach(t => clearTimeout(t));
+    state.timers = [];
+  }
+
+  function buildTrack(elId, count){
+    const el = document.getElementById(elId);
+    el.innerHTML = '';
+    for(let i=0;i<count;i++){
+      const c = document.createElement('div');
+      c.className = 'cell pending';
+      c.id = `${elId}_${i}`;
+      c.textContent = '·';
+      el.appendChild(c);
+    }
+    const vb = document.createElement('div');
+    vb.className = 'verify-box';
+    vb.id = `${elId}_verify`;
+    vb.innerHTML = 'Target<br>Verify';
+    el.appendChild(vb);
+  }
+
+  function resetTracks(){
+    clearTimers();
+    state.running = false;
+    document.getElementById('startBtn').disabled = false;
+    buildTrack('trackTop', state.K);
+    buildTrack('trackBot', state.K);
+    document.getElementById('topTimer').textContent = '0 ms';
+    document.getElementById('botTimer').textContent = '0 ms';
+    document.getElementById('statAR').textContent = '— ms';
+    document.getElementById('statDF').textContent = '— ms';
+    document.getElementById('statSpd').textContent = '—×';
+    document.getElementById('statAcc').textContent = '—%';
+  }
+
+  function fakeToken(i){
+    const pool = ['the','a','of','is','to','and','it','in','on','for',
+                  'we','at','can','run','fast','▍','▎','▌','▋','▊'];
+    return pool[i % pool.length];
+  }
+
+  function startSim(){
+    if(state.running) return;
+    resetTracks();
+    state.running = true;
+    document.getElementById('startBtn').disabled = true;
+
+    const K = state.K, D = state.D;
+
+    // ---- Top track: AR drafter (one cell at a time) ----
+    let arTime = 0;
+    for(let i=0;i<K;i++){
+      arTime += STEP_AR_MS;
+      const t = arTime * ANIM_SCALE;
+      const fixedArTime = arTime;
+      state.timers.push(setTimeout(()=>{
+        const cell = document.getElementById(`trackTop_${i}`);
+        cell.className = 'cell lit';
+        cell.textContent = fakeToken(i);
+        document.getElementById('topTimer').textContent = fixedArTime + ' ms';
+      }, t));
+    }
+    arTime += VERIFY_MS;
+    const arTotal = arTime;
+    state.timers.push(setTimeout(()=>{
+      document.getElementById('trackTop_verify').classList.add('active');
+      document.getElementById('topTimer').textContent = arTotal + ' ms';
+    }, arTime * ANIM_SCALE));
+
+    // ---- Bottom track: DFlash (D denoising steps, then all lit) ----
+    let dfTime = 0;
+    // Denoising flicker
+    for(let s=0; s<D; s++){
+      dfTime += STEP_DENOISE;
+      const tFlash = dfTime * ANIM_SCALE;
+      const fixedDf = dfTime;
+      state.timers.push(setTimeout(()=>{
+        for(let i=0;i<K;i++){
+          const cell = document.getElementById(`trackBot_${i}`);
+          cell.className = 'cell denoising';
+          cell.textContent = '~';
+        }
+        document.getElementById('botTimer').textContent = fixedDf + ' ms';
+      }, tFlash));
+    }
+    // Finalize: all light up together
+    state.timers.push(setTimeout(()=>{
+      for(let i=0;i<K;i++){
+        const cell = document.getElementById(`trackBot_${i}`);
+        cell.className = 'cell lit';
+        cell.textContent = fakeToken(i);
+      }
+    }, dfTime * ANIM_SCALE + 80));
+
+    dfTime += VERIFY_MS;
+    const dfTotal = dfTime;
+    state.timers.push(setTimeout(()=>{
+      document.getElementById('trackBot_verify').classList.add('active');
+      document.getElementById('botTimer').textContent = dfTotal + ' ms';
+
+      // Compute acceptance rate: ~95% at K=2, decay to ~60% at K=20
+      const accept = Math.max(0.6, 0.97 - (K - 2) * 0.02);
+      const rejected = Math.floor(K * (1 - accept) + 0.5);
+      // Mark a few rejected cells (deterministic-ish: last ones)
+      for(let i=K-rejected;i<K;i++){
+        const cell = document.getElementById(`trackBot_${i}`);
+        if(cell) cell.className = 'cell rejected';
+      }
+
+      // Update stats
+      document.getElementById('statAR').textContent = arTotal + ' ms';
+      document.getElementById('statDF').textContent = dfTotal + ' ms';
+      const spd = arTotal / dfTotal;
+      document.getElementById('statSpd').textContent = spd.toFixed(2) + '×';
+      document.getElementById('statAcc').textContent = (accept * 100).toFixed(0) + '%';
+
+      state.running = false;
+      document.getElementById('startBtn').disabled = false;
+    }, dfTime * ANIM_SCALE));
+  }
+
+  function setPreset(k, d){
+    state.K = k; state.D = d;
+    document.getElementById('kSlider').value = k;
+    document.getElementById('dSlider').value = d;
+    document.getElementById('kVal').textContent = k;
+    document.getElementById('dVal').textContent = d;
+    resetTracks();
+    setTimeout(startSim, 200);
+  }
+
+  document.getElementById('kSlider').addEventListener('input', e=>{
+    state.K = parseInt(e.target.value, 10);
+    document.getElementById('kVal').textContent = state.K;
+    if(!state.running) resetTracks();
+  });
+  document.getElementById('dSlider').addEventListener('input', e=>{
+    state.D = parseInt(e.target.value, 10);
+    document.getElementById('dVal').textContent = state.D;
+  });
+
+  // Init
+  (function init(){
+    resetTracks();
+    setTimeout(startSim, 400);
+  })();
+</script>
+</body>
+</html>

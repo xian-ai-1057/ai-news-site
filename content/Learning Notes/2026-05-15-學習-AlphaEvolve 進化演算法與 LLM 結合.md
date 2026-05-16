@@ -136,6 +136,12 @@ NAS 的搜尋空間由人類預定義（如選擇哪種 layer 組合），AlphaE
 3. **再讀**：本文（AlphaEvolve 一週年成果更新）
 4. **進階**：OpenEvolve（開源實現）：[Hugging Face Blog](https://huggingface.co/blog/codelion/openevolve)
 
+## 🎮 互動式學習工具
+
+➡️ **[開啟 演化搜尋模擬器](Interactive/alpha-evolve-algorithm-discovery-simulator.html)**
+
+切換「LLM-guided」vs「Random」變異策略並按下「開始演化」，觀察 50 代之內候選池的更替、精英保留如何鎖住歷史最優解，以及兩種策略的演化曲線斜率差異——直觀體驗為何 LLM 作為智慧變異算子能大幅加速演算法發現。
+
 ## 🔗 延伸閱讀
 - 原文連結：[AlphaEvolve: Scaling Impact Across Fields](https://deepmind.google/blog/alphaevolve-impact/)
 - 對應新聞筆記：[[2026-05-15-AlphaEvolve 進化演算法代理跨領域落地]]

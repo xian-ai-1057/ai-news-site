@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Qwen3 雙模式統一推理 Demo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang TC",
+                 "Microsoft JhengHei", sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #f1f5f9;
+    min-height: 100vh;
+    padding: 24px;
+    line-height: 1.6;
+  }
+  .container { max-width: 1000px; margin: 0 auto; }
+  h1 {
+    font-size: 26px; margin-bottom: 6px;
+    background: linear-gradient(135deg,#38bdf8,#a78bfa);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: #94a3b8; margin-bottom: 24px; font-size: 14px; }
+
+  .card {
+    background: rgba(30,41,59,.7); backdrop-filter: blur(8px);
+    border: 1px solid rgba(148,163,184,.15);
+    border-radius: 16px; padding: 22px; margin-bottom: 20px;
+  }
+  .card h2 { font-size: 17px; margin-bottom: 14px; color: #e2e8f0; }
+
+  /* Chip row */
+  .chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .chip {
+    background: rgba(56,189,248,.08); color: #7dd3fc;
+    border: 1px solid rgba(56,189,248,.25);
+    padding: 7px 14px; border-radius: 999px;
+    font-size: 13px; cursor: pointer; transition: all .2s;
+  }
+  .chip:hover { background: rgba(56,189,248,.18); }
+  .chip.active {
+    background: linear-gradient(135deg, rgba(56,189,248,.3), rgba(99,102,241,.25));
+    color: #f0f9ff; border-color: #38bdf8;
+    box-shadow: 0 0 12px rgba(56,189,248,.25);
+  }
+
+  /* Query bar */
+  .query-bar {
+    background: rgba(15,23,42,.6);
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-family: ui-monospace, monospace;
+    font-size: 14px; color: #fbbf24;
+    margin-bottom: 12px;
+  }
+  .query-bar::before { content: "Q: "; color: #64748b; }
+
+  /* Slider */
+  .slider-row { margin-top: 12px; }
+  .slider-row label {
+    display: flex; justify-content: space-between;
+    font-size: 13px; color: #cbd5e1; margin-bottom: 6px;
+  }
+  .slider-row label .val { color: #7dd3fc; font-family: ui-monospace, monospace; }
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 6px; background: #334155;
+    border-radius: 3px; outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: linear-gradient(135deg,#38bdf8,#6366f1);
+    cursor: pointer; box-shadow: 0 0 8px rgba(56,189,248,.4);
+  }
+
+  button {
+    background: linear-gradient(135deg,#38bdf8,#6366f1);
+    color: white; border: none; border-radius: 10px;
+    padding: 10px 20px; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: transform .15s, box-shadow .15s;
+    font-family: inherit; margin-top: 12px;
+  }
+  button:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(56,189,248,.3); }
+
+  /* Dual panel */
+  .dual-panel {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 720px){ .dual-panel { grid-template-columns: 1fr; } }
+  .mode-panel {
+    background: rgba(15,23,42,.55);
+    border: 1px solid rgba(148,163,184,.12);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex; flex-direction: column;
+    min-height: 320px;
+  }
+  .mode-panel.non-thinking { border-color: rgba(52,211,153,.25); }
+  .mode-panel.thinking { border-color: rgba(167,139,250,.25); }
+  .mode-header {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; font-weight: 700;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed rgba(148,163,184,.15);
+  }
+  .mode-panel.non-thinking .mode-header { color: #6ee7b7; }
+  .mode-panel.thinking .mode-header { color: #c4b5fd; }
+  .mode-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 999px;
+    font-weight: 600; text-transform: uppercase; letter-spacing: .5px;
+  }
+  .non-thinking .mode-badge { background: rgba(52,211,153,.15); color: #6ee7b7; }
+  .thinking .mode-badge { background: rgba(167,139,250,.15); color: #c4b5fd; }
+
+  .chat-bubble {
+    background: rgba(30,41,59,.7);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 13.5px;
+    color: #e2e8f0;
+    flex: 1;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: ui-monospace, "SF Mono", monospace;
+    line-height: 1.6;
+  }
+  .think-block {
+    color: #64748b;
+    font-style: italic;
+    display: block;
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    background: rgba(167,139,250,.06);
+    border-left: 2px solid rgba(167,139,250,.4);
+    border-radius: 4px;
+    font-size: 12.5px;
+  }
+  .think-block::before { content: "<think>"; color: #a78bfa; display: block; opacity: .7; }
+  .think-block::after { content: "</think>"; color: #a78bfa; display: block; opacity: .7; margin-top: 4px; }
+  .answer { color: #f0f9ff; font-style: normal; }
+  .cursor-blink {
+    display: inline-block; width: 7px; height: 14px;
+    background: #38bdf8; margin-left: 2px;
+    animation: blink 1s infinite;
+    vertical-align: text-bottom;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Panel stats */
+  .panel-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 8px; margin-top: 12px;
+  }
+  .panel-stat {
+    background: rgba(15,23,42,.6);
+    border: 1px solid #1e293b;
+    padding: 8px 6px; border-radius: 8px; text-align: center;
+  }
+  .panel-stat .label { font-size: 10px; color: #94a3b8; text-transform: uppercase; }
+  .panel-stat .value {
+    font-size: 16px; font-weight: 700; margin-top: 2px;
+    color: #38bdf8;
+    font-family: ui-monospace, monospace;
+  }
+
+  /* Cost ratio */
+  .cost-ratio {
+    background: linear-gradient(135deg, rgba(167,139,250,.1), rgba(56,189,248,.08));
+    border: 1px solid rgba(167,139,250,.25);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-top: 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px;
+  }
+  .cost-ratio .ratio-label { font-size: 13px; color: #cbd5e1; }
+  .cost-ratio .ratio-val {
+    font-size: 22px; font-weight: 800;
+    background: linear-gradient(135deg,#38bdf8,#a78bfa);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-family: ui-monospace, monospace;
+  }
+
+  /* Concept mapping */
+  .concept-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .concept {
+    background: rgba(56,189,248,.06);
+    border-left: 3px solid #38bdf8;
+    padding: 10px 12px; border-radius: 6px;
+    font-size: 13px; color: #cbd5e1;
+  }
+  .concept strong { color: #7dd3fc; display: block; margin-bottom: 4px; }
+
+  footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 28px; }
+  .small { font-size: 11px; color: #64748b; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>🧩 Qwen3 雙模式統一推理 Demo</h1>
+  <p class="subtitle">同一權重，兩種模式 — 看 thinking 模式如何用延遲換深度。左右兩邊是同一個 Qwen3 模型，只有 chat template 不同。</p>
+
+  <!-- Control panel -->
+  <div class="card">
+    <h2>① 選擇範例 Query</h2>
+    <div class="chip-row" id="queryChips"></div>
+    <div class="query-bar" id="queryDisplay">—</div>
+
+    <div class="slider-row">
+      <label>
+        <span>Thinking budget（max thinking tokens）</span>
+        <span class="val"><span id="budgetVal">512</span> tokens</span>
+      </label>
+      <input type="range" id="budgetSlider" min="0" max="2048" value="512" step="64">
+      <div class="small">控制 thinking 模式中 <code>&lt;think&gt;</code> 區塊的長度與打字延遲；非 0 才會啟動 thinking。</div>
+    </div>
+
+    <button onclick="generate()">▶ 重新生成</button>
+  </div>
+
+  <!-- Dual panel -->
+  <div class="card">
+    <h2>② 同一個 Qwen3 權重，兩種模式並排</h2>
+    <div class="dual-panel">
+      <div class="mode-panel non-thinking">
+        <div class="mode-header">
+          ⚡ Non-thinking <span class="mode-badge">直答</span>
+        </div>
+        <div class="chat-bubble" id="ntBubble">—</div>
+        <div class="panel-stats">
+          <div class="panel-stat"><div class="label">Tokens</div><div class="value" id="ntTok">—</div></div>
+          <div class="panel-stat"><div class="label">延遲 (ms)</div><div class="value" id="ntLat">—</div></div>
+          <div class="panel-stat"><div class="label">成本 ¢</div><div class="value" id="ntCost">—</div></div>
+        </div>
+      </div>
+
+      <div class="mode-panel thinking">
+        <div class="mode-header">
+          🧠 Thinking <span class="mode-badge">深思</span>
+        </div>
+        <div class="chat-bubble" id="thBubble">—</div>
+        <div class="panel-stats">
+          <div class="panel-stat"><div class="label">Tokens</div><div class="value" id="thTok">—</div></div>
+          <div class="panel-stat"><div class="label">延遲 (ms)</div><div class="value" id="thLat">—</div></div>
+          <div class="panel-stat"><div class="label">成本 ¢</div><div class="value" id="thCost">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cost-ratio">
+      <span class="ratio-label">相對成本倍率 <span style="color:#64748b">(thinking / non-thinking)</span></span>
+      <span class="ratio-val" id="ratioVal">—</span>
+    </div>
+  </div>
+
+  <!-- Concept mapping -->
+  <div class="card">
+    <h2>③ 概念對照：互動 ↔ Qwen3 設計</h2>
+    <div class="concept-grid">
+      <div class="concept">
+        <strong>打字機式的 think 區塊</strong>
+        ↔ <em>顯性化推理</em>：thinking 模式把 chain-of-thought 真的吐出來，可控、可審計。
+      </div>
+      <div class="concept">
+        <strong>Thinking budget 滑桿</strong>
+        ↔ <em>thinking budget</em>：Qwen3 允許在 chat template 上設定推理 token 上限。
+      </div>
+      <div class="concept">
+        <strong>同一面板兩邊並排</strong>
+        ↔ <em>單一權重雙模式</em>：左右兩邊背後是同一份 Qwen3 權重，差別只在 prompt template。
+      </div>
+      <div class="concept">
+        <strong>右下角成本倍率</strong>
+        ↔ <em>用延遲換準確率</em>：thinking 多花 token 與時間，但複雜題目正確率顯著提升。
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    本 Demo 為教學示意：回應內容預先撰寫，token 數與延遲為合理估值。<br>
+    真實 Qwen3 由 <code>enable_thinking=True/False</code> 或對話中 <code>/think</code>、<code>/no_think</code> 觸發切換。
+  </footer>
+</div>
+
+<script>
+  const QUERIES = [
+    {
+      id: 'q1', label: '簡單：2+3=?',
+      query: '2+3=?',
+      nt: '5',
+      thinkBase: '這是基本算術。2 加 3，先取 2，再加 1 → 3，再加 1 → 4，再加 1 → 5。確認結果為 5。其實這題不需要 thinking，直接答即可。',
+      thAnswer: '5'
+    },
+    {
+      id: 'q2', label: '中：為什麼天空是藍色',
+      query: '為什麼天空是藍色的？',
+      nt: '因為太陽光中的藍光比紅光更容易被空氣中的分子散射（瑞利散射），所以白天我們從各方向看到的天空主要是被散射的藍光。',
+      thinkBase: '使用者問天空為什麼是藍色。需要解釋的核心機制是「瑞利散射」。\n步驟：\n1. 太陽光是白光（含紅橙黃綠藍靛紫）。\n2. 大氣中的氣體分子大小遠小於可見光波長。\n3. 瑞利散射強度 ∝ 1/λ^4，波長越短散射越強。\n4. 藍光（~450nm）的散射量比紅光（~650nm）高約 (650/450)^4 ≈ 4.3 倍。\n5. 因此白天從天空各方向進到眼睛的散射光以藍色為主。\n6. 補充：日出日落時光線斜穿大氣較厚，藍光被散射殆盡，因此呈紅橙色。\n組織成簡潔的最終回答。',
+      thAnswer: '因為**瑞利散射**——大氣分子散射光的強度與波長的四次方成反比 (∝ 1/λ⁴)，藍光波長短（約 450 nm），被散射的量比紅光（約 650 nm）高約 4 倍。所以白天從四面八方進到我們眼睛的散射光以藍色為主。\n\n（日出日落時光線斜穿較厚大氣，藍光被散射殆盡，剩下紅橙光直射，因此天空才會變紅。）'
+    },
+    {
+      id: 'q3', label: '複雜：鐵塊沉、船浮',
+      query: '鐵塊在水中為何下沉但船能浮？',
+      nt: '關鍵在於「平均密度」：鐵塊整體密度大於水（約 7.8 g/cm³ vs 1 g/cm³）所以下沉；鋼船的船體內部是空心的，整體（鋼殼 + 內部空氣）的平均密度小於水，所以浮起來。',
+      thinkBase: '使用者直覺感到矛盾：同樣是鐵，為什麼一個沉一個浮？需要用「浮力 = 排開液體的重量」拆解。\n\n步驟：\n1. 阿基米德原理：浮力 F_b = ρ_water × V_排開 × g。\n2. 平衡條件：物體浮在水面時，F_b = mg；下沉時 F_b < mg。\n3. 把它改寫成密度比較：物體要浮，「平均密度」必須小於水。\n4. 鐵塊：整塊實心鐵，密度 ~7.8 g/cm³ > 水的 1 g/cm³ → 沉。\n5. 鋼船：船殼是鐵，但船體大部分是「空氣」。把整艘船（殼 + 內部空氣）視為一個物體，平均密度 < 1 g/cm³ → 浮。\n6. 換句話說，船的形狀讓它能「排開」相對於自身重量更多的水。\n7. 補充：把船弄一個破洞讓水灌進去，平均密度就會變回鐵的密度 → 沉沒。',
+      thAnswer: '關鍵是**平均密度**，不是材質：\n\n- **鐵塊**：實心鐵，平均密度 ≈ 7.8 g/cm³ > 水的 1 g/cm³ → 下沉。\n- **鋼船**：船殼是鐵，但船內絕大部分是**空氣**。把「鋼殼 + 內部空氣」當成一個整體，平均密度遠小於水 → 浮起。\n\n用阿基米德原理講：浮力 = 排開水的重量。船因為形狀「胖」，能排開大量水，浮力就大。一旦船破洞進水，平均密度回到鐵的水準，就會沉沒。'
+    },
+    {
+      id: 'q4', label: '程式：費氏數列',
+      query: '寫一個 Python 函式回傳費氏數列前 n 項',
+      nt: 'def fib(n):\n    a, b, out = 0, 1, []\n    for _ in range(n):\n        out.append(a)\n        a, b = b, a + b\n    return out',
+      thinkBase: '使用者要求：費氏數列前 n 項的 Python 函式。\n\n考慮幾個實作選項：\n1. 樸素遞迴：fib(n) = fib(n-1)+fib(n-2)。寫法簡潔但 O(2^n)，n 稍大就爆。\n2. memoization：O(n) 時間，但有遞迴深度限制（n>1000 容易 RecursionError）。\n3. 迭代：O(n) 時間、O(1) 額外空間。最穩定、最 Pythonic。\n4. 生成器版：def fib_gen(): a,b=0,1; while True: yield a; a,b=b,a+b。彈性最高。\n\n決定：給迭代版作為主要回答，順便補充生成器版讓進階使用者參考。同時處理 n<=0 的邊界情況。',
+      thAnswer: '```python\ndef fib(n):\n    """回傳費氏數列前 n 項（0, 1, 1, 2, 3, 5, ...）"""\n    if n <= 0:\n        return []\n    a, b, out = 0, 1, []\n    for _ in range(n):\n        out.append(a)\n        a, b = b, a + b\n    return out\n\n# 進階：生成器版本（無上限、惰性求值）\ndef fib_gen():\n    a, b = 0, 1\n    while True:\n        yield a\n        a, b = b, a + b\n```\n\n迭代版本 O(n) 時間、O(1) 額外空間，避免遞迴深度爆炸與重複計算。'
+    },
+  ];
+
+  let currentQ = QUERIES[1];
+  let budget = 512;
+  let typingTimers = [];
+
+  function renderChips(){
+    const row = document.getElementById('queryChips');
+    row.innerHTML = '';
+    QUERIES.forEach(q=>{
+      const c = document.createElement('span');
+      c.className = 'chip' + (q.id===currentQ.id ? ' active' : '');
+      c.textContent = q.label;
+      c.onclick = ()=>{ currentQ = q; renderChips(); generate(); };
+      row.appendChild(c);
+    });
+    document.getElementById('queryDisplay').textContent = currentQ.query;
+  }
+
+  function clearTimers(){
+    typingTimers.forEach(t=>clearInterval(t));
+    typingTimers = [];
+  }
+
+  // approx 1 token ≈ 0.6 chinese char or 0.8 english char; just use length/2 as a rough token count
+  function estTokens(s){ return Math.max(1, Math.round(s.length * 0.5)); }
+
+  function typewriter(el, text, speed, done){
+    let i = 0;
+    el.innerHTML = '<span class="cursor-blink"></span>';
+    const t = setInterval(()=>{
+      i++;
+      const sub = text.slice(0, i).replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      el.innerHTML = sub + '<span class="cursor-blink"></span>';
+      if(i >= text.length){
+        clearInterval(t);
+        el.innerHTML = sub;
+        if(done) done();
+      }
+    }, speed);
+    typingTimers.push(t);
+  }
+
+  function renderNonThinking(){
+    const bubble = document.getElementById('ntBubble');
+    bubble.innerHTML = '';
+    const span = document.createElement('span');
+    span.className = 'answer';
+    bubble.appendChild(span);
+    const text = currentQ.nt;
+    const tokens = estTokens(text);
+    typewriter(span, text, 12);
+    const latency = Math.round(120 + tokens * 4);
+    const cost = (tokens * 0.0002).toFixed(3);
+    document.getElementById('ntTok').textContent = tokens;
+    document.getElementById('ntLat').textContent = latency;
+    document.getElementById('ntCost').textContent = cost;
+    return { tokens, latency, cost: parseFloat(cost) };
+  }
+
+  function renderThinking(){
+    const bubble = document.getElementById('thBubble');
+    bubble.innerHTML = '';
+
+    if(budget === 0){
+      // budget 0 → fall back to direct answer (mimic non-thinking)
+      const ans = document.createElement('span');
+      ans.className = 'answer';
+      bubble.appendChild(ans);
+      typewriter(ans, currentQ.thAnswer, 12);
+      const tokens = estTokens(currentQ.thAnswer);
+      const latency = Math.round(120 + tokens * 4);
+      const cost = (tokens * 0.0002).toFixed(3);
+      document.getElementById('thTok').textContent = tokens;
+      document.getElementById('thLat').textContent = latency;
+      document.getElementById('thCost').textContent = cost;
+      return { tokens, latency, cost: parseFloat(cost) };
+    }
+
+    // truncate thinking text by budget
+    const budgetChars = Math.min(currentQ.thinkBase.length, Math.round(budget * 1.2));
+    let thinkText = currentQ.thinkBase.slice(0, budgetChars);
+    if(budgetChars < currentQ.thinkBase.length) thinkText += ' …（達 budget 上限）';
+
+    const think = document.createElement('span');
+    think.className = 'think-block';
+    bubble.appendChild(think);
+    const ans = document.createElement('span');
+    ans.className = 'answer';
+    bubble.appendChild(ans);
+
+    typewriter(think, thinkText, 8, ()=>{
+      typewriter(ans, '\n\n' + currentQ.thAnswer, 12);
+    });
+
+    const thinkTokens = estTokens(thinkText);
+    const ansTokens = estTokens(currentQ.thAnswer);
+    const tokens = thinkTokens + ansTokens;
+    const latency = Math.round(150 + tokens * 5);
+    const cost = (tokens * 0.0002).toFixed(3);
+    document.getElementById('thTok').textContent = tokens;
+    document.getElementById('thLat').textContent = latency;
+    document.getElementById('thCost').textContent = cost;
+    return { tokens, latency, cost: parseFloat(cost) };
+  }
+
+  function updateRatio(nt, th){
+    if(nt.cost === 0){ document.getElementById('ratioVal').textContent = '∞'; return; }
+    const ratio = th.cost / nt.cost;
+    document.getElementById('ratioVal').textContent = ratio.toFixed(2) + '×';
+  }
+
+  function generate(){
+    clearTimers();
+    document.getElementById('queryDisplay').textContent = currentQ.query;
+    const nt = renderNonThinking();
+    const th = renderThinking();
+    updateRatio(nt, th);
+  }
+
+  document.getElementById('budgetSlider').addEventListener('input', e=>{
+    budget = parseInt(e.target.value, 10);
+    document.getElementById('budgetVal').textContent = budget;
+  });
+  document.getElementById('budgetSlider').addEventListener('change', generate);
+
+  renderChips();
+  generate();
+</script>
+</body>
+</html>
