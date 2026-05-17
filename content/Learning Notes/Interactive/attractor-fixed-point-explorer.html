@@ -3,477 +3,741 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Attractor 固定點精煉探索器</title>
+<title>Attractor · Fixed-point Explorer · Notebook</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang TC",
-                 "Microsoft JhengHei", sans-serif;
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    color: #f1f5f9;
-    min-height: 100vh;
-    padding: 24px;
-    line-height: 1.6;
-  }
-  .container { max-width: 960px; margin: 0 auto; }
-  h1 {
-    font-size: 26px; margin-bottom: 6px;
-    background: linear-gradient(135deg,#38bdf8,#a78bfa);
-    -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .subtitle { color: #94a3b8; margin-bottom: 24px; font-size: 14px; }
+:root {
+  --paper: #faf8f8; --paper-2: #f1eeec; --card: #ffffff;
+  --ink-1: #2b2b2b; --ink-2: #4e4e4e; --ink-3: #7c7c7c; --ink-4: #b8b8b8; --ink-5: #d4d4d4;
+  --rule: rgba(43,43,43,0.10); --rule-strong: rgba(43,43,43,0.22); --rule-bold: var(--ink-1);
+  --accent: #284b63; --accent-2: #1a3445;
+  --accent-soft: rgba(40,75,99,0.10); --accent-tint: rgba(40,75,99,0.04);
+  --sage: #84a59d; --sage-soft: rgba(132,165,157,0.20); --sage-tint: rgba(132,165,157,0.08);
+  --f-display: 'Schibsted Grotesk','Noto Sans TC',-apple-system,'PingFang TC',sans-serif;
+  --f-body: 'Source Sans 3','Noto Sans TC',-apple-system,'PingFang TC',sans-serif;
+  --f-mono: 'IBM Plex Mono', ui-monospace,'SF Mono', Consolas, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--paper); }
+body {
+  font-family: var(--f-body); color: var(--ink-1); line-height: 1.6;
+  -webkit-font-smoothing: antialiased; padding: 56px 40px 88px;
+}
+.page { max-width: 1080px; margin: 0 auto; }
 
-  .card {
-    background: rgba(30,41,59,.7); backdrop-filter: blur(8px);
-    border: 1px solid rgba(148,163,184,.15);
-    border-radius: 16px; padding: 22px; margin-bottom: 20px;
-  }
-  .card h2 { font-size: 17px; margin-bottom: 14px; color: #e2e8f0; }
+/* ===== Masthead ===== */
+.masthead {
+  display: grid; grid-template-columns: 180px 1fr; gap: 32px;
+  padding-bottom: 36px; border-bottom: 1px solid var(--rule-bold); margin-bottom: 48px;
+}
+.masthead .meta { font-family: var(--f-mono); font-size: 11px; line-height: 1.7; color: var(--ink-2); letter-spacing: 0.02em; }
+.masthead .meta .label { color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.14em; font-size: 10px; display: block; }
+.masthead .meta dl { display: grid; gap: 16px; }
+.masthead .title {
+  font-family: var(--f-display); font-size: clamp(44px, 6.6vw, 72px);
+  font-weight: 600; line-height: 1.02; letter-spacing: -0.02em; color: var(--ink-1);
+}
+.masthead .title em { font-style: italic; font-weight: 500; color: var(--accent); }
+.masthead .lede { font-size: 17px; color: var(--ink-2); max-width: 58ch; margin-top: 22px; line-height: 1.65; }
+@media (max-width: 720px) { .masthead { grid-template-columns: 1fr; gap: 20px; } }
 
-  /* Controls */
-  .control-row {
-    display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap;
-  }
-  .control-row label { font-size: 13px; color: #cbd5e1; min-width: 130px; }
-  input[type="range"] {
-    flex: 1; min-width: 200px;
-    accent-color: #38bdf8;
-  }
-  .range-val {
-    font-family: ui-monospace, monospace; color: #7dd3fc;
-    min-width: 50px; text-align: right; font-size: 13px;
-  }
+/* ===== Sections ===== */
+section.note {
+  display: grid; grid-template-columns: 180px 1fr; gap: 32px;
+  padding-top: 36px; padding-bottom: 12px;
+  border-top: 1px solid var(--rule); margin-top: 24px;
+}
+section.note:first-of-type { border-top: none; }
+section.note > .marker {
+  font-family: var(--f-display); font-weight: 500;
+  font-size: 20px; line-height: 1.3; color: var(--ink-1);
+}
+section.note > .marker .num {
+  display: block; color: var(--accent);
+  font-style: italic; font-weight: 500; margin-bottom: 2px;
+}
+section.note > .marker .name {
+  font-family: var(--f-mono); font-style: normal; font-weight: 400;
+  font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3); margin-top: 6px;
+}
+section.note > .body { min-width: 0; }
+@media (max-width: 720px) { section.note { grid-template-columns: 1fr; gap: 12px; } }
 
-  button {
-    background: linear-gradient(135deg,#38bdf8,#6366f1);
-    color: white; border: none; border-radius: 10px;
-    padding: 11px 22px; font-size: 14px; font-weight: 600;
-    cursor: pointer; transition: transform .15s, box-shadow .15s;
-    font-family: inherit;
-  }
-  button:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(56,189,248,.3); }
-  button.secondary {
-    background: rgba(148,163,184,.15); color: #cbd5e1;
-  }
-  button:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+h2.head {
+  font-family: var(--f-display); font-size: 30px; font-weight: 600;
+  line-height: 1.2; margin-bottom: 10px; letter-spacing: -0.012em; color: var(--ink-1);
+}
+h2.head em { font-style: italic; font-weight: 500; color: var(--accent); }
+p.body-text { font-size: 16px; color: var(--ink-2); max-width: 60ch; line-height: 1.75; margin-bottom: 10px; }
 
-  .toggle-row {
-    display: flex; align-items: center; gap: 10px; margin-top: 8px;
-    font-size: 13px; color: #cbd5e1;
-  }
-  .switch {
-    position: relative; width: 42px; height: 22px;
-    background: #334155; border-radius: 999px; cursor: pointer;
-    transition: background .2s;
-  }
-  .switch.on { background: linear-gradient(135deg,#38bdf8,#6366f1); }
-  .switch::after {
-    content: ''; position: absolute; top: 3px; left: 3px;
-    width: 16px; height: 16px; border-radius: 50%;
-    background: white; transition: transform .2s;
-  }
-  .switch.on::after { transform: translateX(20px); }
+/* ===== Controls ===== */
+.btn {
+  font-family: var(--f-body); font-size: 14px; font-weight: 500;
+  color: var(--ink-1); background: transparent;
+  border: 1px solid var(--ink-1); border-radius: 2px;
+  padding: 8px 18px; cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  letter-spacing: 0.01em;
+}
+.btn:hover { background: var(--ink-1); color: var(--paper); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+.btn.ghost { border-color: transparent; color: var(--ink-2); padding-left: 8px; padding-right: 8px; }
+.btn.ghost:hover { background: transparent; color: var(--accent); text-decoration: underline; text-underline-offset: 4px; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  .preset-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
-  .preset {
-    background: rgba(56,189,248,.1); color: #7dd3fc;
-    border: 1px solid rgba(56,189,248,.3);
-    padding: 5px 11px; border-radius: 999px;
-    font-size: 12px; cursor: pointer;
-  }
-  .preset:hover { background: rgba(56,189,248,.2); }
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag-pill {
+  font-family: var(--f-body); font-size: 13px; color: var(--ink-2);
+  background: transparent; border: 1px solid var(--rule-strong);
+  border-radius: 2px; padding: 5px 12px; cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.tag-pill:hover { color: var(--accent); border-color: var(--accent); }
+.tag-pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-  /* Canvas */
-  #canvas {
-    width: 100%; height: 360px; display: block;
-    background: radial-gradient(ellipse at center, rgba(99,102,241,.08) 0%, rgba(15,23,42,.6) 70%);
-    border-radius: 12px; border: 1px solid rgba(148,163,184,.1);
-  }
-  .canvas-legend {
-    display: flex; gap: 18px; flex-wrap: wrap; margin-top: 10px;
-    font-size: 12px; color: #94a3b8;
-  }
-  .legend-item { display: flex; align-items: center; gap: 6px; }
-  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
-  .dot-start { background: #fbbf24; }
-  .dot-trail { background: #38bdf8; box-shadow: 0 0 6px #38bdf8; }
-  .dot-fp { background: linear-gradient(135deg,#a78bfa,#f472b6); box-shadow: 0 0 12px #a78bfa; }
+.field-label {
+  font-family: var(--f-mono); font-size: 10px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 8px; display: block;
+}
 
-  /* Stats */
-  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 4px; }
-  @media (max-width: 700px) { .stats { grid-template-columns: repeat(2, 1fr); } }
-  .stat {
-    background: rgba(15,23,42,.6);
-    border: 1px solid #1e293b;
-    padding: 12px; border-radius: 10px; text-align: center;
-  }
-  .stat .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; }
-  .stat .value { font-size: 22px; font-weight: 700; margin-top: 4px; color: #38bdf8;
-                 font-family: ui-monospace, monospace; }
-  .stat .sub { font-size: 11px; color: #64748b; margin-top: 2px; }
-  .stat.purple .value { color: #a78bfa; }
-  .stat.amber .value { color: #fbbf24; }
-  .stat.emerald .value { color: #34d399; }
+/* Difficulty slider — minimal */
+.slider-row {
+  display: grid; grid-template-columns: 1fr 64px;
+  gap: 18px; align-items: center; margin-bottom: 6px;
+}
+input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 2px; background: var(--ink-4);
+  outline: none; cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); cursor: pointer;
+  border: 2px solid var(--paper);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); cursor: pointer; border: 2px solid var(--paper);
+}
+.slider-val {
+  font-family: var(--f-mono); font-size: 15px; color: var(--accent);
+  font-weight: 500; text-align: right; font-variant-numeric: tabular-nums;
+}
 
-  /* Concept mapping */
-  .map-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .map-table td { padding: 9px 8px; border-bottom: 1px solid rgba(148,163,184,.1); vertical-align: top; }
-  .map-table tr:last-child td { border-bottom: none; }
-  .map-left { color: #7dd3fc; font-weight: 600; width: 38%; }
-  .map-arrow { color: #475569; width: 24px; text-align: center; }
-  .map-right { color: #cbd5e1; }
-  .note-back {
-    margin-top: 14px; padding: 10px 14px;
-    background: rgba(167,139,250,.08);
-    border-left: 3px solid #a78bfa; border-radius: 6px;
-    font-size: 13px; color: #cbd5e1;
-  }
+.toggle-row {
+  display: flex; align-items: center; gap: 12px;
+  margin-top: 22px;
+  font-family: var(--f-mono); font-size: 11px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+.switch {
+  position: relative; width: 38px; height: 20px;
+  background: var(--ink-4); border-radius: 999px; cursor: pointer;
+  transition: background 0.2s;
+}
+.switch.on { background: var(--accent); }
+.switch::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--paper); transition: transform 0.2s;
+}
+.switch.on::after { transform: translateX(18px); }
+.switch-state { color: var(--ink-1); font-weight: 500; min-width: 28px; }
+.switch-state.off { color: var(--ink-3); }
 
-  footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 28px; }
+/* ===== SVG trajectory plot ===== */
+.plot-wrap {
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+  padding: 18px 0;
+}
+#trajSvg {
+  width: 100%; height: 380px; display: block;
+}
+.plot-legend {
+  display: flex; gap: 24px; flex-wrap: wrap;
+  margin-top: 14px;
+  font-family: var(--f-mono); font-size: 10px;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3);
+}
+.plot-legend .item { display: flex; align-items: center; gap: 8px; }
+.plot-legend .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.plot-legend .dot.start { background: var(--ink-1); }
+.plot-legend .dot.trail { background: var(--sage); }
+.plot-legend .dot.fp { background: var(--accent); }
+.plot-caption {
+  font-family: var(--f-mono); font-size: 11px;
+  color: var(--ink-3); letter-spacing: 0.12em;
+  text-transform: uppercase; margin-top: 16px;
+}
+
+/* ===== Figures ===== */
+.figure-row {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+}
+@media (max-width: 720px) { .figure-row { grid-template-columns: repeat(2, 1fr); } }
+.figure { padding: 22px 22px; border-right: 1px solid var(--rule); }
+.figure:last-child { border-right: none; }
+@media (max-width: 720px) {
+  .figure { border-right: none; border-bottom: 1px solid var(--rule); }
+  .figure:nth-child(2n) { border-right: none; }
+  .figure:last-child { border-bottom: none; }
+}
+.figure .fig-label {
+  font-family: var(--f-mono); font-size: 10px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 10px;
+}
+.figure .fig-num {
+  font-family: var(--f-display); font-size: 38px; font-weight: 500;
+  line-height: 1; letter-spacing: -0.025em;
+  color: var(--ink-1); font-variant-numeric: tabular-nums;
+}
+.figure .fig-num em { font-style: normal; font-weight: 600; color: var(--accent); }
+.figure .fig-num.sage em { color: var(--sage); }
+.figure .fig-num .unit {
+  font-family: var(--f-body); font-size: 15px; font-weight: 400;
+  color: var(--ink-3); margin-left: 4px;
+}
+.figure .fig-sub { font-size: 13px; color: var(--ink-3); margin-top: 8px; line-height: 1.5; }
+
+/* ===== Reading ===== */
+.reading { font-size: 16px; line-height: 1.85; color: var(--ink-2); max-width: 62ch; }
+.reading p + p { margin-top: 14px; }
+.reading .h-hot { color: var(--accent); font-weight: 600; }
+.reading .h-warm { color: var(--ink-1); font-weight: 600; }
+.reading .token { color: var(--accent); font-family: var(--f-mono); font-weight: 500; }
+
+.side-note {
+  position: relative; padding-left: 18px;
+  margin: 28px 0 0 0; border-left: 2px solid var(--accent);
+  font-size: 15px; color: var(--ink-2); line-height: 1.65;
+  font-style: italic; font-family: var(--f-display); font-weight: 400;
+  max-width: 58ch;
+}
+.side-note .auth {
+  display: block; font-style: normal;
+  font-family: var(--f-mono); font-size: 10px;
+  color: var(--ink-3); letter-spacing: 0.14em;
+  text-transform: uppercase; margin-top: 8px;
+}
+
+/* ===== Colophon ===== */
+.colophon {
+  margin-top: 64px; padding-top: 24px;
+  border-top: 1px solid var(--rule-bold);
+  display: grid; grid-template-columns: 180px 1fr; gap: 32px;
+  font-family: var(--f-mono); font-size: 11px;
+  color: var(--ink-3); line-height: 1.85; letter-spacing: 0.02em;
+}
+.colophon .l { color: var(--ink-4); text-transform: uppercase; letter-spacing: 0.14em; font-size: 10px; }
+.colophon em { font-family: var(--f-display); font-style: italic; font-weight: 500; color: var(--accent); }
 </style>
 </head>
 <body>
-<div class="container">
 
-  <h1>🌀 Attractor 固定點精煉探索器</h1>
-  <p class="subtitle">拖動難度滑桿，觀察潛在向量如何收斂至固定點 z*。對應筆記中「吸子模組」與「隱式微分」的核心概念。</p>
+<main class="page">
 
-  <!-- Control -->
-  <div class="card">
-    <h2>🎮 控制台</h2>
-
-    <div class="control-row">
-      <label>Token 難度</label>
-      <input type="range" id="difficulty" min="0" max="100" value="35">
-      <span class="range-val" id="difficultyVal">35</span>
+  <header class="masthead">
+    <div class="meta">
+      <dl>
+        <div><span class="label">Volume</span>Learning Note №07</div>
+        <div><span class="label">Subject</span>Attractor · 固定點</div>
+        <div><span class="label">Date</span>2026 · 05 · 16</div>
+      </dl>
     </div>
-
-    <div class="control-row">
-      <button onclick="startConvergence()">🔁 重設並開始收斂</button>
-      <button class="secondary" onclick="stopAnim()">⏹ 暫停</button>
+    <div>
+      <h1 class="title">A latent vector<br><em>finds</em> its rest.</h1>
+      <p class="lede">
+        給定一個起始向量 z₀，反覆套用 f 直到 z_n ≈ z_{n-1}。
+        終點 z* 就是吸子（attractor）— 對應 Deep Equilibrium 模型在潛在空間中的固定點精煉。
+        困難 token 多算幾步、簡單 token 幾步就收斂 — 固定深度的 Transformer 做不到。
+      </p>
     </div>
+  </header>
 
-    <div class="toggle-row">
-      <span>隱式微分（Implicit Differentiation）</span>
-      <div class="switch on" id="implicitSwitch" onclick="toggleImplicit()"></div>
-      <span id="implicitLabel" style="color:#7dd3fc;">ON</span>
+  <!-- § 01 SPECIMEN -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 01</span>
+      Specimen
+      <div class="name">Initial input</div>
     </div>
+    <div class="body">
+      <h2 class="head">Pick a <em>specimen</em>.</h2>
+      <p class="body-text">
+        Token 難度決定 f 的非線性強度 — 越難的 token，迭代軌跡越曲折、收斂步數越多。
+        下方三個預設樣本對應簡單、中等、高難度的真實情境。
+      </p>
 
-    <div class="preset-row">
-      <span class="preset" onclick="setPreset(8, 'the')">「the」（簡單）</span>
-      <span class="preset" onclick="setPreset(45, '∫ x² dx')">「∫ x² dx」（中等）</span>
-      <span class="preset" onclick="setPreset(85, '因此 ... 所以 ...')">「因此 ... 所以 ...」（高難度）</span>
-    </div>
-  </div>
+      <div style="height: 28px;"></div>
 
-  <!-- Visualization -->
-  <div class="card">
-    <h2>📊 視覺化：固定點吸引盆</h2>
-    <canvas id="canvas" width="900" height="360"></canvas>
-    <div class="canvas-legend">
-      <div class="legend-item"><span class="legend-dot dot-start"></span>起始點 z₀</div>
-      <div class="legend-item"><span class="legend-dot dot-trail"></span>迭代軌跡 z₁, z₂, …</div>
-      <div class="legend-item"><span class="legend-dot dot-fp"></span>固定點 z*（吸子）</div>
-    </div>
-  </div>
-
-  <!-- Stats -->
-  <div class="card">
-    <h2>📐 即時指標</h2>
-    <div class="stats">
-      <div class="stat">
-        <div class="label">迭代步數</div>
-        <div class="value" id="statSteps">0</div>
-        <div class="sub">自適應深度</div>
+      <span class="field-label">Token difficulty</span>
+      <div class="slider-row">
+        <input type="range" id="difficulty" min="0" max="100" value="35">
+        <span class="slider-val" id="difficultyVal">35</span>
       </div>
-      <div class="stat purple">
-        <div class="label">收斂殘差 ‖z_n − z_{n−1}‖</div>
-        <div class="value" id="statResidual">—</div>
-        <div class="sub">< 1e−3 即收斂</div>
+
+      <div style="height: 26px;"></div>
+
+      <span class="field-label">Presets</span>
+      <div class="chip-row" style="margin-bottom: 22px;">
+        <span class="tag-pill" data-diff="8" onclick="setPreset(this, 8)">「the」 · 簡單</span>
+        <span class="tag-pill active" data-diff="45" onclick="setPreset(this, 45)">「∫ x² dx」 · 中等</span>
+        <span class="tag-pill" data-diff="85" onclick="setPreset(this, 85)">「因此 ... 所以 ...」 · 高難度</span>
+        <span class="tag-pill" onclick="randomSpecimen()">↻ random init</span>
       </div>
-      <div class="stat amber">
-        <div class="label">梯度記憶體</div>
-        <div class="value" id="statMem">—</div>
-        <div class="sub" id="statMemSub">O(d) 恆定</div>
+
+      <div class="chip-row">
+        <button class="btn primary" onclick="startConvergence()">Iterate →</button>
+        <button class="btn" onclick="stopAnim()">Pause</button>
       </div>
-      <div class="stat emerald">
-        <div class="label">vs Transformer 12 層</div>
-        <div class="value" id="statVs">—</div>
-        <div class="sub">計算量比較</div>
+
+      <div class="toggle-row">
+        <span>Implicit differentiation</span>
+        <div class="switch on" id="implicitSwitch" onclick="toggleImplicit()"></div>
+        <span class="switch-state" id="implicitLabel">ON</span>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Concept mapping -->
-  <div class="card">
-    <h2>📚 概念對照：互動元件 ↔ 筆記原理</h2>
-    <table class="map-table">
-      <tr>
-        <td class="map-left">畫面上的迭代軌跡</td>
-        <td class="map-arrow">↔</td>
-        <td class="map-right">潛在空間中的多次精煉 z₀ → z₁ → … → z*（吸子模組）</td>
-      </tr>
-      <tr>
-        <td class="map-left">「收斂殘差」指標</td>
-        <td class="map-arrow">↔</td>
-        <td class="map-right">固定點求解的終止條件：當 ‖z_n − z_{n−1}‖ < ε 即視為達到 z*</td>
-      </tr>
-      <tr>
-        <td class="map-left">「隱式微分」開關 ON</td>
-        <td class="map-arrow">↔</td>
-        <td class="map-right">利用 z* = f(z*) 的數學性質直接計算梯度（Deep Equilibrium 技巧）</td>
-      </tr>
-      <tr>
-        <td class="map-left">「隱式微分」OFF</td>
-        <td class="map-arrow">↔</td>
-        <td class="map-right">退化為標準反向傳播，梯度需展開整條迭代鏈，記憶體 O(N)</td>
-      </tr>
-      <tr>
-        <td class="map-left">「自適應深度」</td>
-        <td class="map-arrow">↔</td>
-        <td class="map-right">簡單 token 幾步就收斂、困難 token 多算幾步——固定深度 Transformer 做不到</td>
-      </tr>
-    </table>
-    <div class="note-back">
-      ← 回到學習筆記，比對「重點原理」第 2、3、4 點，可看到本 demo 的每個元件都對應到論文中的具體機制。
+  <!-- § 02 TRAJECTORY -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 02</span>
+      Trajectory
+      <div class="name">Iterative convergence</div>
     </div>
-  </div>
+    <div class="body">
+      <h2 class="head">The path to <em>rest</em>.</h2>
+      <p class="body-text">
+        每一步 z_{n+1} = f(z_n) 都把向量推得離吸子 z* 更近一點。
+        起點是墨黑、軌跡用鼠尾草綠連線、終點 z* 用石板藍標記。
+        阻尼隨機遊走逼近真實 latent space 中的精煉行為。
+      </p>
 
-  <footer>
-    示意：軌跡採用阻尼隨機遊走逼近固定點，並非真實神經網路求解過程。<br>
-    難度越高，f 的非線性越強，收斂步數變多、軌跡更曲折，正如真實困難 token 在 latent space 的行為。
+      <div style="height: 26px;"></div>
+
+      <figure>
+        <div class="plot-wrap">
+          <svg id="trajSvg" viewBox="0 0 900 380" preserveAspectRatio="xMidYMid meet">
+            <g id="basinG"></g>
+            <g id="fpG"></g>
+            <g id="trailLineG"></g>
+            <g id="trailDotsG"></g>
+            <g id="labelG"></g>
+          </svg>
+        </div>
+
+        <div class="plot-legend">
+          <div class="item"><span class="dot start"></span>z₀ · start</div>
+          <div class="item"><span class="dot trail"></span>z₁, z₂, … · iterates</div>
+          <div class="item"><span class="dot fp"></span>z* · fixed point</div>
+        </div>
+
+        <figcaption class="plot-caption">
+          Fig 01 · trajectory of z_n under repeated f, 2D latent projection
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- § 03 CONVERGENCE -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 03</span>
+      Convergence
+      <div class="name">Diagnostics</div>
+    </div>
+    <div class="body">
+      <h2 class="head">When did it <em>stop</em>?</h2>
+      <p class="body-text">
+        終止條件 ‖z_n − z_{n−1}‖ &lt; ε 是固定點求解的標準判準。
+        步數越少越好 — 簡單 token 在 4 步內就停下，困難 token 可能需要 20 步以上。
+      </p>
+
+      <div style="height: 26px;"></div>
+
+      <div class="figure-row">
+        <div class="figure">
+          <div class="fig-label">Iterations</div>
+          <div class="fig-num"><em id="statSteps">0</em></div>
+          <div class="fig-sub">adaptive depth</div>
+        </div>
+        <div class="figure">
+          <div class="fig-label">Residual ε</div>
+          <div class="fig-num sage" style="font-size: 30px;"><em id="statResidual">—</em></div>
+          <div class="fig-sub">‖z_n − z_{n−1}‖</div>
+        </div>
+        <div class="figure">
+          <div class="fig-label">Converged</div>
+          <div class="fig-num" style="font-size: 30px;" id="statConverged">—</div>
+          <div class="fig-sub" id="statConvergedSub">awaiting trace</div>
+        </div>
+        <div class="figure">
+          <div class="fig-label">vs Transformer 12L</div>
+          <div class="fig-num" style="font-size: 30px;" id="statVs">—</div>
+          <div class="fig-sub">compute ratio</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- § 04 READING -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 04</span>
+      Reading
+      <div class="name">What it means</div>
+    </div>
+    <div class="body">
+      <h2 class="head">Read the <em>fixed point</em>.</h2>
+      <div class="reading" id="reading">點上方 Iterate，這裡會出現解釋。</div>
+
+      <div class="side-note">
+        “一個強調色用在最該被注意的位置 — 顏色出現的地方，就是論證落腳的地方。
+        z* 用石板藍，是因為它就是這場精煉的結論。”
+        <span class="auth">— note on reading the trajectory</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <div>
+      <span class="l">Colophon</span><br>
+      Notebook · v2<br>
+      Attractor · fixed-point
+    </div>
+    <div>
+      教學示意 · 軌跡採用阻尼隨機遊走逼近固定點，並非真實神經網路求解過程。
+      難度越高，f 的非線性越強，收斂步數變多、軌跡更曲折，
+      正如真實困難 token 在 latent space 的行為。
+      Set in <em>Schibsted Grotesk</em> &amp; Source Sans Pro,
+      with <span style="font-family: var(--f-mono);">IBM Plex Mono</span> for figures.
+    </div>
   </footer>
-</div>
+
+</main>
 
 <script>
-  const cvs = document.getElementById('canvas');
-  const ctx = cvs.getContext('2d');
-  // Handle device pixel ratio for crisp rendering
-  function fitCanvas(){
-    const dpr = window.devicePixelRatio || 1;
-    const rect = cvs.getBoundingClientRect();
-    cvs.width = rect.width * dpr;
-    cvs.height = rect.height * dpr;
-    ctx.setTransform(dpr,0,0,dpr,0,0);
-  }
-  window.addEventListener('resize', ()=>{ fitCanvas(); drawStatic(); });
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const VIEW_W = 900, VIEW_H = 380;
 
-  let state = {
-    difficulty: 35,
-    implicit: true,
-    running: false,
-    step: 0,
-    maxSteps: 0,
-    trail: [], // {x,y}
-    fp: null,  // {x,y}
-    z0: null,  // {x,y}
-    residual: 0,
-    animId: null,
+const basinG = document.getElementById('basinG');
+const fpG = document.getElementById('fpG');
+const trailLineG = document.getElementById('trailLineG');
+const trailDotsG = document.getElementById('trailDotsG');
+const labelG = document.getElementById('labelG');
+
+let state = {
+  difficulty: 35,
+  implicit: true,
+  running: false,
+  step: 0,
+  maxSteps: 0,
+  trail: [],
+  fp: null,
+  z0: null,
+  residual: 0,
+  converged: false,
+  animId: null,
+};
+
+const CONV_THRESHOLD = 1.5; // px in viewport space — analogue to ε
+
+function difficultyToMaxSteps(d) {
+  return Math.round(3 + (d / 100) * 22);
+}
+function difficultyToJitter(d) {
+  return 6 + (d / 100) * 38;
+}
+
+function el(tag, attrs) {
+  const e = document.createElementNS(SVG_NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+function clearG(g) { while (g.firstChild) g.removeChild(g.firstChild); }
+
+function resetTrajectory() {
+  const cx = VIEW_W * 0.66;
+  const cy = VIEW_H * 0.5;
+  state.fp = { x: cx, y: cy };
+
+  const startAngle = Math.PI * (0.7 + Math.random() * 0.6);
+  const startR = 200 + (state.difficulty / 100) * 90;
+  state.z0 = {
+    x: cx + Math.cos(startAngle) * startR,
+    y: cy + Math.sin(startAngle) * startR
   };
+  // Clamp to viewport
+  state.z0.x = Math.max(20, Math.min(VIEW_W - 20, state.z0.x));
+  state.z0.y = Math.max(20, Math.min(VIEW_H - 20, state.z0.y));
 
-  function difficultyToMaxSteps(d){
-    // Easy ~4 steps, hard ~24 steps
-    return Math.round(3 + (d/100) * 22);
-  }
-  function difficultyToJitter(d){
-    return 6 + (d/100) * 38;
-  }
+  state.trail = [{ ...state.z0 }];
+  state.step = 0;
+  state.maxSteps = difficultyToMaxSteps(state.difficulty);
+  state.residual = Infinity;
+  state.converged = false;
+}
 
-  function resetTrajectory(){
-    const rect = cvs.getBoundingClientRect();
-    const cx = rect.width * 0.62;
-    const cy = rect.height * 0.5;
-    state.fp = { x: cx, y: cy };
+function drawBasinAndFp() {
+  clearG(basinG); clearG(fpG);
+  if (!state.fp) return;
 
-    // Start point on the left, with some random offset based on difficulty
-    const startAngle = Math.PI * (0.7 + Math.random()*0.6);
-    const startR = 180 + (state.difficulty/100)*80;
-    state.z0 = {
-      x: cx + Math.cos(startAngle)*startR,
-      y: cy + Math.sin(startAngle)*startR
-    };
-    state.trail = [{...state.z0}];
-    state.step = 0;
-    state.maxSteps = difficultyToMaxSteps(state.difficulty);
-    state.residual = Infinity;
-  }
-
-  function drawStatic(){
-    const rect = cvs.getBoundingClientRect();
-    ctx.clearRect(0,0,rect.width,rect.height);
-    // Faint concentric rings around fixed point (attractor basin)
-    if(state.fp){
-      for(let r=200;r>=40;r-=40){
-        ctx.beginPath();
-        ctx.arc(state.fp.x, state.fp.y, r, 0, Math.PI*2);
-        ctx.strokeStyle = `rgba(167,139,250,${0.05 + (200-r)/600})`;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-      // Fixed point glow
-      const g = ctx.createRadialGradient(state.fp.x, state.fp.y, 0, state.fp.x, state.fp.y, 30);
-      g.addColorStop(0, 'rgba(244,114,182,0.9)');
-      g.addColorStop(0.4, 'rgba(167,139,250,0.6)');
-      g.addColorStop(1, 'rgba(167,139,250,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(state.fp.x-30, state.fp.y-30, 60, 60);
-      // Star symbol
-      ctx.fillStyle = '#fdf4ff';
-      ctx.font = 'bold 22px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('★', state.fp.x, state.fp.y);
-      ctx.font = '11px ui-monospace, monospace';
-      ctx.fillStyle = '#c4b5fd';
-      ctx.fillText('z*', state.fp.x, state.fp.y + 22);
-    }
-  }
-
-  function drawTrail(){
-    drawStatic();
-    if(state.trail.length === 0) return;
-    // Connecting line
-    ctx.beginPath();
-    ctx.moveTo(state.trail[0].x, state.trail[0].y);
-    for(let i=1;i<state.trail.length;i++){
-      ctx.lineTo(state.trail[i].x, state.trail[i].y);
-    }
-    ctx.strokeStyle = 'rgba(56,189,248,0.5)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // Points
-    state.trail.forEach((p, i)=>{
-      const isStart = i === 0;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, isStart ? 6 : 3.5, 0, Math.PI*2);
-      if(isStart){
-        ctx.fillStyle = '#fbbf24';
-        ctx.shadowColor = '#fbbf24';
-        ctx.shadowBlur = 10;
-      } else {
-        ctx.fillStyle = '#38bdf8';
-        ctx.shadowColor = '#38bdf8';
-        ctx.shadowBlur = 6;
-      }
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      if(isStart){
-        ctx.fillStyle = '#fde68a';
-        ctx.font = '11px ui-monospace, monospace';
-        ctx.textAlign = 'left';
-        ctx.fillText(' z₀', p.x + 8, p.y - 6);
-      }
+  // Concentric basin rings — minimal hairlines, accent-tinted
+  for (let r = 220; r >= 40; r -= 36) {
+    const c = el('circle', {
+      cx: state.fp.x, cy: state.fp.y, r: r,
+      fill: 'none',
+      stroke: 'rgba(40,75,99,0.10)',
+      'stroke-width': '1',
+      'stroke-dasharray': r === 40 ? '0' : '2 4'
     });
-    // Label latest
-    if(state.trail.length > 1){
-      const last = state.trail[state.trail.length-1];
-      ctx.fillStyle = '#bae6fd';
-      ctx.font = '11px ui-monospace, monospace';
-      ctx.textAlign = 'left';
-      ctx.fillText(`z${state.step}`, last.x + 7, last.y - 6);
-    }
+    basinG.appendChild(c);
   }
 
-  function step(){
-    if(state.step >= state.maxSteps){ stopAnim(); updateStats(true); return; }
-    const last = state.trail[state.trail.length-1];
-    // Move a fraction toward fixed point + jitter that decreases over steps
-    const progress = state.step / state.maxSteps;
-    const damping = 0.18 + 0.12 * progress;
-    const jitter = difficultyToJitter(state.difficulty) * (1 - progress*0.7);
-    const dx = (state.fp.x - last.x) * damping + (Math.random()-0.5)*jitter;
-    const dy = (state.fp.y - last.y) * damping + (Math.random()-0.5)*jitter;
-    const nx = last.x + dx;
-    const ny = last.y + dy;
-    state.residual = Math.hypot(dx, dy);
-    state.trail.push({x: nx, y: ny});
-    state.step++;
-    drawTrail();
-    updateStats(false);
+  // Fixed point marker — solid accent circle
+  fpG.appendChild(el('circle', {
+    cx: state.fp.x, cy: state.fp.y, r: 7,
+    fill: '#284b63', stroke: '#faf8f8', 'stroke-width': '2'
+  }));
+  const lbl = el('text', {
+    x: state.fp.x + 14, y: state.fp.y + 4,
+    'font-family': 'IBM Plex Mono, monospace',
+    'font-size': '12', fill: '#284b63', 'font-weight': '500'
+  });
+  lbl.textContent = 'z*';
+  fpG.appendChild(lbl);
+}
+
+function drawTrail() {
+  clearG(trailLineG); clearG(trailDotsG); clearG(labelG);
+  if (state.trail.length === 0) return;
+
+  // Polyline — sage, thin
+  if (state.trail.length > 1) {
+    const pts = state.trail.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    trailLineG.appendChild(el('polyline', {
+      points: pts,
+      fill: 'none',
+      stroke: '#84a59d',
+      'stroke-width': '1.5',
+      'stroke-linejoin': 'round',
+      'stroke-linecap': 'round'
+    }));
   }
 
-  let lastFrame = 0;
-  function tick(t){
-    if(!state.running) return;
-    if(t - lastFrame > 180){  // ~5-6 fps for visible steps
-      lastFrame = t;
-      step();
-    }
-    state.animId = requestAnimationFrame(tick);
-  }
-
-  function startConvergence(){
-    stopAnim();
-    resetTrajectory();
-    drawTrail();
-    updateStats(false);
-    state.running = true;
-    lastFrame = 0;
-    state.animId = requestAnimationFrame(tick);
-  }
-  function stopAnim(){
-    state.running = false;
-    if(state.animId){ cancelAnimationFrame(state.animId); state.animId = null; }
-  }
-
-  function updateStats(done){
-    document.getElementById('statSteps').textContent = state.step;
-    document.getElementById('statResidual').textContent =
-      state.residual === Infinity ? '—' : state.residual.toFixed(2);
-
-    // Gradient memory
-    if(state.implicit){
-      document.getElementById('statMem').textContent = '0.5 MB';
-      document.getElementById('statMemSub').textContent = 'O(d) 恆定（隱式）';
-    } else {
-      const mem = (0.5 * Math.max(state.step, 1)).toFixed(1);
-      document.getElementById('statMem').textContent = mem + ' MB';
-      document.getElementById('statMemSub').textContent = `O(N×d)，N=${state.step}`;
-    }
-
-    // vs 12-layer Transformer
-    const ratio = state.maxSteps / 12;
-    let label;
-    if(state.maxSteps <= 12) label = `−${(100 - ratio*100).toFixed(0)}% 算力`;
-    else label = `+${((ratio-1)*100).toFixed(0)}% 算力`;
-    document.getElementById('statVs').textContent = label;
-  }
-
-  function toggleImplicit(){
-    state.implicit = !state.implicit;
-    const sw = document.getElementById('implicitSwitch');
-    const lbl = document.getElementById('implicitLabel');
-    if(state.implicit){
-      sw.classList.add('on'); lbl.textContent = 'ON'; lbl.style.color = '#7dd3fc';
-    } else {
-      sw.classList.remove('on'); lbl.textContent = 'OFF'; lbl.style.color = '#fbbf24';
-    }
-    updateStats(false);
-  }
-
-  function setPreset(diff, label){
-    state.difficulty = diff;
-    document.getElementById('difficulty').value = diff;
-    document.getElementById('difficultyVal').textContent = diff;
-    startConvergence();
-  }
-
-  document.getElementById('difficulty').addEventListener('input', e=>{
-    state.difficulty = parseInt(e.target.value, 10);
-    document.getElementById('difficultyVal').textContent = state.difficulty;
+  // Dots
+  state.trail.forEach((p, i) => {
+    const isStart = i === 0;
+    trailDotsG.appendChild(el('circle', {
+      cx: p.x, cy: p.y,
+      r: isStart ? 6 : 3.5,
+      fill: isStart ? '#2b2b2b' : '#84a59d',
+      stroke: '#faf8f8',
+      'stroke-width': isStart ? '2' : '1.5'
+    }));
   });
 
-  // Init
-  (function init(){
-    fitCanvas();
-    resetTrajectory();
-    drawStatic();
-    updateStats(false);
-    // Auto-start once on load
-    setTimeout(startConvergence, 300);
-  })();
+  // Start label
+  const z0 = state.trail[0];
+  const t0 = el('text', {
+    x: z0.x - 6, y: z0.y - 12,
+    'font-family': 'IBM Plex Mono, monospace',
+    'font-size': '11', fill: '#2b2b2b', 'font-weight': '500',
+    'text-anchor': 'end'
+  });
+  t0.textContent = 'z₀';
+  labelG.appendChild(t0);
+
+  // Latest label
+  if (state.trail.length > 1) {
+    const last = state.trail[state.trail.length - 1];
+    const tl = el('text', {
+      x: last.x + 8, y: last.y - 8,
+      'font-family': 'IBM Plex Mono, monospace',
+      'font-size': '10', fill: '#7c7c7c'
+    });
+    tl.textContent = 'z' + sub(state.step);
+    labelG.appendChild(tl);
+  }
+}
+
+function sub(n) {
+  const map = { '0':'₀','1':'₁','2':'₂','3':'₃','4':'₄','5':'₅','6':'₆','7':'₇','8':'₈','9':'₉' };
+  return String(n).split('').map(c => map[c] || c).join('');
+}
+
+function step() {
+  if (state.step >= state.maxSteps) {
+    stopAnim();
+    state.converged = state.residual < CONV_THRESHOLD * 2;
+    updateStats(true);
+    renderReading();
+    return;
+  }
+  const last = state.trail[state.trail.length - 1];
+  const progress = state.step / state.maxSteps;
+  const damping = 0.18 + 0.12 * progress;
+  const jitter = difficultyToJitter(state.difficulty) * (1 - progress * 0.7);
+  const dx = (state.fp.x - last.x) * damping + (Math.random() - 0.5) * jitter;
+  const dy = (state.fp.y - last.y) * damping + (Math.random() - 0.5) * jitter;
+  const nx = last.x + dx;
+  const ny = last.y + dy;
+  state.residual = Math.hypot(dx, dy);
+  state.trail.push({ x: nx, y: ny });
+  state.step++;
+  drawTrail();
+  updateStats(false);
+
+  // Early convergence check
+  if (state.residual < CONV_THRESHOLD && state.step > 2) {
+    state.converged = true;
+    stopAnim();
+    updateStats(true);
+    renderReading();
+  }
+}
+
+let lastFrame = 0;
+function tick(t) {
+  if (!state.running) return;
+  if (t - lastFrame > 220) {
+    lastFrame = t;
+    step();
+  }
+  state.animId = requestAnimationFrame(tick);
+}
+
+function startConvergence() {
+  stopAnim();
+  resetTrajectory();
+  drawBasinAndFp();
+  drawTrail();
+  updateStats(false);
+  document.getElementById('reading').innerHTML = '迭代中 … 等收斂後這裡會出現完整解讀。';
+  state.running = true;
+  lastFrame = 0;
+  state.animId = requestAnimationFrame(tick);
+}
+function stopAnim() {
+  state.running = false;
+  if (state.animId) { cancelAnimationFrame(state.animId); state.animId = null; }
+}
+
+function updateStats(done) {
+  document.getElementById('statSteps').textContent = state.step;
+  document.getElementById('statResidual').textContent =
+    state.residual === Infinity ? '—' : state.residual.toFixed(2);
+
+  const convEl = document.getElementById('statConverged');
+  const convSub = document.getElementById('statConvergedSub');
+  if (!done) {
+    convEl.innerHTML = '<em style="color: var(--ink-3); font-weight: 500;">…</em>';
+    convSub.textContent = 'iterating';
+  } else if (state.converged) {
+    convEl.innerHTML = '<em>Yes</em>';
+    convSub.textContent = 'ε &lt; threshold';
+  } else {
+    convEl.innerHTML = '<em style="color: var(--ink-1);">No</em>';
+    convSub.textContent = 'max steps reached';
+  }
+
+  const ratio = state.maxSteps / 12;
+  const vsEl = document.getElementById('statVs');
+  if (state.maxSteps <= 12) {
+    const pct = (100 - ratio * 100).toFixed(0);
+    vsEl.innerHTML = '<em>−' + pct + '<span class="unit">%</span></em>';
+  } else {
+    const pct = ((ratio - 1) * 100).toFixed(0);
+    vsEl.innerHTML = '+' + pct + '<span class="unit">%</span>';
+  }
+}
+
+function renderReading() {
+  const diff = state.difficulty;
+  let diffLabel;
+  if (diff < 25) diffLabel = '簡單';
+  else if (diff < 60) diffLabel = '中等';
+  else diffLabel = '高難度';
+
+  const memMode = state.implicit
+    ? '<span class="h-hot">隱式微分 ON</span> · 梯度記憶體 O(d) 恆定（利用 z* = f(z*) 的數學性質直接計算）'
+    : '<span class="h-warm">隱式微分 OFF</span> · 退化為標準反向傳播，需展開整條迭代鏈，記憶體 O(N×d)';
+
+  const verdict = state.converged
+    ? `軌跡在 <span class="h-hot">${state.step} 步</span>內收斂到吸子 z*，殘差降至 <span class="token">${state.residual.toFixed(2)}</span>。`
+    : `經過 <span class="h-warm">${state.step} 步</span>仍未完全穩定，殘差停在 <span class="token">${state.residual.toFixed(2)}</span> — 這個 token 的 f 非線性夠強，需要更深的迭代。`;
+
+  document.getElementById('reading').innerHTML = `
+    <p>本次以難度 <span class="token">${diff}</span>（${diffLabel}）啟動。
+    ${verdict}</p>
+    <p>對應到 Deep Equilibrium 模型：簡單 token 幾步就抵達 z*，困難 token 多算幾步 —
+    這個「自適應深度」是固定層數 Transformer 做不到的。</p>
+    <p>記憶體配置：${memMode}。</p>
+  `;
+}
+
+function toggleImplicit() {
+  state.implicit = !state.implicit;
+  const sw = document.getElementById('implicitSwitch');
+  const lbl = document.getElementById('implicitLabel');
+  if (state.implicit) {
+    sw.classList.add('on');
+    lbl.textContent = 'ON';
+    lbl.classList.remove('off');
+  } else {
+    sw.classList.remove('on');
+    lbl.textContent = 'OFF';
+    lbl.classList.add('off');
+  }
+  if (state.step > 0) renderReading();
+}
+
+function setPreset(elPill, diff) {
+  document.querySelectorAll('.tag-pill[data-diff]').forEach(p => p.classList.remove('active'));
+  if (elPill && elPill.classList) elPill.classList.add('active');
+  state.difficulty = diff;
+  document.getElementById('difficulty').value = diff;
+  document.getElementById('difficultyVal').textContent = diff;
+  startConvergence();
+}
+
+function randomSpecimen() {
+  document.querySelectorAll('.tag-pill[data-diff]').forEach(p => p.classList.remove('active'));
+  const d = Math.floor(Math.random() * 95) + 5;
+  state.difficulty = d;
+  document.getElementById('difficulty').value = d;
+  document.getElementById('difficultyVal').textContent = d;
+  startConvergence();
+}
+
+document.getElementById('difficulty').addEventListener('input', e => {
+  state.difficulty = parseInt(e.target.value, 10);
+  document.getElementById('difficultyVal').textContent = state.difficulty;
+  document.querySelectorAll('.tag-pill[data-diff]').forEach(p => p.classList.remove('active'));
+});
+
+// Init
+(function init() {
+  resetTrajectory();
+  drawBasinAndFp();
+  drawTrail();
+  updateStats(false);
+  setTimeout(startConvergence, 400);
+})();
 </script>
 </body>
 </html>

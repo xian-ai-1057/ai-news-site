@@ -7,7 +7,7 @@ tags:
   - 學習筆記
   - 索引
 created: 2026-05-13
-updated: 2026-05-16
+updated: 2026-05-17
 ---
 
 # 🎓 AI 學習筆記中心
@@ -20,6 +20,9 @@ updated: 2026-05-16
 
 | 日期 | 主題 | 難度 | 領域 | 互動工具 |
 |---|---|---|---|---|
+| 2026-05-17 | [[2026-05-17-學習-Titans 神經長期記憶架構\|Titans 神經長期記憶架構]] | 中階 | 模型架構 / 長期記憶 | — |
+| 2026-05-17 | [[2026-05-17-學習-TLT 自適應推測解碼訓練加速\|TLT 自適應推測解碼訓練加速]] | 中階 | 訓練優化 / 推測解碼 | — |
+| 2026-05-17 | [[2026-05-17-學習-狀態空間模型 SSM 與 Mamba 系列\|狀態空間模型 SSM 與 Mamba 系列]] | 進階 | 模型架構 / 線性序列建模 | — |
 | 2026-05-16 | [[2026-05-16-學習-DFlash 區塊擴散推測解碼\|DFlash：區塊擴散推測解碼]] | 中階 | 推理加速 / 推測解碼 | [🎮 DFlash 模擬器](Interactive/block-diffusion-speculative-decoder.html) |
 | 2026-05-16 | [[2026-05-16-學習-Attractor Models 固定點潛在精煉架構\|Attractor Models：固定點潛在精煉架構]] | 進階 | 模型架構 / 動態系統 | [🎮 Attractor 探索器](Interactive/attractor-fixed-point-explorer.html) |
 | 2026-05-15 | [[2026-05-15-學習-Subquadratic 稀疏注意力架構\|Subquadratic 稀疏注意力架構]] | 中階 | 模型架構 / 長上下文 | [🎮 SSA 成本計算器](Interactive/subq-sparse-attention-cost-calculator.html) |
@@ -38,6 +41,8 @@ updated: 2026-05-16
 ## 🗺️ 依主題分類
 
 ### 模型架構（怎麼把模型蓋大、蓋好）
+- [[2026-05-17-學習-Titans 神經長期記憶架構|Titans 神經長期記憶架構]] — Google 提出，以神經 MLP 作為長期記憶模組，支援 200 萬 token 上下文
+- [[2026-05-17-學習-狀態空間模型 SSM 與 Mamba 系列|狀態空間模型 SSM 與 Mamba 系列]] — Princeton Mamba-3 延續 SSD 框架，O(N) 線性推理挑戰 Transformer
 - [[2026-05-16-學習-Attractor Models 固定點潛在精煉架構|Attractor Models：固定點潛在精煉]] — ICLR 2026，困惑度改善 46.6%，打破 Transformer 固定深度限制
 - [[2026-05-15-學習-Subquadratic 稀疏注意力架構|Subquadratic 稀疏注意力（SSA）]] — 打破 Transformer 二次方縮放，支援 1200 萬 Token 上下文
 - [[2026-05-15-學習-混合專家架構 MoE 為何成為主流|混合專家架構（MoE）主流化]] — 2026年四大中國開放模型全採 MoE 的原因
@@ -54,6 +59,7 @@ updated: 2026-05-16
 - [[2026-05-16-學習-DFlash 區塊擴散推測解碼|DFlash：區塊擴散推測解碼]] — 以擴散模型替換自回歸草稿模型，6 倍無損加速
 
 ### 訓練優化（怎麼讓模型訓練得更快更便宜）
+- [[2026-05-17-學習-TLT 自適應推測解碼訓練加速|TLT 自適應推測解碼訓練加速]] — MIT 提出，利用 RL rollout GPU 閒置時間訓練動態 drafter，訓練速度提升 70-210%
 - [[2026-05-14-學習-推測解碼與 TLT 訓練加速|推測解碼與 TLT 訓練加速]] — 用閒置 GPU 訓 drafter，把推理模型訓練速度翻倍
 
 ### 資安 / AI 漏洞發現（怎麼用 AI 找程式碼中的漏洞）
@@ -73,6 +79,8 @@ updated: 2026-05-16
 - [[2026-05-13-學習-Mixture of Experts MoE 入門|Mixture of Experts (MoE)]] — 用「綜合醫院 vs 分診台」類比即可理解
 
 ### 中階（建議先讀 Transformer 與 LLM 基礎）
+- [[2026-05-17-學習-Titans 神經長期記憶架構|Titans 神經長期記憶架構]]
+- [[2026-05-17-學習-TLT 自適應推測解碼訓練加速|TLT 自適應推測解碼訓練加速]]
 - [[2026-05-16-學習-DFlash 區塊擴散推測解碼|DFlash：區塊擴散推測解碼]]
 - [[2026-05-15-學習-Subquadratic 稀疏注意力架構|Subquadratic 稀疏注意力（SSA）]]
 - [[2026-05-15-學習-AlphaEvolve 進化演算法與 LLM 結合|AlphaEvolve：進化演算法 × LLM]]
@@ -83,6 +91,7 @@ updated: 2026-05-16
 - [[2026-05-13-學習-LLM Agent 技能演化框架|LLM Agent 技能演化]]
 
 ### 進階（需要強數學或工程背景）
+- [[2026-05-17-學習-狀態空間模型 SSM 與 Mamba 系列|狀態空間模型 SSM 與 Mamba 系列]] — SSD 數學框架、結構半可分矩陣、控制理論基礎
 - [[2026-05-16-學習-Attractor Models 固定點潛在精煉架構|Attractor Models：固定點潛在精煉]] — 隱式微分 + 固定點求解，需要線性代數與微積分背景
 - [[2026-05-14-學習-推測解碼與 TLT 訓練加速|推測解碼與 TLT 訓練加速]] — 訓練側的推測解碼，涉及 RL rollout 與集群排程
 

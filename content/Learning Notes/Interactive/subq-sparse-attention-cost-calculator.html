@@ -3,277 +3,437 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>稀疏注意力成本計算器</title>
+<title>稀疏注意力成本計算器 · Notebook</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang TC",
-                 "Microsoft JhengHei", sans-serif;
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    color: #f1f5f9;
-    min-height: 100vh;
-    padding: 24px;
-    line-height: 1.6;
-  }
-  .container { max-width: 1000px; margin: 0 auto; }
-  h1 {
-    font-size: 26px; margin-bottom: 6px;
-    background: linear-gradient(135deg,#38bdf8,#a78bfa);
-    -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .subtitle { color: #94a3b8; margin-bottom: 24px; font-size: 14px; }
+:root {
+  --paper: #faf8f8; --paper-2: #f1eeec; --card: #ffffff;
+  --ink-1: #2b2b2b; --ink-2: #4e4e4e; --ink-3: #7c7c7c; --ink-4: #b8b8b8; --ink-5: #d4d4d4;
+  --rule: rgba(43,43,43,0.10); --rule-strong: rgba(43,43,43,0.22); --rule-bold: var(--ink-1);
+  --accent: #284b63; --accent-2: #1a3445;
+  --accent-soft: rgba(40,75,99,0.10); --accent-tint: rgba(40,75,99,0.04);
+  --sage: #84a59d; --sage-soft: rgba(132,165,157,0.20); --sage-tint: rgba(132,165,157,0.08);
+  --f-display: 'Schibsted Grotesk','Noto Sans TC',-apple-system,'PingFang TC',sans-serif;
+  --f-body: 'Source Sans 3','Noto Sans TC',-apple-system,'PingFang TC',sans-serif;
+  --f-mono: 'IBM Plex Mono', ui-monospace,'SF Mono', Consolas, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--paper); }
+body {
+  font-family: var(--f-body); color: var(--ink-1); line-height: 1.6;
+  -webkit-font-smoothing: antialiased; padding: 56px 40px 88px;
+}
+.page { max-width: 1080px; margin: 0 auto; }
 
-  .card {
-    background: rgba(30,41,59,.7); backdrop-filter: blur(8px);
-    border: 1px solid rgba(148,163,184,.15);
-    border-radius: 16px; padding: 22px; margin-bottom: 20px;
-  }
-  .card h2 { font-size: 17px; margin-bottom: 14px; color: #e2e8f0; }
+/* ===== Masthead ===== */
+.masthead {
+  display: grid; grid-template-columns: 180px 1fr; gap: 32px;
+  padding-bottom: 36px; border-bottom: 1px solid var(--rule-bold); margin-bottom: 48px;
+}
+.masthead .meta { font-family: var(--f-mono); font-size: 11px; line-height: 1.7; color: var(--ink-2); letter-spacing: 0.02em; }
+.masthead .meta .label { color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.14em; font-size: 10px; display: block; }
+.masthead .meta dl { display: grid; gap: 16px; }
+.masthead .title {
+  font-family: var(--f-display); font-size: clamp(44px, 6.6vw, 72px);
+  font-weight: 600; line-height: 1.02; letter-spacing: -0.02em; color: var(--ink-1);
+}
+.masthead .title em { font-style: italic; font-weight: 500; color: var(--accent); }
+.masthead .lede { font-size: 17px; color: var(--ink-2); max-width: 56ch; margin-top: 22px; line-height: 1.65; }
+@media (max-width: 720px) { .masthead { grid-template-columns: 1fr; gap: 20px; } }
 
-  /* Sliders */
-  .slider-group { margin-bottom: 16px; }
-  .slider-label {
-    display: flex; justify-content: space-between; align-items: baseline;
-    margin-bottom: 8px; font-size: 13px; color: #cbd5e1;
-  }
-  .slider-label .value {
-    color: #38bdf8; font-family: ui-monospace, monospace; font-weight: 600;
-  }
-  input[type="range"] {
-    width: 100%; height: 6px;
-    -webkit-appearance: none; appearance: none;
-    background: #1e293b; border-radius: 4px; outline: none;
-  }
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none; appearance: none;
-    width: 18px; height: 18px; border-radius: 50%;
-    background: linear-gradient(135deg,#38bdf8,#6366f1);
-    cursor: pointer; box-shadow: 0 2px 8px rgba(56,189,248,.4);
-  }
-  input[type="range"]::-moz-range-thumb {
-    width: 18px; height: 18px; border-radius: 50%; border: none;
-    background: linear-gradient(135deg,#38bdf8,#6366f1);
-    cursor: pointer;
-  }
+/* ===== Sections ===== */
+section.note {
+  display: grid; grid-template-columns: 180px 1fr; gap: 32px;
+  padding-top: 36px; padding-bottom: 12px;
+  border-top: 1px solid var(--rule); margin-top: 24px;
+}
+section.note:first-of-type { border-top: none; }
+section.note > .marker {
+  font-family: var(--f-display); font-weight: 500;
+  font-size: 20px; line-height: 1.3; color: var(--ink-1);
+}
+section.note > .marker .num {
+  display: block; color: var(--accent);
+  font-style: italic; font-weight: 500; margin-bottom: 2px;
+}
+section.note > .marker .name {
+  font-family: var(--f-mono); font-style: normal; font-weight: 400;
+  font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3); margin-top: 6px;
+}
+section.note > .body { min-width: 0; }
+@media (max-width: 720px) { section.note { grid-template-columns: 1fr; gap: 12px; } }
 
-  .preset-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
-  .preset {
-    background: rgba(56,189,248,.1); color: #7dd3fc;
-    border: 1px solid rgba(56,189,248,.3);
-    padding: 5px 11px; border-radius: 999px;
-    font-size: 12px; cursor: pointer; transition: background .15s;
-  }
-  .preset:hover { background: rgba(56,189,248,.2); }
+h2.head {
+  font-family: var(--f-display); font-size: 30px; font-weight: 600;
+  line-height: 1.2; margin-bottom: 10px; letter-spacing: -0.012em; color: var(--ink-1);
+}
+h2.head em { font-style: italic; font-weight: 500; color: var(--accent); }
+p.body-text { font-size: 16px; color: var(--ink-2); max-width: 60ch; line-height: 1.75; margin-bottom: 10px; }
 
-  /* Visualization layout */
-  .viz-row {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
-  }
-  @media (max-width: 720px) { .viz-row { grid-template-columns: 1fr; } }
+.field-label {
+  font-family: var(--f-mono); font-size: 10px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 6px; display: block;
+}
 
-  .viz-panel {
-    background: rgba(15,23,42,.5);
-    border: 1px solid rgba(148,163,184,.1);
-    border-radius: 12px; padding: 14px;
-  }
-  .viz-panel h3 {
-    font-size: 13px; color: #94a3b8; margin-bottom: 10px;
-    text-transform: uppercase; letter-spacing: .5px;
-  }
+/* ===== Sliders (notebook) ===== */
+.slider-group { margin-bottom: 22px; }
+.slider-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 8px;
+}
+.slider-head .lbl { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+.slider-head .val { font-family: var(--f-mono); font-weight: 500; font-size: 16px; color: var(--accent); font-variant-numeric: tabular-nums; }
+input[type="range"] {
+  width: 100%; height: 4px; -webkit-appearance: none; appearance: none;
+  background: var(--paper-2); border-radius: 2px; outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); border: 2px solid var(--paper);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); border: 2px solid var(--paper); cursor: pointer;
+}
 
-  /* Mask grid */
-  .mask-grid {
-    display: grid; grid-template-columns: repeat(12, 1fr);
-    gap: 2px; aspect-ratio: 1; max-width: 320px; margin: 0 auto;
-  }
-  .mask-cell {
-    background: #1e293b; border-radius: 2px;
-    transition: background .4s ease, box-shadow .4s ease;
-  }
-  .mask-cell.on {
-    background: linear-gradient(135deg,#38bdf8,#a78bfa);
-    box-shadow: 0 0 6px rgba(56,189,248,.4);
-  }
-  .mask-cell.topk {
-    background: linear-gradient(135deg,#fbbf24,#f472b6);
-    box-shadow: 0 0 8px rgba(251,191,36,.5);
-  }
-  .legend {
-    display: flex; gap: 14px; justify-content: center; margin-top: 12px;
-    font-size: 11px; color: #94a3b8;
-  }
-  .legend-dot {
-    display: inline-block; width: 10px; height: 10px; border-radius: 2px;
-    vertical-align: middle; margin-right: 4px;
-  }
+/* ===== Tag pills ===== */
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag-pill {
+  font-family: var(--f-body); font-size: 13px; color: var(--ink-2);
+  background: transparent; border: 1px solid var(--rule-strong);
+  border-radius: 2px; padding: 5px 12px; cursor: pointer;
+  transition: all 0.15s;
+}
+.tag-pill:hover { color: var(--accent); border-color: var(--accent); }
 
-  /* SVG chart */
-  .chart-wrap { width: 100%; }
-  svg.chart { width: 100%; height: 240px; display: block; }
+/* ===== Viz panels — two-up ===== */
+.viz-row { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+@media (max-width: 720px) { .viz-row { grid-template-columns: 1fr; gap: 20px; } }
 
-  /* Stats */
-  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 4px; }
-  @media (max-width: 640px) { .stats { grid-template-columns: repeat(2, 1fr); } }
-  .stat {
-    background: rgba(15,23,42,.6);
-    border: 1px solid #1e293b;
-    padding: 14px 12px; border-radius: 10px; text-align: center;
-  }
-  .stat .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; }
-  .stat .value {
-    font-size: 20px; font-weight: 700; margin-top: 6px; color: #38bdf8;
-    font-family: ui-monospace, monospace;
-  }
-  .stat .value.warn { color: #fb7185; }
-  .stat .value.good { color: #34d399; }
-  .stat .sub { font-size: 11px; color: #64748b; margin-top: 3px; }
+.viz-panel { display: flex; flex-direction: column; }
+.viz-panel .cap {
+  font-family: var(--f-mono); font-size: 10px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 12px;
+}
 
-  /* Concept table */
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td {
-    text-align: left; padding: 9px 10px;
-    border-bottom: 1px solid rgba(148,163,184,.1);
-  }
-  th { color: #94a3b8; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .3px; }
-  td .pill {
-    display: inline-block; padding: 2px 8px; border-radius: 6px;
-    background: rgba(167,139,250,.15); color: #c4b5fd; font-size: 12px;
-    font-family: ui-monospace, monospace;
-  }
-  td .arrow { color: #475569; padding: 0 8px; }
+/* mask grid */
+.mask-grid {
+  display: grid; grid-template-columns: repeat(12, 1fr);
+  gap: 2px; aspect-ratio: 1; max-width: 320px; margin: 0 auto;
+}
+.mask-cell { background: var(--paper-2); border-radius: 1px; transition: background 0.4s ease; }
+.mask-cell.on   { background: var(--sage); }
+.mask-cell.topk { background: var(--accent); }
 
-  footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 28px; }
+.legend {
+  display: flex; flex-wrap: wrap; gap: 14px; justify-content: center;
+  margin-top: 14px; font-family: var(--f-mono); font-size: 10px;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3);
+}
+.legend .dot { display: inline-block; width: 10px; height: 10px; vertical-align: middle; margin-right: 6px; border-radius: 1px; }
+
+/* chart */
+svg.chart { width: 100%; height: 260px; display: block; }
+
+/* ===== Figures ===== */
+.figure-row {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+}
+@media (max-width: 720px) { .figure-row { grid-template-columns: repeat(2, 1fr); } }
+.figure { padding: 22px 18px; border-right: 1px solid var(--rule); }
+.figure:last-child { border-right: none; }
+@media (max-width: 720px) { .figure:nth-child(2n) { border-right: none; } }
+.figure .fig-label {
+  font-family: var(--f-mono); font-size: 10px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 10px;
+}
+.figure .fig-num {
+  font-family: var(--f-display); font-size: 30px; font-weight: 500;
+  line-height: 1; letter-spacing: -0.025em;
+  color: var(--ink-1); font-variant-numeric: tabular-nums;
+}
+.figure .fig-num em { font-style: normal; font-weight: 600; color: var(--accent); }
+.figure .fig-num.sage { color: var(--sage); }
+.figure .fig-num .unit {
+  font-family: var(--f-body); font-size: 14px; font-weight: 400;
+  color: var(--ink-3); margin-left: 4px;
+}
+.figure .fig-sub { font-size: 13px; color: var(--ink-3); margin-top: 8px; line-height: 1.5; }
+
+.hero-figure {
+  padding: 44px 0; text-align: center;
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+}
+.hero-figure .num {
+  font-family: var(--f-display); font-weight: 600;
+  font-size: clamp(72px, 11vw, 132px);
+  line-height: 0.95; letter-spacing: -0.045em;
+  color: var(--accent); font-variant-numeric: tabular-nums;
+}
+.hero-figure .num .unit { font-size: 0.28em; color: var(--ink-3); font-weight: 400; letter-spacing: -0.01em; margin-left: 0.05em; }
+.hero-figure .caption {
+  font-family: var(--f-mono); font-size: 11px;
+  color: var(--ink-3); letter-spacing: 0.14em;
+  text-transform: uppercase; margin-top: 18px;
+}
+
+/* ===== Reading table ===== */
+.read-row {
+  display: grid; grid-template-columns: 220px 1fr;
+  gap: 24px; padding: 18px 0;
+  border-top: 1px solid var(--rule);
+}
+.read-row:last-child { border-bottom: 1px solid var(--rule); }
+.read-row .obs {
+  font-family: var(--f-mono); font-size: 12px;
+  color: var(--accent); letter-spacing: 0.02em;
+}
+.read-row .meaning { font-size: 15px; color: var(--ink-2); line-height: 1.7; }
+
+.side-note {
+  position: relative; padding-left: 18px;
+  margin: 22px 0 0 0; border-left: 2px solid var(--accent);
+  font-size: 15px; color: var(--ink-2); line-height: 1.65;
+  font-style: italic; font-family: var(--f-display); font-weight: 400;
+  max-width: 56ch;
+}
+.side-note .auth {
+  display: block; font-style: normal;
+  font-family: var(--f-mono); font-size: 10px;
+  color: var(--ink-3); letter-spacing: 0.14em;
+  text-transform: uppercase; margin-top: 8px;
+}
+
+.colophon {
+  margin-top: 64px; padding-top: 24px;
+  border-top: 1px solid var(--rule-bold);
+  display: grid; grid-template-columns: 180px 1fr; gap: 32px;
+  font-family: var(--f-mono); font-size: 11px;
+  color: var(--ink-3); line-height: 1.85; letter-spacing: 0.02em;
+}
+.colophon .l { color: var(--ink-4); text-transform: uppercase; letter-spacing: 0.14em; font-size: 10px; }
+.colophon em { font-family: var(--f-display); font-style: italic; font-weight: 500; color: var(--accent); }
+@media (max-width: 720px) { .colophon { grid-template-columns: 1fr; gap: 12px; } }
 </style>
 </head>
 <body>
-<div class="container">
 
-  <h1>📐 稀疏注意力成本計算器</h1>
-  <p class="subtitle">拖動序列長度滑桿，感受 O(n²) vs O(n log n) 的指數級差距。對照 SubQ 的 SSA 架構，看 12M token 長上下文為何在密集注意力下不可行。</p>
+<main class="page">
 
-  <!-- Control panel -->
-  <div class="card">
-    <h2>🎮 控制台</h2>
+  <header class="masthead">
+    <div class="meta">
+      <dl>
+        <div><span class="label">Volume</span>Learning Note №11</div>
+        <div><span class="label">Subject</span>Sparse Attention · SubQ</div>
+        <div><span class="label">Date</span>2026 · 05 · 16</div>
+      </dl>
+    </div>
+    <div>
+      <h1 class="title"><em>How</em> sparsity<br>tames N².</h1>
+      <p class="lede">
+        拉動序列長度與 Top-K，看 dense O(N²) 與 sparse O(N·K) 在 log-log 坐標上的距離怎麼分開。
+        當 N 來到 12M token，差距會擴張到讓密集注意力完全不可行 — 這是 SubQ SSA 架構解決的問題。
+      </p>
+    </div>
+  </header>
 
-    <div class="slider-group">
-      <div class="slider-label">
-        <span>序列長度 N（Token 數，log scale）</span>
-        <span class="value" id="seqLenLabel">10,000</span>
+  <!-- § 01 INPUTS -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 01</span>
+      Inputs
+      <div class="name">Sequence · Top-K</div>
+    </div>
+    <div class="body">
+      <h2 class="head">Pick a <em>length</em>, pick a <em>budget</em>.</h2>
+      <p class="body-text">
+        左邊滑桿選總序列長度 N（log scale，從 100 到 12M），右邊滑桿選保留多少比例的注意力連結。
+        下方四個 preset 是常見場景的長度落點。
+      </p>
+
+      <div style="height: 28px;"></div>
+
+      <div class="slider-group">
+        <div class="slider-head">
+          <span class="lbl">Sequence length · N (log scale)</span>
+          <span class="val" id="seqLenLabel">10,000</span>
+        </div>
+        <input type="range" id="seqLenSlider" min="0" max="6" step="1" value="2">
       </div>
-      <input type="range" id="seqLenSlider" min="0" max="6" step="1" value="2">
-    </div>
 
-    <div class="slider-group">
-      <div class="slider-label">
-        <span>稀疏度 Top-K（保留最相關的 K%）</span>
-        <span class="value" id="topKLabel">10%</span>
+      <div class="slider-group">
+        <div class="slider-head">
+          <span class="lbl">Top-K density · 保留比例</span>
+          <span class="val" id="topKLabel">10%</span>
+        </div>
+        <input type="range" id="topKSlider" min="1" max="50" step="1" value="10">
       </div>
-      <input type="range" id="topKSlider" min="1" max="50" step="1" value="10">
-    </div>
 
-    <div class="preset-row">
-      <span class="preset" data-len="1000">📄 短文 1K</span>
-      <span class="preset" data-len="32000">📚 論文 32K</span>
-      <span class="preset" data-len="1000000">📖 長書 1M</span>
-      <span class="preset" data-len="12000000">🗄️ 全集 12M</span>
+      <span class="field-label">Presets</span>
+      <div class="chip-row">
+        <span class="tag-pill" data-len="1000">短文 · 1K</span>
+        <span class="tag-pill" data-len="32000">論文 · 32K</span>
+        <span class="tag-pill" data-len="1000000">長書 · 1M</span>
+        <span class="tag-pill" data-len="12000000">全集 · 12M</span>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Visualization -->
-  <div class="card">
-    <h2>📊 視覺化</h2>
-    <div class="viz-row">
-      <div class="viz-panel">
-        <h3>注意力 Mask（12×12 示意）</h3>
-        <div class="mask-grid" id="maskGrid"></div>
-        <div class="legend">
-          <span><span class="legend-dot" style="background:#1e293b"></span>未計算</span>
-          <span><span class="legend-dot" style="background:linear-gradient(135deg,#38bdf8,#a78bfa)"></span>局部窗口</span>
-          <span><span class="legend-dot" style="background:linear-gradient(135deg,#fbbf24,#f472b6)"></span>Top-K 全域</span>
+  <!-- § 02 COMPARISON -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 02</span>
+      Comparison
+      <div class="name">Mask vs cost curve</div>
+    </div>
+    <div class="body">
+      <h2 class="head">A <em>mask</em>, a <em>curve</em>.</h2>
+      <p class="body-text">
+        左圖是 12×12 注意力 mask：對角的鼠尾草色塊是局部窗口，零星的石板藍色塊是 Top-K 全域選擇。
+        右圖是 log-log 成本曲線：兩條線的斜率不一樣，這就是 N² 與 N·K 的本質差別。
+      </p>
+
+      <div style="height: 26px;"></div>
+
+      <div class="viz-row">
+        <div class="viz-panel">
+          <div class="cap">Fig 01 · Attention mask (12×12)</div>
+          <div class="mask-grid" id="maskGrid"></div>
+          <div class="legend">
+            <span><span class="dot" style="background:var(--paper-2); border:1px solid var(--rule)"></span>Skipped</span>
+            <span><span class="dot" style="background:var(--sage)"></span>Local window</span>
+            <span><span class="dot" style="background:var(--accent)"></span>Top-K global</span>
+          </div>
+        </div>
+
+        <div class="viz-panel">
+          <div class="cap">Fig 02 · Cost curve (log-log)</div>
+          <svg class="chart" id="costChart" viewBox="0 0 360 260" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="legend">
+            <span><span class="dot" style="background:var(--ink-2)"></span>Dense · O(N²)</span>
+            <span><span class="dot" style="background:var(--accent)"></span>Sparse · O(N·K)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- § 03 SAVINGS -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 03</span>
+      Savings
+      <div class="name">Live numbers</div>
+    </div>
+    <div class="body">
+      <h2 class="head">The <em>distance</em> between curves.</h2>
+      <p class="body-text">
+        四個數字實時更新 — FLOPs 用 N²·d 與 N·K·d 簡化估算，記憶體是 fp16 attention matrix 的 N²·2 bytes。
+        下方巨型數字是節省倍率，從 1× 到上百萬× 都有可能。
+      </p>
+
+      <div style="height: 26px;"></div>
+
+      <div class="figure-row">
+        <div class="figure">
+          <div class="fig-label">Dense FLOPs</div>
+          <div class="fig-num" id="denseFlops">—</div>
+          <div class="fig-sub">N² × d</div>
+        </div>
+        <div class="figure">
+          <div class="fig-label">Sparse FLOPs</div>
+          <div class="fig-num sage" id="sparseFlops">—</div>
+          <div class="fig-sub">N × K × d</div>
+        </div>
+        <div class="figure">
+          <div class="fig-label">Speedup</div>
+          <div class="fig-num"><em><span id="speedup">—</span></em></div>
+          <div class="fig-sub">dense / sparse</div>
+        </div>
+        <div class="figure">
+          <div class="fig-label">Dense memory</div>
+          <div class="fig-num" id="memory">—</div>
+          <div class="fig-sub">attention matrix · fp16</div>
         </div>
       </div>
 
-      <div class="viz-panel">
-        <h3>成本曲線（log-log）</h3>
-        <div class="chart-wrap">
-          <svg class="chart" id="costChart" viewBox="0 0 360 240" preserveAspectRatio="none"></svg>
-        </div>
-        <div class="legend">
-          <span><span class="legend-dot" style="background:#fb7185"></span>Dense O(N²)</span>
-          <span><span class="legend-dot" style="background:#38bdf8"></span>Sparse O(N log N)</span>
-        </div>
+      <div style="height: 32px;"></div>
+
+      <div class="hero-figure">
+        <div class="num" id="heroSpeedup">—</div>
+        <div class="caption">compute saved · sparse vs dense at current settings</div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Live metrics -->
-  <div class="card">
-    <h2>📐 即時指標</h2>
-    <div class="stats">
-      <div class="stat">
-        <div class="label">Dense FLOPs</div>
-        <div class="value warn" id="denseFlops">—</div>
-        <div class="sub">N² × d</div>
+  <!-- § 04 READING -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 04</span>
+      Reading
+      <div class="name">What the picture means</div>
+    </div>
+    <div class="body">
+      <h2 class="head">Four <em>tells</em>.</h2>
+      <p class="body-text">把視覺現象對到架構意義 — 這是設計選擇的物理憑據。</p>
+
+      <div style="height: 20px;"></div>
+
+      <div class="read-row">
+        <div class="obs">mask 對角集中</div>
+        <div class="meaning">局部窗口 (sliding window) — 每個 token 只看相鄰幾個，這是基本盤。</div>
       </div>
-      <div class="stat">
-        <div class="label">Sparse FLOPs</div>
-        <div class="value good" id="sparseFlops">—</div>
-        <div class="sub">N × K × d</div>
+      <div class="read-row">
+        <div class="obs">少數 Top-K 亮點</div>
+        <div class="meaning">全域稀疏選擇 — SSA 的關鍵：保留長距離強相關連結，不是純粹的局部。</div>
       </div>
-      <div class="stat">
-        <div class="label">節省倍率</div>
-        <div class="value" id="speedup">—</div>
-        <div class="sub">dense / sparse</div>
+      <div class="read-row">
+        <div class="obs">兩條線斜率不同</div>
+        <div class="meaning">O(N²) vs O(N·K) — 在 log-log 上斜率差 1，長度越大、差距越爆炸。</div>
       </div>
-      <div class="stat">
-        <div class="label">估算記憶體</div>
-        <div class="value" id="memory">—</div>
-        <div class="sub">attention matrix</div>
+      <div class="read-row">
+        <div class="obs">12M token 仍可行</div>
+        <div class="meaning">長上下文新典範 — 不再需要 RAG 補丁去切碎、拼回。</div>
+      </div>
+
+      <div class="side-note">
+        “當 N 來到 12M，dense 的記憶體需求會逼近 TB 級。
+        節省的不是 30%、不是 10×，是讓問題從不可行變回可行。”
+        <span class="auth">— note on the asymptote</span>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Concept mapping -->
-  <div class="card">
-    <h2>📚 概念對照</h2>
-    <table>
-      <thead>
-        <tr><th>視覺現象</th><th></th><th>架構意義</th></tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><span class="pill">mask 對角集中</span></td>
-          <td class="arrow">↔</td>
-          <td>局部窗口（sliding window）— 每個 token 只看相鄰幾個</td>
-        </tr>
-        <tr>
-          <td><span class="pill">少數 Top-K 亮點</span></td>
-          <td class="arrow">↔</td>
-          <td>全域稀疏選擇 — SSA 的關鍵：保留長距離強相關</td>
-        </tr>
-        <tr>
-          <td><span class="pill">曲線分歧（log-log 斜率不同）</span></td>
-          <td class="arrow">↔</td>
-          <td>O(N²) vs O(N log N) — 長度越大、差距越爆炸</td>
-        </tr>
-        <tr>
-          <td><span class="pill">12M Token 仍可行</span></td>
-          <td class="arrow">↔</td>
-          <td>長上下文新典範 — 不再依賴 RAG 補丁</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <footer>
-    本計算器為教學示意：成本估計採 N²·d 與 N·K·d 的簡化公式（d=4096，模擬 Transformer hidden dim），<br>
-    記憶體估算為 attention matrix 在 fp16 下的 N²·2 bytes，未計入 KV cache 與 MLP 層。
+  <footer class="colophon">
+    <div>
+      <span class="l">Colophon</span><br>
+      Notebook · v2<br>
+      SubQ · SSA
+    </div>
+    <div>
+      教學示意 · FLOPs 採用 N²·d 與 N·K·d 簡化估算 (d = 4096)，
+      記憶體為 fp16 attention matrix N²·2 bytes，未計入 KV cache 與 MLP 層。
+      Set in <em>Schibsted Grotesk</em> &amp; Source Sans 3,
+      with <span style="font-family: var(--f-mono);">IBM Plex Mono</span> for figures.
+    </div>
   </footer>
-</div>
+
+</main>
 
 <script>
-  // Log-scale slider mapping: index 0..6 → N values
   const SEQ_PRESETS = [100, 1000, 10000, 100000, 1000000, 5000000, 12000000];
   const HIDDEN_DIM = 4096;
 
@@ -311,12 +471,9 @@
     const grid = document.getElementById('maskGrid');
     grid.innerHTML = '';
     const N = 12;
-    // local-window half-width tied to topK (smaller K = tighter window)
     const winHalf = Math.max(1, Math.round(topKPct / 18));
-    // number of top-k global per row
     const globalCount = Math.max(0, Math.round((topKPct / 100) * N) - winHalf);
     for (let i = 0; i < N; i++) {
-      // deterministic pseudo-random top-k positions per row
       const seed = i * 137;
       const globals = new Set();
       let attempts = 0;
@@ -337,11 +494,10 @@
 
   function drawChart(currentN, topKPct) {
     const svg = document.getElementById('costChart');
-    const W = 360, H = 240;
-    const padL = 38, padR = 14, padT = 14, padB = 28;
+    const W = 360, H = 260;
+    const padL = 42, padR = 14, padT = 18, padB = 32;
     const plotW = W - padL - padR, plotH = H - padT - padB;
 
-    // log-log axes: x from 100 → 12M, y from 1e4 → 1e15
     const xMin = Math.log10(100), xMax = Math.log10(12000000);
     const yMin = 4, yMax = 15;
     const sx = (n) => padL + ((Math.log10(n) - xMin) / (xMax - xMin)) * plotW;
@@ -359,20 +515,18 @@
       sparseLine += (i === 0 ? 'M' : 'L') + sx(n).toFixed(1) + ',' + sy(sparse).toFixed(1) + ' ';
     }
 
-    // gridlines
     let grid = '';
     for (let lx = Math.ceil(xMin); lx <= Math.floor(xMax); lx++) {
       const x = sx(Math.pow(10, lx));
-      grid += `<line x1="${x}" y1="${padT}" x2="${x}" y2="${padT+plotH}" stroke="#1e293b" stroke-width="1"/>`;
-      grid += `<text x="${x}" y="${padT+plotH+16}" fill="#64748b" font-size="9" text-anchor="middle">10${supSci(lx)}</text>`;
+      grid += `<line x1="${x}" y1="${padT}" x2="${x}" y2="${padT+plotH}" stroke="rgba(43,43,43,0.08)" stroke-width="1"/>`;
+      grid += `<text x="${x}" y="${padT+plotH+18}" fill="#7c7c7c" font-size="9" font-family="'IBM Plex Mono', monospace" text-anchor="middle">10${supSci(lx)}</text>`;
     }
     for (let ly = yMin; ly <= yMax; ly += 2) {
       const y = sy(Math.pow(10, ly));
-      grid += `<line x1="${padL}" y1="${y}" x2="${padL+plotW}" y2="${y}" stroke="#1e293b" stroke-width="1"/>`;
-      grid += `<text x="${padL-4}" y="${y+3}" fill="#64748b" font-size="9" text-anchor="end">10${supSci(ly)}</text>`;
+      grid += `<line x1="${padL}" y1="${y}" x2="${padL+plotW}" y2="${y}" stroke="rgba(43,43,43,0.08)" stroke-width="1"/>`;
+      grid += `<text x="${padL-6}" y="${y+3}" fill="#7c7c7c" font-size="9" font-family="'IBM Plex Mono', monospace" text-anchor="end">10${supSci(ly)}</text>`;
     }
 
-    // marker for current N
     const cx = sx(currentN);
     const k = Math.max(1, Math.ceil(currentN * topKPct / 100));
     const dyVal = currentN * currentN * HIDDEN_DIM;
@@ -382,13 +536,13 @@
 
     svg.innerHTML = `
       ${grid}
-      <text x="${padL-30}" y="${padT-2}" fill="#94a3b8" font-size="10">FLOPs</text>
-      <text x="${padL+plotW}" y="${padT+plotH+24}" fill="#94a3b8" font-size="10" text-anchor="end">N (tokens)</text>
-      <path d="${denseLine}"  stroke="#fb7185" stroke-width="2" fill="none"/>
-      <path d="${sparseLine}" stroke="#38bdf8" stroke-width="2" fill="none"/>
-      <line x1="${cx}" y1="${padT}" x2="${cx}" y2="${padT+plotH}" stroke="#a78bfa" stroke-width="1" stroke-dasharray="3,3"/>
-      <circle cx="${cx}" cy="${cyDense}"  r="4" fill="#fb7185" stroke="#fff" stroke-width="1.5"/>
-      <circle cx="${cx}" cy="${cySparse}" r="4" fill="#38bdf8" stroke="#fff" stroke-width="1.5"/>
+      <text x="${padL-32}" y="${padT-4}" fill="#7c7c7c" font-size="9" font-family="'IBM Plex Mono', monospace" letter-spacing="0.1em">FLOPS</text>
+      <text x="${padL+plotW}" y="${padT+plotH+28}" fill="#7c7c7c" font-size="9" font-family="'IBM Plex Mono', monospace" text-anchor="end" letter-spacing="0.1em">N · TOKENS</text>
+      <path d="${denseLine}"  stroke="#4e4e4e" stroke-width="1.5" fill="none" stroke-dasharray="4,3"/>
+      <path d="${sparseLine}" stroke="#284b63" stroke-width="2" fill="none"/>
+      <line x1="${cx}" y1="${padT}" x2="${cx}" y2="${padT+plotH}" stroke="#84a59d" stroke-width="1" stroke-dasharray="3,3"/>
+      <circle cx="${cx}" cy="${cyDense}"  r="3.5" fill="#faf8f8" stroke="#4e4e4e" stroke-width="1.5"/>
+      <circle cx="${cx}" cy="${cySparse}" r="3.5" fill="#284b63" stroke="#faf8f8" stroke-width="1.5"/>
     `;
   }
 
@@ -403,14 +557,15 @@
     const denseFlops  = N * N * HIDDEN_DIM;
     const sparseFlops = N * k * HIDDEN_DIM;
     const speedup = denseFlops / sparseFlops;
-    const denseMem = N * N * 2; // fp16 attention matrix bytes
+    const denseMem = N * N * 2;
 
     document.getElementById('denseFlops').textContent  = fmtSci(denseFlops);
     document.getElementById('sparseFlops').textContent = fmtSci(sparseFlops);
-    document.getElementById('speedup').textContent     = speedup >= 1000
-      ? fmtNum(speedup) + '×'
-      : speedup.toFixed(1) + '×';
+    document.getElementById('speedup').textContent     = speedup >= 1000 ? fmtNum(speedup) + '×' : speedup.toFixed(1) + '×';
     document.getElementById('memory').textContent      = fmtBytes(denseMem);
+
+    const heroPct = (1 - 1 / speedup) * 100;
+    document.getElementById('heroSpeedup').innerHTML = `−${heroPct.toFixed(2)}<span class="unit">%</span>`;
 
     renderMask(topKPct);
     drawChart(N, topKPct);
@@ -423,7 +578,7 @@
 
   seqSlider.addEventListener('input', update);
   topKSlider.addEventListener('input', update);
-  document.querySelectorAll('.preset').forEach(el => {
+  document.querySelectorAll('.tag-pill[data-len]').forEach(el => {
     el.addEventListener('click', () => setLen(+el.dataset.len));
   });
 

@@ -3,371 +3,639 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>2026 MoE 模型儀表板</title>
+<title>2026 MoE 模型儀表板 · Notebook</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang TC",
-                 "Microsoft JhengHei", sans-serif;
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    color: #f1f5f9;
-    min-height: 100vh;
-    padding: 24px;
-    line-height: 1.6;
-  }
-  .container { max-width: 980px; margin: 0 auto; }
-  h1 {
-    font-size: 26px; margin-bottom: 6px;
-    background: linear-gradient(135deg,#38bdf8,#a78bfa);
-    -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .subtitle { color: #94a3b8; margin-bottom: 24px; font-size: 14px; }
+:root {
+  --paper: #faf8f8; --paper-2: #f1eeec; --card: #ffffff;
+  --ink-1: #2b2b2b; --ink-2: #4e4e4e; --ink-3: #7c7c7c; --ink-4: #b8b8b8; --ink-5: #d4d4d4;
+  --rule: rgba(43,43,43,0.10); --rule-strong: rgba(43,43,43,0.22); --rule-bold: var(--ink-1);
+  --accent: #284b63; --accent-2: #1a3445;
+  --accent-soft: rgba(40,75,99,0.10); --accent-tint: rgba(40,75,99,0.04);
+  --sage: #84a59d; --sage-soft: rgba(132,165,157,0.20); --sage-tint: rgba(132,165,157,0.08);
+  --f-display: 'Schibsted Grotesk','Noto Sans TC',-apple-system,'PingFang TC',sans-serif;
+  --f-body: 'Source Sans 3','Noto Sans TC',-apple-system,'PingFang TC',sans-serif;
+  --f-mono: 'IBM Plex Mono', ui-monospace,'SF Mono', Consolas, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--paper); }
+body {
+  font-family: var(--f-body); color: var(--ink-1); line-height: 1.6;
+  -webkit-font-smoothing: antialiased; padding: 56px 40px 88px;
+}
+.page { max-width: 1080px; margin: 0 auto; }
 
-  .card {
-    background: rgba(30,41,59,.7); backdrop-filter: blur(8px);
-    border: 1px solid rgba(148,163,184,.15);
-    border-radius: 16px; padding: 22px; margin-bottom: 20px;
-  }
-  .card h2 { font-size: 17px; margin-bottom: 14px; color: #e2e8f0; }
-  .card h3 { font-size: 14px; margin: 14px 0 8px; color: #cbd5e1; font-weight: 600; }
+/* ===== Masthead ===== */
+.masthead {
+  display: grid; grid-template-columns: 180px 1fr; gap: 32px;
+  padding-bottom: 36px; border-bottom: 1px solid var(--rule-bold); margin-bottom: 48px;
+}
+.masthead .meta { font-family: var(--f-mono); font-size: 11px; line-height: 1.7; color: var(--ink-2); letter-spacing: 0.02em; }
+.masthead .meta .label { color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.14em; font-size: 10px; display: block; }
+.masthead .meta dl { display: grid; gap: 16px; }
+.masthead .title { font-family: var(--f-display); font-size: clamp(44px, 6.6vw, 72px); font-weight: 600; line-height: 1.02; letter-spacing: -0.02em; color: var(--ink-1); }
+.masthead .title em { font-style: italic; font-weight: 500; color: var(--accent); }
+.masthead .lede { font-size: 17px; color: var(--ink-2); max-width: 56ch; margin-top: 22px; line-height: 1.65; }
+@media (max-width: 720px) { .masthead { grid-template-columns: 1fr; gap: 20px; } }
 
-  /* Chip row (metric switcher) */
-  .chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
-  .chip {
-    background: rgba(56,189,248,.08); color: #7dd3fc;
-    border: 1px solid rgba(56,189,248,.25);
-    padding: 7px 14px; border-radius: 999px;
-    font-size: 13px; cursor: pointer;
-    transition: all .2s;
-  }
-  .chip:hover { background: rgba(56,189,248,.18); }
-  .chip.active {
-    background: linear-gradient(135deg, rgba(56,189,248,.3), rgba(99,102,241,.25));
-    color: #f0f9ff;
-    border-color: #38bdf8;
-    box-shadow: 0 0 12px rgba(56,189,248,.25);
-  }
+/* ===== Sections ===== */
+section.note {
+  display: grid; grid-template-columns: 180px 1fr; gap: 32px;
+  padding-top: 36px; padding-bottom: 12px;
+  border-top: 1px solid var(--rule); margin-top: 24px;
+}
+section.note:first-of-type { border-top: none; }
+section.note > .marker { font-family: var(--f-display); font-weight: 500; font-size: 20px; line-height: 1.3; color: var(--ink-1); }
+section.note > .marker .num { display: block; color: var(--accent); font-style: italic; font-weight: 500; margin-bottom: 2px; }
+section.note > .marker .name { font-family: var(--f-mono); font-style: normal; font-weight: 400; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-top: 6px; }
+section.note > .body { min-width: 0; }
+@media (max-width: 720px) { section.note { grid-template-columns: 1fr; gap: 12px; } }
 
-  /* Toggle */
-  .toggle-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; color: #cbd5e1; }
-  .switch { position: relative; display: inline-block; width: 42px; height: 22px; }
-  .switch input { opacity: 0; width: 0; height: 0; }
-  .slider-sw {
-    position: absolute; cursor: pointer; inset: 0;
-    background: #334155; border-radius: 22px; transition: .25s;
-  }
-  .slider-sw::before {
-    position: absolute; content: ""; height: 16px; width: 16px;
-    left: 3px; top: 3px; background: #f1f5f9;
-    border-radius: 50%; transition: .25s;
-  }
-  input:checked + .slider-sw { background: linear-gradient(135deg,#38bdf8,#6366f1); }
-  input:checked + .slider-sw::before { transform: translateX(20px); }
+h2.head { font-family: var(--f-display); font-size: 30px; font-weight: 600; line-height: 1.2; margin-bottom: 10px; letter-spacing: -0.012em; color: var(--ink-1); }
+h2.head em { font-style: italic; font-weight: 500; color: var(--accent); }
+p.body-text { font-size: 16px; color: var(--ink-2); max-width: 60ch; line-height: 1.75; margin-bottom: 10px; }
 
-  /* Slider */
-  .slider-row { margin-top: 14px; }
-  .slider-row label {
-    display: flex; justify-content: space-between;
-    font-size: 13px; color: #cbd5e1; margin-bottom: 6px;
-  }
-  .slider-row label .val { color: #7dd3fc; font-family: ui-monospace, monospace; }
-  input[type="range"] {
-    -webkit-appearance: none; appearance: none;
-    width: 100%; height: 6px; background: #334155;
-    border-radius: 3px; outline: none;
-  }
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none; appearance: none;
-    width: 18px; height: 18px; border-radius: 50%;
-    background: linear-gradient(135deg,#38bdf8,#6366f1);
-    cursor: pointer; box-shadow: 0 0 8px rgba(56,189,248,.4);
-  }
+.field-label { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; display: block; }
 
-  /* Bar chart */
-  .bar-row {
-    display: grid;
-    grid-template-columns: 140px 1fr 110px;
-    gap: 12px;
-    align-items: center;
-    padding: 7px 0;
-    border-bottom: 1px dashed rgba(148,163,184,.1);
-  }
-  .bar-row:last-child { border-bottom: none; }
-  .bar-name { font-size: 13px; color: #cbd5e1; font-weight: 600; }
-  .bar-name .tag {
-    display: inline-block; font-size: 10px;
-    background: rgba(167,139,250,.15); color: #c4b5fd;
-    padding: 1px 6px; border-radius: 4px; margin-left: 4px;
-    font-weight: 500;
-  }
-  .bar-name .tag.dense {
-    background: rgba(251,146,60,.15); color: #fdba74;
-  }
-  .bar-track {
-    position: relative; height: 22px;
-    background: rgba(15,23,42,.6);
-    border-radius: 6px; overflow: hidden;
-  }
-  .bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #38bdf8, #a78bfa);
-    border-radius: 6px;
-    transition: width .6s cubic-bezier(.2,.8,.2,1);
-    box-shadow: 0 0 8px rgba(56,189,248,.25) inset;
-  }
-  .bar-fill.dense {
-    background: linear-gradient(90deg, #fb923c, #f97316);
-    box-shadow: 0 0 8px rgba(251,146,60,.25) inset;
-  }
-  .bar-fill.selected {
-    background: linear-gradient(90deg, #34d399, #6366f1);
-    box-shadow: 0 0 12px rgba(52,211,153,.4) inset;
-  }
-  .bar-val {
-    font-size: 12px; color: #94a3b8;
-    font-family: ui-monospace, monospace;
-    text-align: right;
-  }
-  .bar-row.clickable { cursor: pointer; }
-  .bar-row.clickable:hover .bar-name { color: #f0f9ff; }
-  .bar-row.selected .bar-name { color: #6ee7b7; }
+/* ===== Tag pills (filter / sort) ===== */
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag-pill {
+  font-family: var(--f-body); font-size: 13px; color: var(--ink-2);
+  background: transparent; border: 1px solid var(--rule-strong);
+  border-radius: 2px; padding: 5px 12px; cursor: pointer;
+  transition: all 0.15s; letter-spacing: 0.01em;
+}
+.tag-pill:hover { color: var(--accent); border-color: var(--accent); }
+.tag-pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.tag-pill.active.sage { background: var(--sage); border-color: var(--sage); }
 
-  /* Metrics */
-  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
-  .stat {
-    background: rgba(15,23,42,.6);
-    border: 1px solid #1e293b;
-    padding: 12px; border-radius: 10px; text-align: center;
-  }
-  .stat .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; }
-  .stat .value { font-size: 20px; font-weight: 700; margin-top: 4px; color: #38bdf8; }
-  .stat .sub { font-size: 10px; color: #64748b; margin-top: 2px; }
+.controls-stack { display: grid; gap: 18px; }
+.controls-stack .ctrl-group { }
 
-  /* What-if */
-  .whatif-results {
-    display: grid; grid-template-columns: repeat(2, 1fr);
-    gap: 8px; margin-top: 12px;
-  }
-  .whatif-card {
-    background: rgba(15,23,42,.5);
-    border: 1px solid rgba(167,139,250,.2);
-    padding: 10px 12px; border-radius: 8px;
-  }
-  .whatif-card .m { font-size: 12px; color: #cbd5e1; }
-  .whatif-card .eq { font-size: 16px; color: #c4b5fd; font-weight: 600; margin-top: 2px; }
-  .whatif-card .note { font-size: 11px; color: #64748b; margin-top: 2px; }
+/* ===== Distribution rows (model ranking) ===== */
+.dist-input { display: flex; align-items: baseline; gap: 12px; padding: 14px 0; border-top: 1px solid var(--rule-strong); }
+.dist-input .lab { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+.dist-input .val { font-family: var(--f-mono); font-weight: 500; font-size: 15px; color: var(--accent); }
 
-  /* Concept mapping */
-  .concept-grid {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .concept {
-    background: rgba(56,189,248,.06);
-    border-left: 3px solid #38bdf8;
-    padding: 10px 12px; border-radius: 6px;
-    font-size: 13px; color: #cbd5e1;
-  }
-  .concept strong { color: #7dd3fc; display: block; margin-bottom: 4px; }
+.dist-head {
+  display: grid; grid-template-columns: 38px 1fr 62px 1fr 84px;
+  gap: 14px; padding: 9px 4px;
+  font-family: var(--f-mono); font-size: 10px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-4); border-bottom: 1px solid var(--rule);
+}
+.dist-head .col-rt { text-align: right; }
 
-  footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 28px; }
-  .small { font-size: 11px; color: #64748b; margin-top: 8px; }
+.dist-chart { font-variant-numeric: tabular-nums; }
+.dist-row {
+  display: grid; grid-template-columns: 38px 1fr 62px 1fr 84px;
+  gap: 14px; align-items: center; padding: 10px 4px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 13px; color: var(--ink-3);
+  transition: color 0.4s ease;
+}
+.dist-row .r-rank { font-family: var(--f-mono); font-size: 11px; color: var(--ink-4); letter-spacing: 0.04em; }
+.dist-row .r-name { letter-spacing: -0.005em; }
+.dist-row .r-name .tag {
+  display: inline-block; margin-left: 8px;
+  font-family: var(--f-mono); font-size: 9px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-3); border: 1px solid var(--rule-strong);
+  padding: 1px 6px; vertical-align: middle;
+}
+.dist-row .r-id {
+  font-family: var(--f-mono); font-size: 10px;
+  color: var(--ink-4); text-align: right;
+}
+.dist-row .r-bar { height: 10px; background: var(--paper-2); position: relative; overflow: hidden; }
+.dist-row .r-bar .fill { height: 100%; background: var(--ink-4); transition: width 0.5s ease; }
+.dist-row .r-pct { font-family: var(--f-mono); font-size: 11px; text-align: right; color: var(--ink-3); }
+
+.dist-row.warm { color: var(--ink-1); }
+.dist-row.warm .r-rank { color: var(--ink-1); }
+.dist-row.warm .r-name { font-weight: 600; }
+.dist-row.warm .r-id { color: var(--ink-2); }
+.dist-row.warm .r-bar { background: var(--sage-tint); }
+.dist-row.warm .r-bar .fill { background: var(--sage); }
+.dist-row.warm .r-pct { color: var(--ink-1); font-weight: 500; }
+
+.dist-row.hot { color: var(--accent); }
+.dist-row.hot .r-rank { font-family: var(--f-display); font-weight: 600; font-size: 14px; color: var(--accent); letter-spacing: -0.01em; }
+.dist-row.hot .r-name { font-family: var(--f-display); font-weight: 600; font-size: 15px; color: var(--accent); letter-spacing: -0.01em; }
+.dist-row.hot .r-name .tag { color: var(--accent); border-color: var(--accent); }
+.dist-row.hot .r-id { color: var(--accent); }
+.dist-row.hot .r-bar { background: var(--accent-tint); }
+.dist-row.hot .r-bar .fill { background: var(--accent); }
+.dist-row.hot .r-pct { color: var(--accent); font-weight: 600; font-family: var(--f-mono); font-size: 12px; }
+
+.dist-row.dim { opacity: 0.45; }
+
+/* ===== Figures ===== */
+.figure-row {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+}
+@media (max-width: 720px) { .figure-row { grid-template-columns: repeat(2, 1fr); } }
+.figure { padding: 22px 22px; border-right: 1px solid var(--rule); }
+.figure:last-child { border-right: none; }
+@media (max-width: 720px) { .figure:nth-child(2n) { border-right: none; } }
+.figure .fig-label {
+  font-family: var(--f-mono); font-size: 10px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 10px;
+}
+.figure .fig-num {
+  font-family: var(--f-display); font-size: 36px; font-weight: 500;
+  line-height: 1; letter-spacing: -0.025em;
+  color: var(--ink-1); font-variant-numeric: tabular-nums;
+}
+.figure .fig-num em { font-style: normal; font-weight: 600; color: var(--accent); }
+.figure .fig-num.sage { color: var(--sage); }
+.figure .fig-num.accent { color: var(--accent); }
+.figure .fig-num .unit { font-family: var(--f-body); font-size: 14px; font-weight: 400; color: var(--ink-3); margin-left: 4px; }
+.figure .fig-sub { font-size: 13px; color: var(--ink-3); margin-top: 8px; line-height: 1.5; }
+
+/* ===== Scatter chart ===== */
+.chart-cap { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 14px; }
+svg.scatter { width: 100%; height: 320px; display: block; }
+.chart-legend {
+  display: flex; flex-wrap: wrap; gap: 18px; margin-top: 14px;
+  font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.chart-legend .dot { display: inline-block; width: 10px; height: 10px; vertical-align: middle; margin-right: 6px; border-radius: 50%; }
+
+/* ===== Reading rows ===== */
+.read-row { display: grid; grid-template-columns: 220px 1fr; gap: 24px; padding: 18px 0; border-top: 1px solid var(--rule); }
+.read-row:last-child { border-bottom: 1px solid var(--rule); }
+.read-row .obs { font-family: var(--f-mono); font-size: 12px; color: var(--accent); letter-spacing: 0.02em; }
+.read-row .meaning { font-size: 15px; color: var(--ink-2); line-height: 1.7; }
+
+.side-note {
+  position: relative; padding-left: 18px;
+  margin: 28px 0 0 0; border-left: 2px solid var(--accent);
+  font-size: 15px; color: var(--ink-2); line-height: 1.65;
+  font-style: italic; font-family: var(--f-display); font-weight: 400;
+  max-width: 56ch;
+}
+.side-note .auth {
+  display: block; font-style: normal;
+  font-family: var(--f-mono); font-size: 10px;
+  color: var(--ink-3); letter-spacing: 0.14em;
+  text-transform: uppercase; margin-top: 8px;
+}
+
+.colophon {
+  margin-top: 64px; padding-top: 24px;
+  border-top: 1px solid var(--rule-bold);
+  display: grid; grid-template-columns: 180px 1fr; gap: 32px;
+  font-family: var(--f-mono); font-size: 11px;
+  color: var(--ink-3); line-height: 1.85; letter-spacing: 0.02em;
+}
+.colophon .l { color: var(--ink-4); text-transform: uppercase; letter-spacing: 0.14em; font-size: 10px; }
+.colophon em { font-family: var(--f-display); font-style: italic; font-weight: 500; color: var(--accent); }
+@media (max-width: 720px) { .colophon { grid-template-columns: 1fr; gap: 12px; } }
 </style>
 </head>
 <body>
-<div class="container">
 
-  <h1>📊 2026 MoE 模型儀表板</h1>
-  <p class="subtitle">橫向比較四大中國開放 MoE 模型 vs 密集對照組，看為什麼 MoE 在 2026 成為主流。點長條切換選中模型，看右側指標即時變化。</p>
+<main class="page">
 
-  <!-- Control panel -->
-  <div class="card">
-    <h2>① 指標控制台</h2>
-    <div class="chip-row" id="metricChips"></div>
-    <div class="toggle-row">
-      <label class="switch">
-        <input type="checkbox" id="showDense" checked>
-        <span class="slider-sw"></span>
-      </label>
-      <span>顯示密集對照組（Llama 3.1 405B）</span>
+  <header class="masthead">
+    <div class="meta">
+      <dl>
+        <div><span class="label">Volume</span>Learning Note №02</div>
+        <div><span class="label">Subject</span>MoE landscape · 2026</div>
+        <div><span class="label">Date</span>2026 · 05 · 16</div>
+      </dl>
     </div>
-    <div class="slider-row">
-      <label>
-        <span>What-if 滑桿：假設你只能負擔 <strong>Active 參數 = </strong></span>
-        <span class="val"><span id="activeVal">32</span> B</span>
-      </label>
-      <input type="range" id="activeSlider" min="5" max="80" value="32" step="1">
-      <div class="small">基於各模型的稀疏比，反推「等價的 Total 參數可以蓋多大」。</div>
+    <div>
+      <h1 class="title"><em>Why</em> MoE<br>became the default.</h1>
+      <p class="lede">
+        篩選 / 排序 2024–2026 主流開放 MoE 模型 — 總參數、active 參數、稀疏比、發布年。
+        把每一行視為一份論證材料：兆級總參數能成立，是因為每個 token 只動其中一小撮專家。
+      </p>
     </div>
-  </div>
+  </header>
 
-  <!-- Bar chart -->
-  <div class="card">
-    <h2>② <span id="chartTitle">總參數 (Total, B)</span></h2>
-    <div id="barChart"></div>
-
-    <div class="stats">
-      <div class="stat">
-        <div class="label">選中模型</div>
-        <div class="value" id="selName" style="font-size:15px">DeepSeek-V3</div>
-        <div class="sub" id="selType">MoE</div>
-      </div>
-      <div class="stat">
-        <div class="label">稀疏比 (Total/Active)</div>
-        <div class="value" id="sparseRatio">18.1×</div>
-        <div class="sub">數字越大 = 越稀疏</div>
-      </div>
-      <div class="stat">
-        <div class="label">推理成本（vs Llama405B）</div>
-        <div class="value" id="inferCost">9%</div>
-        <div class="sub">越低越便宜</div>
-      </div>
-      <div class="stat">
-        <div class="label">訓練成本節省</div>
-        <div class="value" id="trainSave">82%</div>
-        <div class="sub">相對等效密集</div>
-      </div>
+  <!-- § 01 MODELS -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 01</span>
+      Models
+      <div class="name">模型清單</div>
     </div>
-  </div>
+    <div class="body">
+      <h2 class="head">A <em>roster</em>, not a leaderboard.</h2>
+      <p class="body-text">
+        切 vendor 篩來源、切 year 篩世代、切 active range 篩可負擔範圍。
+        排序按鈕決定下一節 Distribution 的排名依據 — Total 看「知識上限」，Active 看「每 token 推理成本」。
+      </p>
 
-  <!-- What-if results -->
-  <div class="card">
-    <h2>③ What-if：給定 Active 參數，各家能蓋多大的「等效知識容量」</h2>
-    <div class="whatif-results" id="whatifResults"></div>
-    <div class="small">背後直覺：MoE 的 Total/Active 倍率（稀疏比）決定了「同樣的推理預算下，能塞多少額外知識」。倍率越大 = 同樣推理成本下知識容量越大。</div>
-  </div>
+      <div style="height: 26px;"></div>
 
-  <!-- Concept mapping -->
-  <div class="card">
-    <h2>④ 概念對照：互動 ↔ 為什麼 MoE 成為主流</h2>
-    <div class="concept-grid">
-      <div class="concept">
-        <strong>Total vs Active 差距大</strong>
-        ↔ <em>稀疏激活</em>：模型擁有龐大知識上限，但每個 token 只動其中一小部分專家。
-      </div>
-      <div class="concept">
-        <strong>推理 FLOPs 低</strong>
-        ↔ <em>為何能跑得快</em>：每 token 只算 active 那幾個專家的矩陣乘，FLOPs 大幅下降。
-      </div>
-      <div class="concept">
-        <strong>訓練成本低</strong>
-        ↔ <em>為何能燒得起</em>：訓練同樣以 active 參數為主導，讓中小團隊能挑戰兆級模型。
-      </div>
-      <div class="concept">
-        <strong>四家全採 MoE</strong>
-        ↔ <em>為何成為主流</em>：唯一同時滿足「知識廣度」與「推理可負擔」的成熟解法。
+      <div class="controls-stack">
+        <div class="ctrl-group">
+          <span class="field-label">Vendor</span>
+          <div class="chip-row" id="vendorFilters"></div>
+        </div>
+        <div class="ctrl-group">
+          <span class="field-label">Year</span>
+          <div class="chip-row" id="yearFilters"></div>
+        </div>
+        <div class="ctrl-group">
+          <span class="field-label">Active range · B</span>
+          <div class="chip-row" id="activeFilters"></div>
+        </div>
+        <div class="ctrl-group">
+          <span class="field-label">Sort by</span>
+          <div class="chip-row" id="sortChips"></div>
+        </div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <footer>
-    本儀表板數字為 2026 教學示意（部分推估），用以呈現 MoE 與密集模型的差距級別。<br>
-    真實 FLOPs/成本受 hardware、context length、batch size 等多因素影響。
+  <!-- § 02 DISTRIBUTION -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 02</span>
+      Distribution
+      <div class="name">參數量排名</div>
+    </div>
+    <div class="body">
+      <h2 class="head">A <em>ranking</em> is an argument.</h2>
+      <p class="body-text">
+        排名橫條同時告訴你誰贏、贏多少、與後者的距離。Top-1 用石板藍加重，
+        top-2 用鼠尾草綠加重；Dense 模型保留為對照，灰階呈現，看清「同樣的 active 預算下，MoE 多塞了多少」。
+      </p>
+
+      <figure>
+        <div class="dist-input">
+          <span class="lab">Ranking by —</span>
+          <span class="val" id="metricLabel">總參數 (Total, B)</span>
+        </div>
+
+        <div class="dist-head">
+          <span>Rank</span>
+          <span>Model</span>
+          <span class="col-rt">Active</span>
+          <span id="metricCol">Total params</span>
+          <span class="col-rt">Value</span>
+        </div>
+
+        <div class="dist-chart" id="distChart"></div>
+
+        <figcaption style="font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 14px;">
+          Fig 01 · models ranked by selected metric, descending
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- § 03 TREND -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 03</span>
+      Trend
+      <div class="name">2024–2026 演變</div>
+    </div>
+    <div class="body">
+      <h2 class="head">Three numbers, <em>one direction</em>.</h2>
+      <p class="body-text">
+        當前篩選範圍的概覽 — 最大模型的總參數、平均稀疏比、模型數量。下圖是
+        Active × Total 散點：X 軸 active（log），Y 軸 total（log），點離對角線越遠 = 稀疏比越極端。
+      </p>
+
+      <div style="height: 26px;"></div>
+
+      <div class="figure-row">
+        <div class="figure">
+          <div class="fig-label">Largest total</div>
+          <div class="fig-num" id="maxTotal">—<span class="unit">B</span></div>
+          <div class="fig-sub" id="maxTotalSub">—</div>
+        </div>
+        <div class="figure">
+          <div class="fig-label">Avg sparse ratio</div>
+          <div class="fig-num sage" id="avgRatio">—<span class="unit">×</span></div>
+          <div class="fig-sub">Total / Active 平均</div>
+        </div>
+        <div class="figure">
+          <div class="fig-label">Models in view</div>
+          <div class="fig-num"><em><span id="modelCount">—</span></em></div>
+          <div class="fig-sub" id="modelCountSub">符合當前篩選</div>
+        </div>
+      </div>
+
+      <div style="height: 36px;"></div>
+
+      <div class="chart-cap">Fig 02 · Active vs Total · log-log</div>
+      <svg class="scatter" id="scatter" viewBox="0 0 720 320" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="chart-legend">
+        <span><span class="dot" style="background:var(--accent)"></span>Top by metric</span>
+        <span><span class="dot" style="background:var(--sage)"></span>Runner-up</span>
+        <span><span class="dot" style="background:var(--ink-3)"></span>MoE</span>
+        <span><span class="dot" style="background:var(--ink-4); border:1px solid var(--ink-3)"></span>Dense (對照)</span>
+        <span><span class="dot" style="background:transparent; border-top: 1px dashed var(--ink-3); border-radius:0; width:14px; height:0; margin-top:8px;"></span>y = x (dense line)</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- § 04 READING -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 04</span>
+      Reading
+      <div class="name">觀察</div>
+    </div>
+    <div class="body">
+      <h2 class="head">Four <em>tells</em>.</h2>
+      <p class="body-text">把儀表板現象對到「為什麼 2026 主流四家全採 MoE」的結構性原因。</p>
+
+      <div style="height: 20px;"></div>
+
+      <div class="read-row">
+        <div class="obs">Total 跨兩個量級</div>
+        <div class="meaning">從 235B 到 1000B — MoE 讓「知識上限」徹底鬆綁，沒有人再用 Dense 蓋兆級。</div>
+      </div>
+      <div class="read-row">
+        <div class="obs">Active 集中在 20–40B</div>
+        <div class="meaning">每 token 的推理成本被壓在中型模型區間 — 中小算力團隊也能服務兆級模型。</div>
+      </div>
+      <div class="read-row">
+        <div class="obs">稀疏比逐年走高</div>
+        <div class="meaning">2024 約 10×、2026 突破 30× — 路由演算法成熟，敢讓更稀疏的設計上線。</div>
+      </div>
+      <div class="read-row">
+        <div class="obs">點越偏離對角線</div>
+        <div class="meaning">y = x 是 Dense baseline，垂直距離 = log(稀疏比)。Kimi-K2 拉到最遠端，是當下「同 active 預算最大知識容量」的代表。</div>
+      </div>
+
+      <div class="side-note">
+        “MoE 不是更聰明的模型，是更聰明的預算配置 —
+        把訓練 / 推理成本花在『真的會用到』的專家上，其餘庫存著。”
+        <span class="auth">— note on why MoE won</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <div>
+      <span class="l">Colophon</span><br>
+      Notebook · v2<br>
+      MoE Mainstream 2026
+    </div>
+    <div>
+      數字為 2026 教學示意（部分為公開資料、部分推估），用以呈現 MoE 與 Dense 的差距級別。
+      真實 FLOPs / 訓練成本受 hardware、context length、batch size 等因素影響。
+      Set in <em>Schibsted Grotesk</em> &amp; Source Sans 3,
+      with <span style="font-family: var(--f-mono);">IBM Plex Mono</span> for figures.
+    </div>
   </footer>
-</div>
+
+</main>
 
 <script>
-  // Educational figures (2026, order-of-magnitude — not precise)
+  // ============================================================
+  // Model data — preserved from original, augmented with year+vendor
+  // ============================================================
   const MODELS = [
-    { id:'ds',     name:'DeepSeek-V3', type:'MoE',   total:671,  active:37,  infer:9,  train:18 },
-    { id:'qwen',   name:'Qwen3-MoE',   type:'MoE',   total:235,  active:22,  infer:5,  train:11 },
-    { id:'glm',    name:'GLM-4.5',     type:'MoE',   total:355,  active:32,  infer:8,  train:15 },
-    { id:'kimi',   name:'Kimi-K2',     type:'MoE',   total:1000, active:32,  infer:8,  train:22 },
-    { id:'llama',  name:'Llama 3.1 405B', type:'Dense', total:405, active:405, infer:100, train:100 },
+    { id:'ds',    name:'DeepSeek-V3',    vendor:'DeepSeek', type:'MoE',   year:2024, total:671,  active:37 },
+    { id:'qwen',  name:'Qwen3-MoE',      vendor:'Alibaba',  type:'MoE',   year:2025, total:235,  active:22 },
+    { id:'glm',   name:'GLM-4.5',        vendor:'Zhipu',    type:'MoE',   year:2025, total:355,  active:32 },
+    { id:'kimi',  name:'Kimi-K2',        vendor:'Moonshot', type:'MoE',   year:2026, total:1000, active:32 },
+    { id:'llama', name:'Llama 3.1 405B', vendor:'Meta',     type:'Dense', year:2024, total:405,  active:405 },
   ];
 
   const METRICS = [
-    { key:'total',  label:'總參數 (Total, B)',          unit:'B',    fmt:v=>v.toFixed(0)+' B' },
-    { key:'active', label:'啟用參數 (Active, B)',       unit:'B',    fmt:v=>v.toFixed(0)+' B' },
-    { key:'infer',  label:'單 token 推理 FLOPs (相對 Llama=100)', unit:'',  fmt:v=>v.toFixed(0) },
-    { key:'train',  label:'估算訓練成本 (相對 Llama=100)',  unit:'',  fmt:v=>v.toFixed(0) },
+    { key:'total',  label:'Total params',   unitLabel:'總參數 (Total, B)',           fmt:v=>v.toFixed(0)+' B' },
+    { key:'active', label:'Active params',  unitLabel:'啟用參數 (Active, B)',        fmt:v=>v.toFixed(0)+' B' },
+    { key:'ratio',  label:'Sparse ratio',   unitLabel:'稀疏比 (Total/Active)',        fmt:v=>v.toFixed(1)+'×' },
   ];
 
-  let currentMetric = 'total';
-  let selectedId = 'ds';
-  let showDense = true;
+  // ============================================================
+  // Filter state
+  // ============================================================
+  const VENDORS = ['All', ...Array.from(new Set(MODELS.map(m=>m.vendor)))];
+  const YEARS   = ['All', ...Array.from(new Set(MODELS.map(m=>m.year))).sort((a,b)=>a-b)];
+  const ACTIVE_RANGES = [
+    { id:'all',     label:'All' },
+    { id:'small',   label:'< 30B' },
+    { id:'mid',     label:'30–100B' },
+    { id:'dense',   label:'> 100B (dense)' },
+  ];
 
-  function renderChips(){
-    const row = document.getElementById('metricChips');
-    row.innerHTML = '';
-    METRICS.forEach(m=>{
-      const c = document.createElement('span');
-      c.className = 'chip' + (m.key===currentMetric ? ' active' : '');
-      c.textContent = m.label;
-      c.onclick = ()=>{ currentMetric = m.key; renderChips(); renderChart(); };
-      row.appendChild(c);
-    });
-    document.getElementById('chartTitle').textContent = METRICS.find(x=>x.key===currentMetric).label;
-  }
+  let filterVendor = 'All';
+  let filterYear   = 'All';
+  let filterRange  = 'all';
+  let sortKey      = 'total';
 
-  function renderChart(){
-    const chart = document.getElementById('barChart');
-    chart.innerHTML = '';
-    const visible = MODELS.filter(m => showDense || m.type !== 'Dense');
-    const metric = METRICS.find(x=>x.key===currentMetric);
-    const max = Math.max(...visible.map(m=>m[currentMetric]));
-    visible.forEach(m=>{
-      const row = document.createElement('div');
-      row.className = 'bar-row clickable' + (m.id===selectedId ? ' selected' : '');
-      const isDense = m.type === 'Dense';
-      const isSel = m.id === selectedId;
-      const pct = Math.max(2, (m[currentMetric] / max) * 100);
-      row.innerHTML = `
-        <div class="bar-name">${m.name}<span class="tag ${isDense?'dense':''}">${m.type}</span></div>
-        <div class="bar-track">
-          <div class="bar-fill ${isSel?'selected':(isDense?'dense':'')}" style="width:${pct}%"></div>
-        </div>
-        <div class="bar-val">${metric.fmt(m[currentMetric])}</div>
-      `;
-      row.onclick = ()=>{ selectedId = m.id; renderChart(); renderStats(); renderWhatIf(); };
-      chart.appendChild(row);
+  function visibleModels() {
+    return MODELS.filter(m => {
+      if (filterVendor !== 'All' && m.vendor !== filterVendor) return false;
+      if (filterYear   !== 'All' && m.year   != filterYear)   return false;
+      if (filterRange === 'small' && m.active >= 30)   return false;
+      if (filterRange === 'mid'   && (m.active < 30 || m.active > 100)) return false;
+      if (filterRange === 'dense' && m.active <= 100)  return false;
+      return true;
     });
   }
 
-  function renderStats(){
-    const m = MODELS.find(x=>x.id===selectedId);
-    document.getElementById('selName').textContent = m.name;
-    document.getElementById('selType').textContent = m.type;
-    const sparse = m.active>0 ? (m.total / m.active) : 1;
-    document.getElementById('sparseRatio').textContent = sparse.toFixed(1) + '×';
-    document.getElementById('inferCost').textContent = m.infer + '%';
-    // train save vs equivalent-knowledge dense: rough proxy = 100 - train when MoE
-    const save = m.type==='Dense' ? 0 : Math.round(100 - m.train);
-    document.getElementById('trainSave').textContent = save + '%';
+  function getMetric(m, key) {
+    if (key === 'ratio') return m.active > 0 ? m.total / m.active : 1;
+    return m[key];
   }
 
-  function renderWhatIf(){
-    const active = parseInt(document.getElementById('activeSlider').value, 10);
-    document.getElementById('activeVal').textContent = active;
-    const grid = document.getElementById('whatifResults');
-    grid.innerHTML = '';
-    MODELS.forEach(m=>{
-      const ratio = m.active>0 ? (m.total / m.active) : 1;
-      const equivTotal = active * ratio;
-      const card = document.createElement('div');
-      card.className = 'whatif-card';
-      card.innerHTML = `
-        <div class="m">${m.name} <span style="color:#64748b">(比 ${ratio.toFixed(1)}×)</span></div>
-        <div class="eq">≈ ${equivTotal.toFixed(0)} B Total</div>
-        <div class="note">用同款架構，給 ${active}B active 可蓋出的等效模型大小</div>
-      `;
-      grid.appendChild(card);
+  // ============================================================
+  // Render — filter chips
+  // ============================================================
+  function renderFilters() {
+    const vBox = document.getElementById('vendorFilters');
+    vBox.innerHTML = '';
+    VENDORS.forEach(v => {
+      const el = document.createElement('span');
+      el.className = 'tag-pill' + (v === filterVendor ? ' active' : '');
+      el.textContent = v;
+      el.onclick = () => { filterVendor = v; renderAll(); };
+      vBox.appendChild(el);
+    });
+
+    const yBox = document.getElementById('yearFilters');
+    yBox.innerHTML = '';
+    YEARS.forEach(y => {
+      const el = document.createElement('span');
+      el.className = 'tag-pill' + (String(y) === String(filterYear) ? ' active' : '');
+      el.textContent = y;
+      el.onclick = () => { filterYear = y; renderAll(); };
+      yBox.appendChild(el);
+    });
+
+    const rBox = document.getElementById('activeFilters');
+    rBox.innerHTML = '';
+    ACTIVE_RANGES.forEach(r => {
+      const el = document.createElement('span');
+      el.className = 'tag-pill' + (r.id === filterRange ? ' active' : '');
+      el.textContent = r.label;
+      el.onclick = () => { filterRange = r.id; renderAll(); };
+      rBox.appendChild(el);
+    });
+
+    const sBox = document.getElementById('sortChips');
+    sBox.innerHTML = '';
+    METRICS.forEach(m => {
+      const el = document.createElement('span');
+      el.className = 'tag-pill' + (m.key === sortKey ? ' active sage' : '');
+      el.textContent = m.label;
+      el.onclick = () => { sortKey = m.key; renderAll(); };
+      sBox.appendChild(el);
     });
   }
 
-  // wire up
-  document.getElementById('showDense').addEventListener('change', e=>{
-    showDense = e.target.checked;
-    renderChart();
-  });
-  document.getElementById('activeSlider').addEventListener('input', renderWhatIf);
+  // ============================================================
+  // Render — distribution rows
+  // ============================================================
+  function renderDist() {
+    const all = visibleModels();
+    const ranked = [...all].sort((a,b) => getMetric(b, sortKey) - getMetric(a, sortKey));
+    const metric = METRICS.find(x => x.key === sortKey);
+    const maxV = Math.max(...ranked.map(m => getMetric(m, sortKey)), 1);
 
-  // initial
-  renderChips();
-  renderChart();
-  renderStats();
-  renderWhatIf();
+    document.getElementById('metricLabel').textContent = metric.unitLabel;
+    document.getElementById('metricCol').textContent   = metric.label;
+
+    const box = document.getElementById('distChart');
+    if (!ranked.length) {
+      box.innerHTML = '<div class="dist-row"><span class="r-rank">—</span><span class="r-name" style="font-style:italic; color:var(--ink-4);">No models match current filters</span><span class="r-id">—</span><div class="r-bar"></div><span class="r-pct">—</span></div>';
+      return;
+    }
+
+    let html = '';
+    ranked.forEach((m, idx) => {
+      let cls = '';
+      if (idx === 0) cls = 'hot';
+      else if (idx === 1) cls = 'warm';
+      if (m.type === 'Dense' && idx > 1) cls = 'dim';
+      const v = getMetric(m, sortKey);
+      const width = (v / maxV * 100).toFixed(1);
+      const valStr = metric.fmt(v);
+      const activeStr = m.active.toFixed(0) + 'B';
+      html += `
+        <div class="dist-row ${cls}">
+          <span class="r-rank">${String(idx+1).padStart(2,'0')}</span>
+          <span class="r-name">${m.name}<span class="tag">${m.type}</span></span>
+          <span class="r-id">${activeStr}</span>
+          <div class="r-bar"><div class="fill" style="width:${width}%"></div></div>
+          <span class="r-pct">${valStr}</span>
+        </div>`;
+    });
+    box.innerHTML = html;
+  }
+
+  // ============================================================
+  // Render — trend figures
+  // ============================================================
+  function renderTrend() {
+    const all = visibleModels();
+    const maxTotalEl    = document.getElementById('maxTotal');
+    const maxTotalSubEl = document.getElementById('maxTotalSub');
+    const avgRatioEl    = document.getElementById('avgRatio');
+    const countEl       = document.getElementById('modelCount');
+    const countSubEl    = document.getElementById('modelCountSub');
+
+    if (!all.length) {
+      maxTotalEl.innerHTML  = '—<span class="unit">B</span>';
+      maxTotalSubEl.textContent = '—';
+      avgRatioEl.innerHTML  = '—<span class="unit">×</span>';
+      countEl.textContent   = '0';
+      countSubEl.textContent = '無模型符合篩選';
+      return;
+    }
+
+    const maxM = all.reduce((a,b) => b.total > a.total ? b : a);
+    const avgR = all.reduce((s,m) => s + (m.active>0 ? m.total/m.active : 1), 0) / all.length;
+
+    maxTotalEl.innerHTML  = `${maxM.total}<span class="unit">B</span>`;
+    maxTotalSubEl.textContent = maxM.name + ' · ' + maxM.year;
+    avgRatioEl.innerHTML  = `${avgR.toFixed(1)}<span class="unit">×</span>`;
+    countEl.textContent   = String(all.length);
+    countSubEl.textContent = `共 ${all.length} / ${MODELS.length} 個模型在範圍內`;
+  }
+
+  // ============================================================
+  // Render — scatter chart (log-log Active vs Total)
+  // ============================================================
+  function renderScatter() {
+    const svg = document.getElementById('scatter');
+    const W = 720, H = 320, pad = { l: 56, r: 24, t: 18, b: 44 };
+    const plotW = W - pad.l - pad.r, plotH = H - pad.t - pad.b;
+
+    const xMin = Math.log10(10),   xMax = Math.log10(1000);
+    const yMin = Math.log10(100),  yMax = Math.log10(1500);
+    const sx = v => pad.l + (Math.log10(Math.max(v, 1)) - xMin) / (xMax - xMin) * plotW;
+    const sy = v => pad.t + plotH - (Math.log10(Math.max(v, 1)) - yMin) / (yMax - yMin) * plotH;
+
+    // grid lines
+    let grid = '';
+    for (let lx = Math.ceil(xMin); lx <= Math.floor(xMax); lx++) {
+      const x = sx(Math.pow(10, lx));
+      grid += `<line x1="${x}" y1="${pad.t}" x2="${x}" y2="${pad.t+plotH}" stroke="rgba(43,43,43,0.06)" />`;
+      grid += `<text x="${x}" y="${pad.t+plotH+18}" fill="#7c7c7c" font-size="10" font-family="'IBM Plex Mono', monospace" text-anchor="middle">10^${lx}</text>`;
+    }
+    for (let ly = Math.ceil(yMin); ly <= Math.floor(yMax); ly++) {
+      const y = sy(Math.pow(10, ly));
+      grid += `<line x1="${pad.l}" y1="${y}" x2="${pad.l+plotW}" y2="${y}" stroke="rgba(43,43,43,0.06)" />`;
+      grid += `<text x="${pad.l-8}" y="${y+3}" fill="#7c7c7c" font-size="10" font-family="'IBM Plex Mono', monospace" text-anchor="end">10^${ly}</text>`;
+    }
+    // axis labels
+    grid += `<text x="${pad.l-44}" y="${pad.t-4}" fill="#7c7c7c" font-size="9" font-family="'IBM Plex Mono', monospace" letter-spacing="0.1em">TOTAL · B</text>`;
+    grid += `<text x="${pad.l+plotW}" y="${pad.t+plotH+36}" fill="#7c7c7c" font-size="9" font-family="'IBM Plex Mono', monospace" text-anchor="end" letter-spacing="0.1em">ACTIVE · B</text>`;
+
+    // y = x dense baseline (active == total)
+    const x1 = sx(Math.pow(10, xMin)), x2 = sx(Math.pow(10, xMax));
+    const y1Active = Math.pow(10, xMin), y2Active = Math.pow(10, xMax);
+    const diag = `<line x1="${x1}" y1="${sy(y1Active)}" x2="${x2}" y2="${sy(y2Active)}" stroke="#7c7c7c" stroke-width="1" stroke-dasharray="4,3"/>`;
+
+    // determine top/runner-up by current sortKey
+    const all = visibleModels();
+    const ranked = [...all].sort((a,b) => getMetric(b, sortKey) - getMetric(a, sortKey));
+    const topId = ranked[0]?.id;
+    const secId = ranked[1]?.id;
+
+    // points
+    let points = '';
+    all.forEach(m => {
+      const cx = sx(m.active), cy = sy(m.total);
+      let fill = '#7c7c7c', stroke = '#faf8f8', r = 6;
+      if (m.type === 'Dense') { fill = '#faf8f8'; stroke = '#7c7c7c'; }
+      if (m.id === secId) { fill = '#84a59d'; stroke = '#faf8f8'; r = 7; }
+      if (m.id === topId) { fill = '#284b63'; stroke = '#faf8f8'; r = 8; }
+      points += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>`;
+      // label
+      const labelColor = m.id === topId ? '#284b63'
+                      : m.id === secId ? '#84a59d'
+                      : (m.type === 'Dense' ? '#7c7c7c' : '#4e4e4e');
+      const labelWeight = (m.id === topId || m.id === secId) ? 600 : 500;
+      points += `<text x="${(cx+10).toFixed(1)}" y="${(cy+3).toFixed(1)}" fill="${labelColor}" font-size="11" font-family="'Schibsted Grotesk', sans-serif" font-weight="${labelWeight}">${m.name}</text>`;
+    });
+
+    svg.innerHTML = grid + diag + points;
+  }
+
+  // ============================================================
+  // Render all
+  // ============================================================
+  function renderAll() {
+    renderFilters();
+    renderDist();
+    renderTrend();
+    renderScatter();
+  }
+
+  renderAll();
 </script>
 </body>
 </html>

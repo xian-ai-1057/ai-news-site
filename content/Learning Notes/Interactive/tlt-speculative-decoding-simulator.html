@@ -3,575 +3,678 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TLT 訓練加速 + 推測解碼模擬器</title>
+<title>TLT 推測解碼模擬器 · Notebook</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang TC",
-                 "Microsoft JhengHei", sans-serif;
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    color: #f1f5f9;
-    min-height: 100vh;
-    padding: 24px;
-    line-height: 1.6;
-  }
-  .container { max-width: 980px; margin: 0 auto; }
-  h1 {
-    font-size: 26px; margin-bottom: 6px;
-    background: linear-gradient(135deg,#38bdf8,#a78bfa);
-    -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .subtitle { color: #94a3b8; margin-bottom: 24px; font-size: 14px; }
+:root {
+  --paper: #faf8f8; --paper-2: #f1eeec; --card: #ffffff;
+  --ink-1: #2b2b2b; --ink-2: #4e4e4e; --ink-3: #7c7c7c; --ink-4: #b8b8b8; --ink-5: #d4d4d4;
+  --rule: rgba(43,43,43,0.10); --rule-strong: rgba(43,43,43,0.22); --rule-bold: var(--ink-1);
+  --accent: #284b63; --accent-2: #1a3445;
+  --accent-soft: rgba(40,75,99,0.10); --accent-tint: rgba(40,75,99,0.04);
+  --sage: #84a59d; --sage-soft: rgba(132,165,157,0.20); --sage-tint: rgba(132,165,157,0.08);
+  --f-display: 'Schibsted Grotesk','Noto Sans TC',-apple-system,'PingFang TC',sans-serif;
+  --f-body: 'Source Sans 3','Noto Sans TC',-apple-system,'PingFang TC',sans-serif;
+  --f-mono: 'IBM Plex Mono', ui-monospace,'SF Mono', Consolas, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--paper); }
+body { font-family: var(--f-body); color: var(--ink-1); line-height: 1.6; -webkit-font-smoothing: antialiased; padding: 56px 40px 88px; }
+.page { max-width: 1080px; margin: 0 auto; }
 
-  .card {
-    background: rgba(30,41,59,.7); backdrop-filter: blur(8px);
-    border: 1px solid rgba(148,163,184,.15);
-    border-radius: 16px; padding: 22px; margin-bottom: 20px;
-  }
-  .card h2 { font-size: 17px; margin-bottom: 14px; color: #e2e8f0; }
-  .card h3 { font-size: 14px; margin: 8px 0 10px; color: #94a3b8; font-weight: 600; }
+/* ===== Masthead ===== */
+.masthead {
+  display: grid; grid-template-columns: 180px 1fr; gap: 32px;
+  padding-bottom: 36px; border-bottom: 1px solid var(--rule-bold); margin-bottom: 48px;
+}
+.masthead .meta { font-family: var(--f-mono); font-size: 11px; line-height: 1.7; color: var(--ink-2); letter-spacing: 0.02em; }
+.masthead .meta .label { color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.14em; font-size: 10px; display: block; }
+.masthead .meta dl { display: grid; gap: 16px; }
+.masthead .title { font-family: var(--f-display); font-size: clamp(44px, 6.6vw, 72px); font-weight: 600; line-height: 1.02; letter-spacing: -0.02em; color: var(--ink-1); }
+.masthead .title em { font-style: italic; font-weight: 500; color: var(--accent); }
+.masthead .lede { font-size: 17px; color: var(--ink-2); max-width: 56ch; margin-top: 22px; line-height: 1.65; }
+@media (max-width: 720px) { .masthead { grid-template-columns: 1fr; gap: 20px; } }
 
-  button {
-    background: linear-gradient(135deg,#38bdf8,#6366f1);
-    color: white; border: none; border-radius: 10px;
-    padding: 11px 22px; font-size: 14px; font-weight: 600;
-    cursor: pointer; transition: transform .15s, box-shadow .15s;
-    font-family: inherit;
-  }
-  button:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(56,189,248,.3); }
-  button.secondary { background: rgba(148,163,184,.15); color: #cbd5e1; }
-  button:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+/* ===== Sections ===== */
+section.note { display: grid; grid-template-columns: 180px 1fr; gap: 32px; padding-top: 36px; padding-bottom: 12px; border-top: 1px solid var(--rule); margin-top: 24px; }
+section.note:first-of-type { border-top: none; }
+section.note > .marker { font-family: var(--f-display); font-weight: 500; font-size: 20px; line-height: 1.3; color: var(--ink-1); }
+section.note > .marker .num { display: block; color: var(--accent); font-style: italic; font-weight: 500; margin-bottom: 2px; }
+section.note > .marker .name { font-family: var(--f-mono); font-style: normal; font-weight: 400; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-top: 6px; }
+section.note > .body { min-width: 0; }
+@media (max-width: 720px) { section.note { grid-template-columns: 1fr; gap: 12px; } }
 
-  /* Controls row */
-  .controls-row {
-    display: grid; grid-template-columns: 1fr 1fr auto auto;
-    gap: 14px; align-items: center; margin-bottom: 8px;
-  }
-  .slider-wrap { display: flex; flex-direction: column; gap: 4px; }
-  .slider-wrap .lbl {
-    font-size: 12px; color: #94a3b8;
-    display: flex; justify-content: space-between;
-  }
-  .slider-wrap .lbl strong { color: #38bdf8; font-family: ui-monospace, monospace; }
-  input[type="range"] {
-    -webkit-appearance: none; appearance: none;
-    width: 100%; height: 6px; border-radius: 3px;
-    background: #1e293b; outline: none;
-  }
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none; appearance: none;
-    width: 16px; height: 16px; border-radius: 50%;
-    background: linear-gradient(135deg,#38bdf8,#6366f1);
-    cursor: pointer; border: 2px solid #0f172a;
-  }
-  input[type="range"]::-moz-range-thumb {
-    width: 16px; height: 16px; border-radius: 50%;
-    background: linear-gradient(135deg,#38bdf8,#6366f1);
-    cursor: pointer; border: 2px solid #0f172a;
-  }
+h2.head { font-family: var(--f-display); font-size: 30px; font-weight: 600; line-height: 1.2; margin-bottom: 10px; letter-spacing: -0.012em; color: var(--ink-1); }
+h2.head em { font-style: italic; font-weight: 500; color: var(--accent); }
+p.body-text { font-size: 16px; color: var(--ink-2); max-width: 60ch; line-height: 1.75; margin-bottom: 10px; }
 
-  /* Toggle */
-  .toggle-wrap { display: flex; flex-direction: column; gap: 4px; align-items: center; }
-  .toggle-wrap .lbl { font-size: 12px; color: #94a3b8; }
-  .toggle {
-    position: relative; width: 56px; height: 28px;
-    background: #1e293b; border-radius: 14px;
-    cursor: pointer; transition: background .25s;
-    border: 1px solid #334155;
-  }
-  .toggle .thumb {
-    position: absolute; top: 2px; left: 2px;
-    width: 22px; height: 22px; border-radius: 50%;
-    background: #cbd5e1; transition: all .25s ease;
-  }
-  .toggle.on { background: linear-gradient(135deg,#38bdf8,#6366f1); border-color: transparent; }
-  .toggle.on .thumb { left: 32px; background: #f0f9ff; }
+.field-label { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; display: block; }
 
-  /* Token grid */
-  .token-grid {
-    display: grid; grid-template-columns: repeat(20, 1fr);
-    gap: 4px; margin: 10px 0;
-  }
-  .token {
-    aspect-ratio: 1;
-    background: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 10px; color: #475569;
-    font-family: ui-monospace, monospace;
-    transition: all .3s ease;
-    position: relative;
-  }
-  .token.drafted {
-    background: rgba(56,189,248,.15);
-    border-color: rgba(56,189,248,.4);
-    color: #7dd3fc;
-    animation: drafted-pulse .4s ease;
-  }
-  .token.accepted {
-    background: linear-gradient(135deg, #38bdf8, #0ea5e9);
-    border-color: #38bdf8;
-    color: #0f172a; font-weight: 700;
-    box-shadow: 0 0 12px rgba(56,189,248,.5);
-  }
-  .token.rejected {
-    background: rgba(248,113,113,.2);
-    border-color: #f87171;
-    color: #fca5a5;
-    animation: shake .3s ease;
-  }
-  .token.regenerated {
-    background: linear-gradient(135deg, #a78bfa, #6366f1);
-    border-color: #a78bfa;
-    color: #f0f9ff; font-weight: 700;
-  }
-  @keyframes drafted-pulse {
-    0% { transform: scale(.85); opacity: .3; }
-    100% { transform: scale(1); opacity: 1; }
-  }
-  @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-3px); }
-    75% { transform: translateX(3px); }
-  }
+/* ===== Controls ===== */
+.btn { font-family: var(--f-body); font-size: 14px; font-weight: 500; color: var(--ink-1); background: transparent; border: 1px solid var(--ink-1); border-radius: 2px; padding: 8px 18px; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s; letter-spacing: 0.01em; }
+.btn:hover { background: var(--ink-1); color: var(--paper); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+.btn.ghost { border-color: transparent; color: var(--ink-2); padding-left: 8px; padding-right: 8px; }
+.btn.ghost:hover { background: transparent; color: var(--accent); text-decoration: underline; text-underline-offset: 4px; }
+.controls-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 18px; }
 
-  .step-label { font-size: 12px; color: #94a3b8; min-height: 18px; }
-  .step-label .draft { color: #7dd3fc; }
-  .step-label .accept { color: #38bdf8; }
-  .step-label .reject { color: #f87171; }
-  .step-label .regen { color: #a78bfa; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag-pill { font-family: var(--f-body); font-size: 13px; color: var(--ink-2); background: transparent; border: 1px solid var(--rule-strong); border-radius: 2px; padding: 5px 12px; cursor: pointer; transition: all 0.15s; }
+.tag-pill:hover { color: var(--accent); border-color: var(--accent); }
+.tag-pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-  /* GPU cluster */
-  .gpu-grid {
-    display: grid; grid-template-columns: repeat(4, 1fr);
-    gap: 10px; margin: 10px 0;
-  }
-  .gpu {
-    aspect-ratio: 1.4;
-    background: #1e293b;
-    border: 1.5px solid #334155;
-    border-radius: 10px;
-    padding: 10px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    text-align: center; transition: all .4s ease;
-    position: relative; overflow: hidden;
-  }
-  .gpu .id { font-size: 10px; color: #64748b; }
-  .gpu .role { font-size: 11px; color: #cbd5e1; font-weight: 600; margin-top: 4px; }
-  .gpu .util {
-    font-size: 13px; font-family: ui-monospace, monospace;
-    color: #64748b; margin-top: 4px;
-  }
-  .gpu.busy {
-    background: linear-gradient(135deg, rgba(251,191,36,.3), rgba(245,158,11,.2));
-    border-color: #fbbf24;
-    box-shadow: 0 0 16px rgba(251,191,36,.25);
-  }
-  .gpu.busy .role { color: #fef3c7; }
-  .gpu.busy .util { color: #fbbf24; }
-  .gpu.idle {
-    opacity: .55;
-  }
-  .gpu.training {
-    background: linear-gradient(135deg, rgba(52,211,153,.25), rgba(16,185,129,.15));
-    border-color: #34d399;
-    box-shadow: 0 0 16px rgba(52,211,153,.25);
-  }
-  .gpu.training .role { color: #d1fae5; }
-  .gpu.training .util { color: #34d399; }
+.input { font-family: var(--f-body); font-size: 16px; color: var(--ink-1); background: transparent; border: none; border-bottom: 1px solid var(--rule-strong); border-radius: 0; padding: 8px 0; width: 100%; transition: border-color 0.15s; }
+.input:focus { outline: none; border-bottom-color: var(--accent); }
+.input::placeholder { color: var(--ink-4); }
 
-  .gpu .pulse {
-    position: absolute; bottom: 6px; left: 50%;
-    transform: translateX(-50%);
-    width: 6px; height: 6px; border-radius: 50%;
-    background: currentColor; opacity: 0;
-  }
-  .gpu.busy .pulse, .gpu.training .pulse {
-    opacity: 1; animation: pulse 1.2s infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: .3; transform: translateX(-50%) scale(1); }
-    50% { opacity: 1; transform: translateX(-50%) scale(1.6); }
-  }
+/* sliders */
+.slider-group { margin-top: 22px; }
+.slider-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.slider-head .lbl { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+.slider-head .val { font-family: var(--f-mono); font-weight: 500; font-size: 15px; color: var(--accent); font-variant-numeric: tabular-nums; }
+input[type="range"] { width: 100%; height: 4px; -webkit-appearance: none; appearance: none; background: var(--paper-2); border-radius: 2px; outline: none; }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); border: 2px solid var(--paper); cursor: pointer; }
+input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--accent); border: 2px solid var(--paper); cursor: pointer; }
 
-  /* Stats */
-  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; }
-  .stat {
-    background: rgba(15,23,42,.6);
-    border: 1px solid #1e293b;
-    padding: 12px; border-radius: 10px; text-align: center;
-  }
-  .stat .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; }
-  .stat .value { font-size: 22px; font-weight: 700; margin-top: 4px; color: #38bdf8; }
-  .stat .sub { font-size: 11px; color: #64748b; margin-top: 2px; }
-  .stat.speedup .value { color: #a78bfa; }
-  .stat.cluster .value { color: #34d399; }
+/* ===== Viz two-up ===== */
+.viz-row { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+@media (max-width: 720px) { .viz-row { grid-template-columns: 1fr; gap: 22px; } }
+.viz-panel { display: flex; flex-direction: column; min-width: 0; }
+.viz-panel .cap { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: baseline; }
+.viz-panel .cap .who { color: var(--ink-3); }
+.viz-panel .cap .role { color: var(--ink-4); font-style: normal; }
 
-  /* Legend */
-  .legend {
-    display: flex; gap: 14px; flex-wrap: wrap;
-    margin-top: 8px; font-size: 12px; color: #94a3b8;
-  }
-  .legend span span.box {
-    display: inline-block; width: 12px; height: 12px;
-    border-radius: 3px; margin-right: 5px; vertical-align: middle;
-  }
+.panel-box {
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+  padding: 14px 0; min-height: 220px;
+  font-family: var(--f-mono); font-size: 13px;
+  color: var(--ink-2); line-height: 1.85;
+  font-variant-numeric: tabular-nums;
+}
+.panel-box .empty { color: var(--ink-4); font-style: italic; font-family: var(--f-body); font-size: 14px; }
 
-  /* Concept mapping */
-  .concept-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .concept {
-    background: rgba(15,23,42,.5);
-    border: 1px solid #1e293b;
-    border-radius: 8px; padding: 10px 12px;
-    font-size: 13px; color: #cbd5e1;
-  }
-  .concept .viz { color: #fbbf24; font-weight: 600; }
-  .concept .arrow { color: #475569; margin: 0 6px; }
-  .concept .concept-name { color: #a78bfa; font-weight: 600; }
+/* draft token chips */
+.tok-stream { display: flex; flex-wrap: wrap; gap: 5px 6px; align-items: baseline; }
+.tok {
+  display: inline-block; font-family: var(--f-mono); font-size: 13px;
+  padding: 3px 7px; border: 1px solid var(--rule); border-radius: 2px;
+  color: var(--ink-3); background: var(--paper-2);
+  transition: all 0.25s ease;
+  font-variant-numeric: tabular-nums;
+}
+.tok.draft { color: var(--sage); border-color: var(--sage-soft); background: var(--sage-tint); }
+.tok.accept { color: #fff; background: var(--accent); border-color: var(--accent); font-weight: 500; }
+.tok.reject { color: var(--ink-3); background: var(--paper-2); border-color: var(--rule-strong); text-decoration: line-through; text-decoration-color: var(--ink-3); }
+.tok.regen  { color: var(--accent); background: var(--accent-tint); border-color: var(--accent); font-weight: 600; }
 
-  footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 28px; }
+.gate-row {
+  display: grid; grid-template-columns: 30px 1fr 60px;
+  gap: 10px; align-items: center;
+  padding: 6px 0; border-bottom: 1px solid var(--rule);
+  font-size: 13px; color: var(--ink-3);
+}
+.gate-row:last-child { border-bottom: none; }
+.gate-row .g-idx { font-family: var(--f-mono); font-size: 11px; color: var(--ink-4); }
+.gate-row .g-tok { font-family: var(--f-mono); }
+.gate-row .g-res { font-family: var(--f-mono); font-size: 11px; text-align: right; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-4); }
+.gate-row.ok  { color: var(--accent); }
+.gate-row.ok  .g-res { color: var(--accent); font-weight: 600; }
+.gate-row.ok  .g-tok { color: var(--accent); font-weight: 500; }
+.gate-row.no  { color: var(--ink-3); }
+.gate-row.no  .g-res { color: var(--ink-2); font-weight: 600; }
+.gate-row.no  .g-tok { color: var(--ink-2); text-decoration: line-through; }
+.gate-row.fix { color: var(--accent); }
+.gate-row.fix .g-res { color: var(--accent); font-weight: 600; }
+.gate-row.fix .g-tok { color: var(--accent); font-weight: 600; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.legend .dot { display: inline-block; width: 10px; height: 10px; vertical-align: middle; margin-right: 6px; border-radius: 1px; }
+
+/* ===== Figures ===== */
+.figure-row {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+}
+@media (max-width: 720px) { .figure-row { grid-template-columns: repeat(2, 1fr); } }
+.figure { padding: 22px 18px; border-right: 1px solid var(--rule); }
+.figure:last-child { border-right: none; }
+@media (max-width: 720px) { .figure:nth-child(2n) { border-right: none; } }
+.figure .fig-label { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
+.figure .fig-num { font-family: var(--f-display); font-size: 32px; font-weight: 500; line-height: 1; letter-spacing: -0.025em; color: var(--ink-1); font-variant-numeric: tabular-nums; }
+.figure .fig-num em { font-style: normal; font-weight: 600; color: var(--accent); }
+.figure .fig-num.sage { color: var(--sage); }
+.figure .fig-num.accent { color: var(--accent); }
+.figure .fig-num .unit { font-family: var(--f-body); font-size: 14px; font-weight: 400; color: var(--ink-3); margin-left: 4px; }
+.figure .fig-sub { font-size: 13px; color: var(--ink-3); margin-top: 8px; line-height: 1.5; }
+
+.hero-figure {
+  padding: 40px 0 36px; text-align: center;
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+  margin-top: 24px;
+}
+.hero-figure .num {
+  font-family: var(--f-display); font-weight: 600;
+  font-size: clamp(72px, 11vw, 128px);
+  line-height: 0.95; letter-spacing: -0.045em;
+  color: var(--accent); font-variant-numeric: tabular-nums;
+}
+.hero-figure .num .unit { font-size: 0.28em; color: var(--ink-3); font-weight: 400; letter-spacing: -0.01em; margin-left: 0.05em; }
+.hero-figure .caption { font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.14em; text-transform: uppercase; margin-top: 14px; }
+
+/* ===== Log ===== */
+.log {
+  font-family: var(--f-mono); font-size: 12px; color: var(--ink-2);
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+  padding: 16px 0; line-height: 1.95;
+  font-variant-numeric: tabular-nums;
+  max-height: 320px; overflow-y: auto;
+}
+.log .ln { display: grid; grid-template-columns: 36px 1fr 78px; gap: 14px; padding: 1px 0; }
+.log .ln .gutter { color: var(--ink-4); text-align: right; }
+.log .ln .text { color: var(--ink-2); }
+.log .ln .tok  { color: var(--ink-3); text-align: right; }
+.log .ln.warm .text { color: var(--ink-1); font-weight: 500; }
+.log .ln.warm .tok  { color: var(--ink-1); }
+.log .ln.hot  .text { color: var(--accent); font-weight: 600; }
+.log .ln.hot  .tok  { color: var(--accent); font-weight: 600; }
+.log .ln.sage .text { color: var(--sage); }
+.log .ln.sage .tok  { color: var(--sage); }
+.log .ln .arrow { color: var(--ink-4); }
+
+/* ===== Colophon ===== */
+.colophon {
+  margin-top: 64px; padding-top: 24px;
+  border-top: 1px solid var(--rule-bold);
+  display: grid; grid-template-columns: 180px 1fr; gap: 32px;
+  font-family: var(--f-mono); font-size: 11px;
+  color: var(--ink-3); line-height: 1.85; letter-spacing: 0.02em;
+}
+.colophon .l { color: var(--ink-4); text-transform: uppercase; letter-spacing: 0.14em; font-size: 10px; }
+.colophon em { font-family: var(--f-display); font-style: italic; font-weight: 500; color: var(--accent); }
+@media (max-width: 720px) { .colophon { grid-template-columns: 1fr; gap: 14px; } }
 </style>
 </head>
 <body>
-<div class="container">
 
-  <h1>⚡ TLT 訓練加速 + 推測解碼模擬器</h1>
-  <p class="subtitle">看 drafter 如何讓推理變快、看 TLT 如何讓訓練不浪費 GPU。</p>
+<main class="page">
 
-  <!-- Controls -->
-  <div class="card">
-    <h2>① 控制台</h2>
-    <div class="controls-row">
-      <div class="slider-wrap">
-        <div class="lbl">Lookahead 大小 <strong id="lookaheadVal">5</strong></div>
+  <!-- ============ MASTHEAD ============ -->
+  <header class="masthead">
+    <div class="meta">
+      <dl>
+        <div><span class="label">Volume</span>Interactive №07</div>
+        <div><span class="label">Subject</span>TLT · Speculative decoding</div>
+        <div><span class="label">Date</span>2026 · 05 · 16</div>
+      </dl>
+    </div>
+    <div>
+      <h1 class="title">Two models, <em>one stream.</em></h1>
+      <p class="lede">
+        小 drafter 一次猜 k 個 token，大 verifier 一輪驗證 — 接受的繼續、第一個失敗的位置由 verifier 自己重生。
+        看看在不同 prompt 與 lookahead 下，speedup 倍率怎麼變。
+      </p>
+    </div>
+  </header>
+
+  <!-- ============ § 01 SPECIMEN ============ -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 01</span>
+      Specimen
+      <div class="name">Prompt input</div>
+    </div>
+    <div class="body">
+      <h2 class="head">Pick a <em>prompt,</em> set lookahead.</h2>
+      <p class="body-text">
+        Drafter 用一個輕量小模型先「猜」k 個 token；verifier 用大模型一次驗證 — 接受率取決於 prompt 的可預測度，
+        程式碼、模板化文本好猜；創意寫作較難猜。
+      </p>
+
+      <div style="height:18px;"></div>
+
+      <span class="field-label">Prompt</span>
+      <input id="promptInput" class="input" value="def fibonacci(n):" placeholder="輸入 prompt…">
+
+      <div style="height:14px;"></div>
+
+      <span class="field-label">Preset prompts</span>
+      <div class="chip-row" id="presetRow">
+        <span class="tag-pill active" data-preset="def fibonacci(n):" data-rate="0.86">def fibonacci(n):</span>
+        <span class="tag-pill" data-preset="SELECT name FROM users WHERE" data-rate="0.83">SELECT … WHERE</span>
+        <span class="tag-pill" data-preset="import numpy as np" data-rate="0.88">import numpy as np</span>
+        <span class="tag-pill" data-preset="The quick brown fox jumps over" data-rate="0.74">英文模板句</span>
+        <span class="tag-pill" data-preset="一個關於月亮的故事：" data-rate="0.58">創意寫作</span>
+        <span class="tag-pill" data-preset="量子糾纏的核心概念是" data-rate="0.65">技術解釋</span>
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-head">
+          <span class="lbl">Lookahead · k</span>
+          <span class="val" id="lookaheadVal">5</span>
+        </div>
         <input type="range" id="lookahead" min="1" max="10" value="5">
-        <div class="lbl"><span style="color:#64748b">小</span><span style="color:#64748b">大</span></div>
       </div>
-      <div class="slider-wrap">
-        <div class="lbl">每步耗時 <strong id="speedVal">300</strong> ms</div>
+
+      <div class="slider-group">
+        <div class="slider-head">
+          <span class="lbl">Step latency · per round</span>
+          <span class="val"><span id="speedVal">300</span> ms</span>
+        </div>
         <input type="range" id="speed" min="100" max="800" step="50" value="300">
-        <div class="lbl"><span style="color:#64748b">快</span><span style="color:#64748b">慢</span></div>
       </div>
-      <div class="toggle-wrap">
-        <div class="lbl">TLT 啟用</div>
-        <div class="toggle on" id="tltToggle" onclick="toggleTLT()"><div class="thumb"></div></div>
-      </div>
-      <div style="display:flex; gap:8px;">
-        <button id="runBtn" onclick="toggleRun()">▶ 開始</button>
-        <button class="secondary" onclick="resetSim()">🔄 重設</button>
+
+      <div class="controls-row">
+        <button class="btn primary" id="runBtn" onclick="toggleRun()">Run rollout</button>
+        <button class="btn ghost" onclick="resetSim()">↻ reset</button>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Rollout viz -->
-  <div class="card">
-    <h2>② Rollout 推測解碼（Drafter → Target 驗證）</h2>
-    <h3>20-token rollout buffer · 動畫顯示每輪 drafter 預測與 target 驗證</h3>
-    <div class="token-grid" id="tokenGrid"></div>
-    <div class="step-label" id="stepLabel">按「開始」啟動 rollout。</div>
-    <div class="legend">
-      <span><span class="box" style="background:rgba(56,189,248,.15); border:1px solid rgba(56,189,248,.4);"></span>Drafter 預測中</span>
-      <span><span class="box" style="background:#38bdf8"></span>Target 驗證通過</span>
-      <span><span class="box" style="background:rgba(248,113,113,.2); border:1px solid #f87171;"></span>驗證失敗</span>
-      <span><span class="box" style="background:linear-gradient(135deg,#a78bfa,#6366f1);"></span>Target 重生成</span>
+  <!-- ============ § 02 METHOD ============ -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 02</span>
+      Method
+      <div class="name">Draft vs verify</div>
     </div>
-  </div>
+    <div class="body">
+      <h2 class="head">Drafter <em>proposes,</em> verifier disposes.</h2>
+      <p class="body-text">
+        左邊是 drafter 一口氣寫出的 k 個草稿 token；右邊是 verifier 的逐位閘門 — 接受的進入主串，
+        第一個失敗的位置由 verifier 自己改寫一個正確 token，之後的草稿全部作廢。
+      </p>
 
-  <!-- GPU cluster -->
-  <div class="card">
-    <h2>③ 集群 GPU 利用率（8 卡）</h2>
-    <h3>切換 TLT 開關，看閒置卡如何被「拿去訓練 drafter」</h3>
-    <div class="gpu-grid" id="gpuGrid"></div>
-    <div class="legend">
-      <span><span class="box" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);"></span>主訓練 rollout 工作中</span>
-      <span><span class="box" style="background:#1e293b; opacity:.55; border:1px solid #334155;"></span>閒置（傳統做法）</span>
-      <span><span class="box" style="background:linear-gradient(135deg,#34d399,#10b981);"></span>TLT 復用：訓 drafter</span>
-    </div>
-  </div>
+      <div style="height: 22px;"></div>
 
-  <!-- Stats -->
-  <div class="card">
-    <h2>④ 即時指標</h2>
-    <div class="stats">
-      <div class="stat">
-        <div class="label">當前接受率</div>
-        <div class="value" id="acceptRate">—</div>
-        <div class="sub">drafter 預測通過 %</div>
+      <div class="viz-row">
+        <div class="viz-panel">
+          <div class="cap"><span class="who">Draft model · small</span><span class="role">proposes k tokens</span></div>
+          <div class="panel-box" id="draftPanel">
+            <div class="empty">按 Run 開始 rollout — drafter 草稿會逐輪出現於此。</div>
+          </div>
+          <div class="legend">
+            <span><span class="dot" style="background:var(--sage-tint); border:1px solid var(--sage-soft);"></span>Draft proposal</span>
+          </div>
+        </div>
+
+        <div class="viz-panel">
+          <div class="cap"><span class="who">Verifier · large</span><span class="role">accept / reject / fix</span></div>
+          <div class="panel-box" id="verifyPanel">
+            <div class="empty">驗證結果會逐位顯示於此 — 接受、拒絕，或由 verifier 重生。</div>
+          </div>
+          <div class="legend">
+            <span><span class="dot" style="background:var(--accent);"></span>Accept</span>
+            <span><span class="dot" style="background:var(--paper-2); border:1px solid var(--rule-strong);"></span>Reject</span>
+            <span><span class="dot" style="background:var(--accent-tint); border:1px solid var(--accent);"></span>Verifier regen</span>
+          </div>
+        </div>
       </div>
-      <div class="stat">
-        <div class="label">累計生成 token</div>
-        <div class="value" id="tokenCount">0</div>
-        <div class="sub">本回合 rollout</div>
-      </div>
-      <div class="stat speedup">
-        <div class="label">生成速度倍率</div>
-        <div class="value" id="speedup">1.0×</div>
-        <div class="sub">vs. 純 Target 自回歸</div>
-      </div>
-      <div class="stat cluster">
-        <div class="label">集群 GPU 利用率</div>
-        <div class="value" id="gpuUtil">25%</div>
-        <div class="sub">8 卡平均</div>
+
+      <div style="height: 22px;"></div>
+
+      <span class="field-label">Generated stream · accepted + regen</span>
+      <div class="panel-box" id="streamPanel" style="min-height: 90px;">
+        <div class="tok-stream" id="streamTokens">
+          <span class="empty">尚未產生 token。</span>
+        </div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Concept mapping -->
-  <div class="card">
-    <h2>💡 視覺元素 ↔ TLT 概念對照</h2>
-    <div class="concept-grid">
-      <div class="concept"><span class="viz">淺藍 → 亮藍 / 紅 / 紫</span><span class="arrow">↔</span><span class="concept-name">Drafter 預測 → Target 驗證</span><br>
-        <span style="color:#94a3b8; font-size:12px;">小模型先猜、大模型一次性驗證；錯誤就由 target 重生</span></div>
-      <div class="concept"><span class="viz">Lookahead 滑桿</span><span class="arrow">↔</span><span class="concept-name">接受率 vs 並行度 trade-off</span><br>
-        <span style="color:#94a3b8; font-size:12px;">越大每輪猜越多 token，但接受率下降；最佳值需 adaptive 選擇</span></div>
-      <div class="concept"><span class="viz">TLT 開關</span><span class="arrow">↔</span><span class="concept-name">訓練端閒置 GPU 復用</span><br>
-        <span style="color:#94a3b8; font-size:12px;">原本 75% 卡在等待，現在拿去訓 drafter；同硬體預算多一件事</span></div>
-      <div class="concept"><span class="viz">速度倍率 ×</span><span class="arrow">↔</span><span class="concept-name">推測解碼加速效果</span><br>
-        <span style="color:#94a3b8; font-size:12px;">論文回報訓練時間壓到 32–59%（速度 1.7–3.1 倍）</span></div>
+  <!-- ============ § 03 SPEEDUP ============ -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 03</span>
+      Speedup
+      <div class="name">Throughput vs autoregressive</div>
     </div>
-  </div>
+    <div class="body">
+      <h2 class="head">One verify pass, <em>many tokens.</em></h2>
+      <p class="body-text">
+        在純自回歸下，每個 verifier forward 只能產生 1 個 token；推測解碼下，平均每輪能前進
+        <em>accept_run + 1</em> 個 token — 接受率越高、lookahead 越合適，倍率越高。
+      </p>
 
-  <footer>
-    本模擬器為教學示意，接受率採「lookahead 越大則越低」的啟發式（base 0.92 − 0.04×lookahead），並非真實 TLT 數值。<br>
-    真實 TLT 用 Adaptive Drafter Trainer + Adaptive Rollout Engine 動態挑 lookahead，並用閒置卡持續訓練對齊的 drafter。
+      <div style="height: 22px;"></div>
+
+      <div class="figure-row">
+        <div class="figure">
+          <div class="fig-label">Tokens drafted</div>
+          <div class="fig-num" id="draftedNum">0</div>
+          <div class="fig-sub">drafter 累計提案</div>
+        </div>
+        <div class="figure">
+          <div class="fig-label">Tokens accepted</div>
+          <div class="fig-num accent" id="acceptedNum">0</div>
+          <div class="fig-sub">通過 verifier 閘門</div>
+        </div>
+        <div class="figure">
+          <div class="fig-label">Acceptance rate</div>
+          <div class="fig-num" id="acceptRate">—</div>
+          <div class="fig-sub">accepted ÷ drafted</div>
+        </div>
+        <div class="figure">
+          <div class="fig-label">Verify rounds</div>
+          <div class="fig-num sage" id="roundsNum">0</div>
+          <div class="fig-sub">大模型 forward 次數</div>
+        </div>
+      </div>
+
+      <div class="hero-figure">
+        <div class="num" id="speedupHero">1.0<span class="unit">×</span></div>
+        <div class="caption">expected speedup · vs autoregressive baseline</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ § 04 TRACE ============ -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 04</span>
+      Trace
+      <div class="name">Decode log</div>
+    </div>
+    <div class="body">
+      <h2 class="head">A log is the <em>shape</em> of throughput.</h2>
+      <p class="body-text">
+        每一行是一個 token 或一個 verify round。接受的 token 用石板藍；drafter 的草稿提案用鼠尾草綠；
+        verifier 重生與 round 標記用墨深一階。tabular-nums 讓所有位置欄直直對齊。
+      </p>
+
+      <div style="height: 20px;"></div>
+
+      <div class="log" id="logBox">
+        <span class="ln"><span class="gutter">—</span><span class="text">idle · press Run rollout to begin</span><span class="tok">0t</span></span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <div>
+      <span class="l">Colophon</span><br>
+      Notebook · v2<br>
+      TLT · spec decoding
+    </div>
+    <div>
+      Set in <em>Schibsted Grotesk</em> &amp; <strong style="font-weight:500; color:var(--ink-1);">Source Sans 3</strong>,
+      with <span style="font-family: var(--f-mono);">IBM Plex Mono</span> for figures and traces.
+      接受率採啟發式 <em>base × (1 − 0.04·(k−1))</em> · 並非 TLT 真實 adaptive drafter 數值。
+      論文回報訓練時間壓到 <em>32–59%</em>（speedup 1.7–3.1×）。
+    </div>
   </footer>
-</div>
+
+</main>
 
 <script>
-  const GRID_SIZE = 20;
-  const GPU_COUNT = 8;
+  const STREAM_TARGET = 60;  // total tokens to generate per rollout
 
   let state = {
     running: false,
-    tltOn: true,
     lookahead: 5,
     stepMs: 300,
-    cursor: 0,           // next token index in grid
+    baseRate: 0.86,        // adjusted per preset
+    prompt: 'def fibonacci(n):',
     totalDrafted: 0,
     totalAccepted: 0,
-    tokenCount: 0,
-    tokens: [],          // array of {state: idle|drafted|accepted|rejected|regenerated}
-    timer: null
+    rounds: 0,
+    streamTokens: [],       // string array of finalized tokens
+    timer: null,
+    roundCounter: 0
   };
 
-  function initTokens(){
-    state.tokens = Array.from({length: GRID_SIZE}, ()=> ({ state: 'idle', label: '' }));
-    state.cursor = 0;
-    state.totalDrafted = 0;
-    state.totalAccepted = 0;
-    state.tokenCount = 0;
+  // ---- helpers ----
+  function currentAcceptRate(){
+    // base rate decays with larger lookahead — harder to guess far ahead
+    let r = state.baseRate - 0.035 * (state.lookahead - 1);
+    return Math.max(0.40, Math.min(0.96, r));
+  }
+  function expectedSpeedup(){
+    const r = currentAcceptRate();
+    const k = state.lookahead;
+    // Tokens advanced per verify round = sum_{i=0..k-1} r^i + 1 (the regen if any reject)
+    // geometric sum
+    const accRun = (1 - Math.pow(r, k)) / (1 - r);
+    return Math.min(k + 1, accRun + 1);
+  }
+  function genDraftToken(i){
+    // produce a short fake token label that looks plausible
+    const fragments = ['return','for','if','i+1','range','n-1','==','print','self','data','x','+=','True','None','->','# ok','step','idx','val','...'];
+    return fragments[(i * 7 + state.roundCounter * 3) % fragments.length];
+  }
+  function genRegenToken(){
+    const fragments = ['return','=','+','1','n','i','x','x+1','step','#fix','None','data','==','->'];
+    return fragments[Math.floor(Math.random() * fragments.length)];
   }
 
-  function renderTokens(){
-    const grid = document.getElementById('tokenGrid');
-    grid.innerHTML = '';
-    state.tokens.forEach((t, i)=>{
-      const div = document.createElement('div');
-      div.className = 'token ' + (t.state !== 'idle' ? t.state : '');
-      div.textContent = t.label || (i+1);
-      grid.appendChild(div);
+  // ---- render ----
+  function renderDraftRound(roundIdx, draftN){
+    const panel = document.getElementById('draftPanel');
+    const row = document.createElement('div');
+    row.style.marginBottom = '14px';
+    row.innerHTML = `<div style="font-family:var(--f-mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-4); margin-bottom:6px;">Round ${roundIdx} · drafter proposes ${draftN}</div>`;
+    const stream = document.createElement('div');
+    stream.className = 'tok-stream';
+    stream.id = `draft-r${roundIdx}`;
+    for(let i=0; i<draftN; i++){
+      const t = document.createElement('span');
+      t.className = 'tok draft';
+      t.textContent = genDraftToken(i);
+      t.dataset.idx = i;
+      stream.appendChild(t);
+    }
+    row.appendChild(stream);
+    panel.appendChild(row);
+    panel.scrollTop = panel.scrollHeight;
+  }
+
+  function renderVerifyRound(roundIdx, draftTokens, results, regenTok){
+    const panel = document.getElementById('verifyPanel');
+    const row = document.createElement('div');
+    row.style.marginBottom = '14px';
+    row.innerHTML = `<div style="font-family:var(--f-mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-4); margin-bottom:6px;">Round ${roundIdx} · verify gate</div>`;
+    results.forEach((r, i) => {
+      const gr = document.createElement('div');
+      gr.className = 'gate-row ' + (r === 'ok' ? 'ok' : 'no');
+      gr.innerHTML = `<span class="g-idx">[${i+1}]</span><span class="g-tok">${draftTokens[i]}</span><span class="g-res">${r === 'ok' ? 'accept' : 'reject'}</span>`;
+      row.appendChild(gr);
+    });
+    if(regenTok){
+      const gr = document.createElement('div');
+      gr.className = 'gate-row fix';
+      gr.innerHTML = `<span class="g-idx">[fix]</span><span class="g-tok">${regenTok}</span><span class="g-res">regen</span>`;
+      row.appendChild(gr);
+    }
+    panel.appendChild(row);
+    panel.scrollTop = panel.scrollHeight;
+  }
+
+  function renderStream(){
+    const box = document.getElementById('streamTokens');
+    if(state.streamTokens.length === 0){
+      box.innerHTML = '<span class="empty" style="color:var(--ink-4); font-style:italic;">尚未產生 token。</span>';
+      return;
+    }
+    box.innerHTML = '';
+    state.streamTokens.forEach(({tok, kind}) => {
+      const span = document.createElement('span');
+      span.className = 'tok ' + kind;
+      span.textContent = tok;
+      box.appendChild(span);
     });
   }
 
-  function renderGPUs(){
-    const grid = document.getElementById('gpuGrid');
-    grid.innerHTML = '';
-    // 2 GPUs busy (rollout), 6 idle or training depending on TLT
-    for(let i=0; i<GPU_COUNT; i++){
-      const div = document.createElement('div');
-      let cls, role, util;
-      if(i < 2){
-        cls = 'busy';
-        role = '主訓練 Rollout';
-        util = (90 + Math.floor(Math.random()*8)) + '%';
-      } else if(state.tltOn){
-        cls = 'training';
-        role = 'Drafter 訓練';
-        util = (75 + Math.floor(Math.random()*15)) + '%';
-      } else {
-        cls = 'idle';
-        role = '閒置';
-        util = (5 + Math.floor(Math.random()*8)) + '%';
-      }
-      div.className = 'gpu ' + cls;
-      div.innerHTML = `
-        <div class="id">GPU ${i}</div>
-        <div class="role">${role}</div>
-        <div class="util">${util}</div>
-        <div class="pulse"></div>
-      `;
-      grid.appendChild(div);
+  function clearDraftPanels(){
+    document.getElementById('draftPanel').innerHTML = '';
+    document.getElementById('verifyPanel').innerHTML = '';
+  }
+
+  function updateFigures(){
+    document.getElementById('draftedNum').textContent = state.totalDrafted;
+    document.getElementById('acceptedNum').textContent = state.totalAccepted;
+    const rate = state.totalDrafted > 0 ? (state.totalAccepted / state.totalDrafted * 100) : 0;
+    document.getElementById('acceptRate').innerHTML = state.totalDrafted > 0
+      ? `<em>${rate.toFixed(0)}</em><span class="unit">%</span>`
+      : '—';
+    document.getElementById('roundsNum').textContent = state.rounds;
+    const sp = expectedSpeedup();
+    document.getElementById('speedupHero').innerHTML = `${sp.toFixed(2)}<span class="unit">×</span>`;
+  }
+
+  function pushLog(cls, gutter, text, tok){
+    const log = document.getElementById('logBox');
+    // remove the placeholder idle line on first real log
+    if(log.children.length === 1 && log.children[0].querySelector('.text').textContent.startsWith('idle')){
+      log.innerHTML = '';
     }
-    updateClusterUtil();
+    const ln = document.createElement('span');
+    ln.className = 'ln' + (cls ? ' ' + cls : '');
+    ln.innerHTML = `<span class="gutter">${gutter}</span><span class="text">${text}</span><span class="tok">${tok}</span>`;
+    log.appendChild(ln);
+    log.scrollTop = log.scrollHeight;
   }
 
-  function updateClusterUtil(){
-    // Avg utilization: busy 90%, training 80%, idle 8%
-    let total = 0;
-    for(let i=0; i<GPU_COUNT; i++){
-      if(i<2) total += 90;
-      else if(state.tltOn) total += 80;
-      else total += 8;
-    }
-    const avg = Math.round(total / GPU_COUNT);
-    document.getElementById('gpuUtil').textContent = avg + '%';
-  }
-
-  // Compute acceptance rate based on lookahead
-  function currentAcceptRate(){
-    // base 0.92 - 0.04 * (lookahead-1), clamp [0.45, 0.95]
-    let r = 0.92 - 0.045 * (state.lookahead - 1);
-    return Math.max(0.45, Math.min(0.95, r));
-  }
-
+  // ---- core simulation step ----
   function stepOnce(){
-    if(state.cursor >= GRID_SIZE){
+    const generated = state.streamTokens.length;
+    if(generated >= STREAM_TARGET){
       stopSim();
-      document.getElementById('stepLabel').innerHTML = '✓ Rollout 完成。按「重設」再跑一次。';
+      pushLog('warm', '··', 'rollout complete · stream target reached', `${generated}t`);
       return;
     }
-    const la = state.lookahead;
+
+    state.roundCounter++;
+    const k = state.lookahead;
     const accRate = currentAcceptRate();
-    const remaining = GRID_SIZE - state.cursor;
-    const draftN = Math.min(la, remaining);
+    const remaining = STREAM_TARGET - generated;
+    const draftN = Math.min(k, remaining);
 
-    // Step 1: drafter predicts draftN tokens (visual: turn drafted)
-    for(let i=0; i<draftN; i++){
-      const idx = state.cursor + i;
-      state.tokens[idx] = { state: 'drafted', label: 'D' };
-    }
+    // Phase 1: drafter proposes
     state.totalDrafted += draftN;
-    renderTokens();
-    document.getElementById('stepLabel').innerHTML =
-      `<span class="draft">Drafter 預測 ${draftN} 個 token（lookahead=${la}）…</span>`;
+    const draftTokens = [];
+    for(let i=0; i<draftN; i++) draftTokens.push(genDraftToken(i));
+    renderDraftRound(state.roundCounter, draftN);
+    pushLog('sage', `R${state.roundCounter}`, `drafter proposes ${draftN} tokens · k=${k}`, `+${draftN}d`);
 
-    // Step 2: target verifies after a short pause
-    setTimeout(()=>{
+    // Phase 2: verify after small delay
+    setTimeout(() => {
       let acceptedThisRound = 0;
       let firstReject = -1;
+      const results = [];
       for(let i=0; i<draftN; i++){
-        const idx = state.cursor + i;
-        const accepted = Math.random() < accRate;
-        if(accepted && firstReject === -1){
-          state.tokens[idx] = { state: 'accepted', label: '✓' };
+        const ok = Math.random() < accRate;
+        if(ok && firstReject === -1){
+          results.push('ok');
           acceptedThisRound++;
         } else {
-          if(firstReject === -1){
-            firstReject = i;
-            state.tokens[idx] = { state: 'rejected', label: '✗' };
-          } else {
-            state.tokens[idx] = { state: 'idle', label: '' };
-          }
+          if(firstReject === -1) firstReject = i;
+          results.push('no');
         }
       }
       state.totalAccepted += acceptedThisRound;
+      state.rounds++;
 
-      // Step 3: if rejected, target regenerates the rejected token
-      let regenAt = -1;
-      if(firstReject !== -1){
-        regenAt = state.cursor + firstReject;
+      // commit accepted to stream
+      for(let i=0; i<acceptedThisRound; i++){
+        state.streamTokens.push({ tok: draftTokens[i], kind: 'accept' });
       }
-      renderTokens();
+
+      let regenTok = null;
+      if(firstReject !== -1){
+        regenTok = genRegenToken();
+        state.streamTokens.push({ tok: regenTok, kind: 'regen' });
+      }
+
+      renderVerifyRound(state.roundCounter, draftTokens, results, regenTok);
+      renderStream();
+      updateFigures();
 
       if(firstReject !== -1){
-        setTimeout(()=>{
-          state.tokens[regenAt] = { state: 'regenerated', label: 'T' };
-          renderTokens();
-          state.cursor += acceptedThisRound + 1; // accepted ones + the regenerated one
-          state.tokenCount = state.cursor;
-          updateStats();
-          document.getElementById('stepLabel').innerHTML =
-            `<span class="accept">接受 ${acceptedThisRound}</span> · ` +
-            `<span class="reject">第 ${firstReject+1} 個失敗</span> · ` +
-            `<span class="regen">Target 重生 1 個</span>`;
-          if(state.running) state.timer = setTimeout(stepOnce, state.stepMs);
-        }, state.stepMs * 0.4);
+        pushLog('hot', `R${state.roundCounter}`, `accept ${acceptedThisRound} · reject at [${firstReject+1}] · verifier regen → "${regenTok}"`, `+${acceptedThisRound+1}t`);
       } else {
-        // all accepted
-        state.cursor += acceptedThisRound;
-        state.tokenCount = state.cursor;
-        updateStats();
-        document.getElementById('stepLabel').innerHTML =
-          `<span class="accept">全部 ${acceptedThisRound} 個接受！</span> drafter 大勝。`;
-        if(state.running) state.timer = setTimeout(stepOnce, state.stepMs);
+        pushLog('hot', `R${state.roundCounter}`, `accept all ${acceptedThisRound} · drafter run perfect`, `+${acceptedThisRound}t`);
       }
-    }, state.stepMs * 0.5);
+
+      if(state.running) state.timer = setTimeout(stepOnce, state.stepMs);
+    }, state.stepMs * 0.45);
   }
 
-  function updateStats(){
-    const accRate = state.totalDrafted > 0
-      ? (state.totalAccepted / state.totalDrafted) * 100 : 0;
-    document.getElementById('acceptRate').textContent = accRate.toFixed(0) + '%';
-    document.getElementById('tokenCount').textContent = state.tokenCount;
-
-    // Speedup = (accepted + regen) / forward_passes_equivalent
-    // Each round = 1 target forward; pure autoregressive = 1 token per forward
-    // Tokens advanced per round = accepted + 1 (regen) or accepted if no reject
-    // Average rounds taken ~ tokenCount / avgPerRound
-    // simpler: speedup ~ 1 + (acceptRate * lookahead) / 1.0 — capped
-    const r = currentAcceptRate();
-    const avgPerRound = (1 - Math.pow(r, state.lookahead)) / (1 - r); // geometric sum-like estimate of accepted
-    const tokensPerRound = avgPerRound + 1; // + the regen if reject, or +0 if all accept — approx
-    const speedup = Math.min(state.lookahead, tokensPerRound);
-    document.getElementById('speedup').textContent = speedup.toFixed(1) + '×';
-  }
-
+  // ---- run control ----
   function toggleRun(){
     if(state.running) stopSim();
     else startSim();
   }
   function startSim(){
     state.running = true;
-    document.getElementById('runBtn').textContent = '⏸ 暫停';
-    if(state.cursor >= GRID_SIZE){
-      initTokens();
-      renderTokens();
+    document.getElementById('runBtn').textContent = 'Pause';
+    if(state.streamTokens.length >= STREAM_TARGET){
+      doReset();
     }
     stepOnce();
   }
   function stopSim(){
     state.running = false;
     if(state.timer){ clearTimeout(state.timer); state.timer = null; }
-    document.getElementById('runBtn').textContent = '▶ 繼續';
+    document.getElementById('runBtn').textContent = state.streamTokens.length > 0 ? 'Resume' : 'Run rollout';
+  }
+  function doReset(){
+    state.totalDrafted = 0;
+    state.totalAccepted = 0;
+    state.rounds = 0;
+    state.streamTokens = [];
+    state.roundCounter = 0;
+    clearDraftPanels();
+    document.getElementById('draftPanel').innerHTML = '<div class="empty">按 Run 開始 rollout — drafter 草稿會逐輪出現於此。</div>';
+    document.getElementById('verifyPanel').innerHTML = '<div class="empty">驗證結果會逐位顯示於此 — 接受、拒絕，或由 verifier 重生。</div>';
+    document.getElementById('logBox').innerHTML = '<span class="ln"><span class="gutter">—</span><span class="text">idle · press Run rollout to begin</span><span class="tok">0t</span></span>';
+    renderStream();
+    updateFigures();
   }
   function resetSim(){
     stopSim();
-    initTokens();
-    renderTokens();
-    document.getElementById('stepLabel').textContent = '按「開始」啟動 rollout。';
-    document.getElementById('acceptRate').textContent = '—';
-    document.getElementById('tokenCount').textContent = '0';
-    updateStats();
-    document.getElementById('runBtn').textContent = '▶ 開始';
+    doReset();
+    document.getElementById('runBtn').textContent = 'Run rollout';
   }
 
-  function toggleTLT(){
-    state.tltOn = !state.tltOn;
-    document.getElementById('tltToggle').classList.toggle('on', state.tltOn);
-    renderGPUs();
-  }
-
-  // Wire sliders
-  document.getElementById('lookahead').addEventListener('input', e=>{
+  // ---- wiring ----
+  document.getElementById('lookahead').addEventListener('input', e => {
     state.lookahead = parseInt(e.target.value);
     document.getElementById('lookaheadVal').textContent = state.lookahead;
-    updateStats();
+    updateFigures();
   });
-  document.getElementById('speed').addEventListener('input', e=>{
+  document.getElementById('speed').addEventListener('input', e => {
     state.stepMs = parseInt(e.target.value);
     document.getElementById('speedVal').textContent = state.stepMs;
   });
+  document.getElementById('promptInput').addEventListener('input', e => {
+    state.prompt = e.target.value;
+    // clear active preset
+    document.querySelectorAll('#presetRow .tag-pill').forEach(p => p.classList.remove('active'));
+  });
+  document.querySelectorAll('#presetRow .tag-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('#presetRow .tag-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      state.prompt = pill.dataset.preset;
+      state.baseRate = parseFloat(pill.dataset.rate);
+      document.getElementById('promptInput').value = state.prompt;
+      updateFigures();
+    });
+  });
 
-  // Init
-  initTokens();
-  renderTokens();
-  renderGPUs();
-  updateStats();
-
-  // Refresh GPU utilization numbers every couple seconds for "alive" feel
-  setInterval(()=>{ if(!document.hidden) renderGPUs(); }, 2500);
+  // init
+  updateFigures();
+  renderStream();
 </script>
+
 </body>
 </html>

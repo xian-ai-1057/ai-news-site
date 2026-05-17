@@ -3,469 +3,720 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mem0 圖記憶視覺化</title>
+<title>Mem0 圖記憶視覺化 · Notebook</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang TC",
-                 "Microsoft JhengHei", sans-serif;
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    color: #f1f5f9;
-    min-height: 100vh;
-    padding: 24px;
-    line-height: 1.6;
-  }
-  .container { max-width: 980px; margin: 0 auto; }
-  h1 {
-    font-size: 26px; margin-bottom: 6px;
-    background: linear-gradient(135deg,#38bdf8,#a78bfa);
-    -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .subtitle { color: #94a3b8; margin-bottom: 24px; font-size: 14px; }
+:root {
+  --paper: #faf8f8; --paper-2: #f1eeec; --card: #ffffff;
+  --ink-1: #2b2b2b; --ink-2: #4e4e4e; --ink-3: #7c7c7c; --ink-4: #b8b8b8; --ink-5: #d4d4d4;
+  --rule: rgba(43,43,43,0.10); --rule-strong: rgba(43,43,43,0.22); --rule-bold: var(--ink-1);
+  --accent: #284b63; --accent-2: #1a3445;
+  --accent-soft: rgba(40,75,99,0.10); --accent-tint: rgba(40,75,99,0.04);
+  --sage: #84a59d; --sage-soft: rgba(132,165,157,0.20); --sage-tint: rgba(132,165,157,0.08);
+  --f-display: 'Schibsted Grotesk','Noto Sans TC',-apple-system,'PingFang TC',sans-serif;
+  --f-body: 'Source Sans 3','Noto Sans TC',-apple-system,'PingFang TC',sans-serif;
+  --f-mono: 'IBM Plex Mono', ui-monospace,'SF Mono', Consolas, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--paper); }
+body { font-family: var(--f-body); color: var(--ink-1); line-height: 1.6; -webkit-font-smoothing: antialiased; padding: 56px 40px 88px; }
+.page { max-width: 1080px; margin: 0 auto; }
 
-  .card {
-    background: rgba(30,41,59,.7); backdrop-filter: blur(8px);
-    border: 1px solid rgba(148,163,184,.15);
-    border-radius: 16px; padding: 22px; margin-bottom: 20px;
-  }
-  .card h2 { font-size: 17px; margin-bottom: 14px; color: #e2e8f0; }
+/* ===== Masthead ===== */
+.masthead {
+  display: grid; grid-template-columns: 180px 1fr; gap: 32px;
+  padding-bottom: 36px; border-bottom: 1px solid var(--rule-bold); margin-bottom: 48px;
+}
+.masthead .meta { font-family: var(--f-mono); font-size: 11px; line-height: 1.7; color: var(--ink-2); letter-spacing: 0.02em; }
+.masthead .meta .label { color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.14em; font-size: 10px; display: block; }
+.masthead .meta dl { display: grid; gap: 16px; }
+.masthead .title { font-family: var(--f-display); font-size: clamp(44px, 6.6vw, 72px); font-weight: 600; line-height: 1.02; letter-spacing: -0.02em; color: var(--ink-1); }
+.masthead .title em { font-style: italic; font-weight: 500; color: var(--accent); }
+.masthead .lede { font-size: 17px; color: var(--ink-2); max-width: 56ch; margin-top: 22px; line-height: 1.65; }
+@media (max-width: 720px) { .masthead { grid-template-columns: 1fr; gap: 20px; } }
 
-  .input-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
-  input[type="text"] {
-    flex: 1; min-width: 200px;
-    background: #0f172a; color: #f1f5f9;
-    border: 1px solid #334155; border-radius: 10px;
-    padding: 11px 14px; font-size: 15px;
-    font-family: inherit;
-  }
-  input[type="text"]:focus { outline: none; border-color: #38bdf8; }
-  button {
-    background: linear-gradient(135deg,#38bdf8,#6366f1);
-    color: white; border: none; border-radius: 10px;
-    padding: 11px 22px; font-size: 14px; font-weight: 600;
-    cursor: pointer; transition: transform .15s, box-shadow .15s;
-    font-family: inherit;
-  }
-  button:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(56,189,248,.3); }
-  button:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
-  button.secondary { background: rgba(148,163,184,.15); color: #cbd5e1; }
+/* ===== Sections ===== */
+section.note {
+  display: grid; grid-template-columns: 180px 1fr; gap: 32px;
+  padding-top: 36px; padding-bottom: 12px;
+  border-top: 1px solid var(--rule); margin-top: 24px;
+}
+section.note:first-of-type { border-top: none; }
+section.note > .marker { font-family: var(--f-display); font-weight: 500; font-size: 20px; line-height: 1.3; color: var(--ink-1); }
+section.note > .marker .num { display: block; color: var(--accent); font-style: italic; font-weight: 500; margin-bottom: 2px; }
+section.note > .marker .name { font-family: var(--f-mono); font-style: normal; font-weight: 400; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-top: 6px; }
+section.note > .body { min-width: 0; }
+@media (max-width: 720px) { section.note { grid-template-columns: 1fr; gap: 12px; } }
 
-  .preset-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-  .preset {
-    background: rgba(167,139,250,.1); color: #c4b5fd;
-    border: 1px solid rgba(167,139,250,.3);
-    padding: 5px 11px; border-radius: 999px;
-    font-size: 12px; cursor: pointer;
-  }
-  .preset:hover { background: rgba(167,139,250,.2); }
+h2.head { font-family: var(--f-display); font-size: 30px; font-weight: 600; line-height: 1.2; margin-bottom: 10px; letter-spacing: -0.012em; color: var(--ink-1); }
+h2.head em { font-style: italic; font-weight: 500; color: var(--accent); }
+p.body-text { font-size: 16px; color: var(--ink-2); max-width: 60ch; line-height: 1.75; margin-bottom: 10px; }
 
-  /* Dialog log */
-  .dialog-log {
-    background: rgba(15,23,42,.6);
-    border: 1px solid #1e293b;
-    border-radius: 10px; padding: 12px;
-    max-height: 160px; overflow-y: auto;
-    font-size: 13px; margin-bottom: 10px;
-  }
-  .dialog-turn {
-    padding: 6px 10px; margin-bottom: 4px;
-    border-left: 3px solid #475569;
-    background: rgba(15,23,42,.4); border-radius: 4px;
-    color: #cbd5e1;
-  }
-  .dialog-turn.new {
-    border-left-color: #38bdf8;
-    animation: fadeIn .4s ease;
-  }
-  .dialog-turn .role { color: #7dd3fc; font-weight: 600; margin-right: 6px; }
-  .dialog-turn .triplets {
-    color: #94a3b8; font-size: 11px; margin-top: 4px;
-    font-family: ui-monospace, monospace;
-  }
-  .dialog-turn .triplets .t {
-    display: inline-block;
-    background: rgba(56,189,248,.1);
-    padding: 1px 6px; margin: 2px 4px 0 0; border-radius: 4px;
-    color: #7dd3fc;
-  }
+.field-label { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; display: block; }
 
-  /* Graph */
-  .graph-wrap {
-    background: rgba(15,23,42,.5);
-    border-radius: 10px; padding: 8px;
-    position: relative;
-  }
-  svg { display: block; width: 100%; height: 380px; }
-  .node-circle { transition: all .4s ease; }
-  .node-label {
-    font-size: 11px; pointer-events: none;
-    text-anchor: middle; font-weight: 600;
-  }
-  .edge {
-    stroke: #475569; stroke-width: 1.5;
-    transition: all .4s ease;
-  }
-  .edge-label {
-    font-size: 10px; fill: #64748b;
-    text-anchor: middle; pointer-events: none;
-    font-family: ui-monospace, monospace;
-  }
-  .node-appear { animation: nodeIn .5s ease; }
-  .highlighted .node-circle { stroke: #fbbf24 !important; stroke-width: 3 !important; filter: drop-shadow(0 0 8px rgba(251,191,36,.6)); }
-  .highlighted-edge { stroke: #fbbf24 !important; stroke-width: 3 !important; }
-  .dim { opacity: .2; }
+/* ===== Controls ===== */
+.btn {
+  font-family: var(--f-body); font-size: 14px; font-weight: 500;
+  color: var(--ink-1); background: transparent;
+  border: 1px solid var(--ink-1); border-radius: 2px;
+  padding: 8px 18px; cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  letter-spacing: 0.01em;
+}
+.btn:hover { background: var(--ink-1); color: var(--paper); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; border-color: var(--rule-strong); color: var(--ink-3); background: transparent; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+.btn.primary:disabled { background: transparent; color: var(--ink-3); border-color: var(--rule-strong); }
+.btn.ghost { border-color: transparent; color: var(--ink-2); padding-left: 8px; padding-right: 8px; }
+.btn.ghost:hover { background: transparent; color: var(--accent); text-decoration: underline; text-underline-offset: 4px; }
 
-  @keyframes nodeIn {
-    0% { transform: scale(0); opacity: 0; }
-    60% { transform: scale(1.3); }
-    100% { transform: scale(1); opacity: 1; }
-  }
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+.controls-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.progress-label { font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.12em; text-transform: uppercase; margin-left: 6px; }
+.progress-label .v { color: var(--accent); font-weight: 500; }
 
-  /* Legend */
-  .legend {
-    display: flex; gap: 16px; flex-wrap: wrap;
-    margin-top: 10px; font-size: 12px; color: #94a3b8;
-  }
-  .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+/* ===== Tag pills ===== */
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag-pill {
+  font-family: var(--f-body); font-size: 13px; color: var(--ink-2);
+  background: transparent; border: 1px solid var(--rule-strong);
+  border-radius: 2px; padding: 5px 12px; cursor: pointer;
+  transition: all 0.15s;
+}
+.tag-pill:hover { color: var(--accent); border-color: var(--accent); }
 
-  /* Query result */
-  .query-result {
-    background: rgba(56,189,248,.08);
-    border-left: 3px solid #38bdf8;
-    padding: 12px 14px; border-radius: 6px;
-    font-size: 14px; color: #cbd5e1; margin-top: 12px;
-  }
-  .query-result strong { color: #7dd3fc; }
-  .compare-bars { display: flex; gap: 10px; margin-top: 10px; }
-  .compare-bar {
-    flex: 1; background: rgba(15,23,42,.6); padding: 10px; border-radius: 8px;
-    border: 1px solid #1e293b;
-  }
-  .compare-bar .lbl { font-size: 11px; color: #94a3b8; }
-  .compare-bar .val { font-size: 18px; font-weight: 700; margin-top: 2px; }
-  .compare-bar.mem0 { border-color: rgba(56,189,248,.4); }
-  .compare-bar.mem0 .val { color: #38bdf8; }
-  .compare-bar.full { border-color: rgba(248,113,113,.4); }
-  .compare-bar.full .val { color: #f87171; }
-  .bar-fill {
-    height: 6px; background: #1e293b; border-radius: 3px; margin-top: 6px;
-    overflow: hidden;
-  }
-  .bar-fill > div { height: 100%; transition: width .6s ease; border-radius: 3px; }
+/* ===== Dialog log (turns already injected) ===== */
+.turns {
+  border-top: 1px solid var(--rule);
+  margin-top: 14px;
+}
+.turn {
+  padding: 12px 4px; border-bottom: 1px solid var(--rule);
+  display: grid; grid-template-columns: 60px 1fr; gap: 16px;
+}
+.turn .gut { font-family: var(--f-mono); font-size: 11px; color: var(--ink-4); letter-spacing: 0.1em; text-transform: uppercase; padding-top: 2px; }
+.turn .body-line .role { font-family: var(--f-mono); font-size: 10px; color: var(--ink-3); letter-spacing: 0.14em; text-transform: uppercase; margin-right: 8px; }
+.turn .body-line .said { font-size: 15px; color: var(--ink-1); }
+.turn .trips { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+.turn .trip {
+  font-family: var(--f-mono); font-size: 11px;
+  color: var(--ink-2); background: var(--accent-tint);
+  border: 1px solid var(--accent-soft);
+  padding: 2px 8px; border-radius: 2px;
+}
+.turn.fresh .trip { background: var(--sage-tint); border-color: var(--sage-soft); color: var(--ink-1); }
+.turns-empty {
+  padding: 14px 4px; font-family: var(--f-mono); font-size: 11px;
+  color: var(--ink-4); letter-spacing: 0.12em; text-transform: uppercase;
+  border-bottom: 1px solid var(--rule);
+}
 
-  /* Stats */
-  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; }
-  .stat {
-    background: rgba(15,23,42,.6);
-    border: 1px solid #1e293b;
-    padding: 12px; border-radius: 10px; text-align: center;
-  }
-  .stat .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; }
-  .stat .value { font-size: 22px; font-weight: 700; margin-top: 4px; color: #38bdf8; }
-  .stat .sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+/* ===== Graph SVG ===== */
+.graph-wrap {
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+  padding: 12px 0;
+}
+svg.graph { display: block; width: 100%; height: 380px; background: var(--paper); }
+.legend {
+  display: flex; flex-wrap: wrap; gap: 18px; margin-top: 14px;
+  font-family: var(--f-mono); font-size: 10px;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3);
+}
+.legend .swatch { display: inline-block; width: 14px; height: 14px; border-radius: 50%; vertical-align: middle; margin-right: 6px; background: var(--paper); }
+.legend .swatch.s-accent { border: 1.5px solid var(--accent); }
+.legend .swatch.s-sage { border: 1.5px solid var(--sage); }
+.legend .swatch.s-ink { border: 1.5px solid var(--ink-2); }
+.legend .swatch.s-hot { border: 1.5px solid var(--accent); background: var(--accent-soft); }
 
-  /* Concept mapping */
-  .concept-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .concept {
-    background: rgba(15,23,42,.5);
-    border: 1px solid #1e293b;
-    border-radius: 8px; padding: 10px 12px;
-    font-size: 13px; color: #cbd5e1;
-  }
-  .concept .viz { color: #fbbf24; font-weight: 600; }
-  .concept .arrow { color: #475569; margin: 0 6px; }
-  .concept .concept-name { color: #a78bfa; font-weight: 600; }
+/* ===== Figures ===== */
+.figure-row {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+}
+@media (max-width: 720px) { .figure-row { grid-template-columns: repeat(2, 1fr); } }
+.figure { padding: 22px 18px; border-right: 1px solid var(--rule); }
+.figure:last-child { border-right: none; }
+@media (max-width: 720px) { .figure:nth-child(2n) { border-right: none; } }
+.figure .fig-label {
+  font-family: var(--f-mono); font-size: 10px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 10px;
+}
+.figure .fig-num {
+  font-family: var(--f-display); font-size: 32px; font-weight: 500;
+  line-height: 1; letter-spacing: -0.025em;
+  color: var(--ink-1); font-variant-numeric: tabular-nums;
+}
+.figure .fig-num em { font-style: normal; font-weight: 600; color: var(--accent); }
+.figure .fig-num.sage { color: var(--sage); }
+.figure .fig-num.accent { color: var(--accent); }
+.figure .fig-num .unit {
+  font-family: var(--f-body); font-size: 14px; font-weight: 400;
+  color: var(--ink-3); margin-left: 4px;
+}
+.figure .fig-sub { font-size: 13px; color: var(--ink-3); margin-top: 8px; line-height: 1.5; }
 
-  footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 28px; }
+.hero-figure {
+  padding: 44px 0; text-align: center;
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+}
+.hero-figure .num {
+  font-family: var(--f-display); font-weight: 600;
+  font-size: clamp(72px, 11vw, 132px);
+  line-height: 0.95; letter-spacing: -0.045em;
+  color: var(--accent); font-variant-numeric: tabular-nums;
+}
+.hero-figure .num .unit { font-size: 0.28em; color: var(--ink-3); font-weight: 400; letter-spacing: -0.01em; margin-left: 0.05em; }
+.hero-figure .caption {
+  font-family: var(--f-mono); font-size: 11px;
+  color: var(--ink-3); letter-spacing: 0.14em;
+  text-transform: uppercase; margin-top: 18px;
+}
+
+/* ===== Log ===== */
+.log {
+  font-family: var(--f-mono); font-size: 12px; color: var(--ink-2);
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+  padding: 16px 0; line-height: 1.9;
+  font-variant-numeric: tabular-nums;
+  max-height: 320px; overflow-y: auto;
+}
+.log .ln { display: grid; grid-template-columns: 40px 1fr 90px; gap: 14px; padding: 2px 0; }
+.log .ln .gutter { color: var(--ink-4); text-align: right; }
+.log .ln .text { color: var(--ink-2); }
+.log .ln .tok { color: var(--ink-3); text-align: right; font-size: 11px; }
+.log .ln.warm .text { color: var(--ink-1); }
+.log .ln.warm .tok { color: var(--ink-1); }
+.log .ln.hot .text { color: var(--accent); font-weight: 600; }
+.log .ln.hot .tok { color: var(--accent); font-weight: 600; }
+.log .ln.sage .text { color: var(--sage); }
+.log .ln .ent { color: var(--accent); font-weight: 500; }
+.log .ln .rel { color: var(--sage); }
+
+/* ===== Side note ===== */
+.side-note {
+  position: relative; padding-left: 18px;
+  margin: 22px 0 0 0; border-left: 2px solid var(--accent);
+  font-size: 15px; color: var(--ink-2); line-height: 1.65;
+  font-style: italic; font-family: var(--f-display); font-weight: 400;
+  max-width: 56ch;
+}
+.side-note .auth { display: block; font-style: normal; font-family: var(--f-mono); font-size: 10px; color: var(--ink-3); letter-spacing: 0.14em; text-transform: uppercase; margin-top: 8px; }
+
+/* ===== Colophon ===== */
+.colophon {
+  margin-top: 64px; padding-top: 24px;
+  border-top: 1px solid var(--rule-bold);
+  display: grid; grid-template-columns: 180px 1fr; gap: 32px;
+  font-family: var(--f-mono); font-size: 11px;
+  color: var(--ink-3); line-height: 1.85; letter-spacing: 0.02em;
+}
+.colophon .l { color: var(--ink-4); text-transform: uppercase; letter-spacing: 0.14em; font-size: 10px; }
+.colophon em { font-family: var(--f-display); font-style: italic; font-weight: 500; color: var(--accent); }
+@media (max-width: 720px) { .colophon { grid-template-columns: 1fr; gap: 12px; } }
 </style>
 </head>
 <body>
-<div class="container">
 
-  <h1>🧠 Mem0 圖記憶視覺化</h1>
-  <p class="subtitle">看對話如何逐步建構知識圖、查詢時如何只取相關子圖，把 token 用量從整段歷史壓到 13%。</p>
+<main class="page">
 
-  <!-- Controls -->
-  <div class="card">
-    <h2>① 對話注入控制台</h2>
-    <div class="input-row">
-      <button id="nextBtn" onclick="nextTurn()">▶ 下一輪對話</button>
-      <button class="secondary" onclick="resetAll()">🔄 重設圖</button>
-      <span style="flex:1"></span>
-      <span style="color:#94a3b8; font-size:13px; align-self:center;">進度：<span id="progress">0 / 5</span></span>
+  <header class="masthead">
+    <div class="meta">
+      <dl>
+        <div><span class="label">Volume</span>Learning Note №07</div>
+        <div><span class="label">Subject</span>Mem0 · Graph memory</div>
+        <div><span class="label">Date</span>2026 · 05 · 16</div>
+      </dl>
     </div>
-    <div class="dialog-log" id="dialogLog">
-      <div style="color:#64748b; font-size:13px; text-align:center; padding:14px;">
-        尚未注入任何對話。按「下一輪對話」開始建構圖。
+    <div>
+      <h1 class="title"><em>How</em> a dialogue<br>becomes a graph.</h1>
+      <p class="lede">
+        逐輪注入對話 — 每一句被抽出 (subject, relation, object) 三元組,長成節點與邊。
+        到了第五輪,整段歷史壓進一張小圖;查詢時只取相關子圖,token 用量壓到原本的一個零頭。
+      </p>
+    </div>
+  </header>
+
+  <!-- § 01 INPUT -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 01</span>
+      Input
+      <div class="name">對話片段</div>
+    </div>
+    <div class="body">
+      <h2 class="head">Inject a <em>turn</em>.</h2>
+      <p class="body-text">
+        按 Step 一輪一輪注入預先腳本的五句對話,每句旁邊列出 LLM 抽取出的三元組。
+        想換場景就用下面的 preset 直接重設 — 不同對白會產出不同結構的圖。
+      </p>
+
+      <div style="height: 24px;"></div>
+
+      <span class="field-label">Run</span>
+      <div class="controls-row" style="margin-bottom: 18px;">
+        <button class="btn primary" id="nextBtn" onclick="nextTurn()">Step →</button>
+        <button class="btn" onclick="runAll()">Run all 5</button>
+        <button class="btn ghost" onclick="resetAll()">↻ reset</button>
+        <span class="progress-label">Progress · <span class="v" id="progress">0 / 5</span></span>
+      </div>
+
+      <span class="field-label">Scenario presets</span>
+      <div class="chip-row">
+        <span class="tag-pill" onclick="loadScenario('family')">家庭 · Alice & 太太</span>
+        <span class="tag-pill" onclick="loadScenario('work')">工作 · Bob & 專案</span>
+        <span class="tag-pill" onclick="loadScenario('hobby')">嗜好 · Carol & 攝影</span>
+      </div>
+
+      <div class="turns" id="turnsBox">
+        <div class="turns-empty">— 尚未注入對話 · 按 Step → 開始</div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Graph -->
-  <div class="card">
-    <h2>② 知識圖（人物 / 地點 / 物件）</h2>
-    <div class="graph-wrap">
-      <svg id="graph" viewBox="0 0 920 380" preserveAspectRatio="xMidYMid meet"></svg>
+  <!-- § 02 GRAPH -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 02</span>
+      Graph
+      <div class="name">圖記憶結構</div>
     </div>
-    <div class="legend">
-      <span><span class="legend-dot" style="background:#38bdf8"></span>人物 (Person)</span>
-      <span><span class="legend-dot" style="background:#a78bfa"></span>地點 (Place)</span>
-      <span><span class="legend-dot" style="background:#fb923c"></span>物件 / 事件 (Thing/Event)</span>
-      <span><span class="legend-dot" style="background:#fbbf24"></span>檢索高亮 (Retrieved subgraph)</span>
-    </div>
+    <div class="body">
+      <h2 class="head">A graph is a <em>compression</em>.</h2>
+      <p class="body-text">
+        節點是被命名的實體 — 人物用石板藍、地點用鼠尾草綠、物件用墨灰。
+        邊是關係,線上的小字是關係名稱。同一個實體只佔一個節點,所以五輪對話最後只剩 7 個節點。
+      </p>
 
-    <div class="stats">
-      <div class="stat">
-        <div class="label">節點數</div>
-        <div class="value" id="nodeCount">0</div>
-        <div class="sub">entities</div>
+      <figure class="graph-wrap">
+        <svg class="graph" id="graph" viewBox="0 0 920 380" preserveAspectRatio="xMidYMid meet"></svg>
+      </figure>
+
+      <div class="legend">
+        <span><span class="swatch s-accent"></span>Person · 人物</span>
+        <span><span class="swatch s-sage"></span>Place · 地點</span>
+        <span><span class="swatch s-ink"></span>Thing · 物件/事件</span>
       </div>
-      <div class="stat">
-        <div class="label">邊數</div>
-        <div class="value" id="edgeCount">0</div>
-        <div class="sub">relations</div>
-      </div>
-      <div class="stat">
-        <div class="label">Token 節省</div>
-        <div class="value" id="tokenSave">—</div>
-        <div class="sub">vs. 整段歷史</div>
-      </div>
-      <div class="stat">
-        <div class="label">檢索延遲</div>
-        <div class="value" id="latency">—</div>
-        <div class="sub">milliseconds</div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Query simulator -->
-  <div class="card">
-    <h2>③ Query 模擬器</h2>
-    <div class="input-row">
-      <input type="text" id="queryInput" placeholder="例如：太太能吃花生嗎？" value="太太能吃花生嗎？">
-      <button onclick="runQuery()">🔍 檢索</button>
+      <div style="height: 14px;"></div>
+      <figcaption style="font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.12em; text-transform: uppercase;">
+        Fig 01 · entity-relation graph after <span id="figTurn">0</span> turn(s)
+      </figcaption>
     </div>
-    <div class="preset-row">
-      <span class="preset" onclick="setQuery('太太能吃花生嗎？')">太太能吃花生嗎？</span>
-      <span class="preset" onclick="setQuery('Alice 上次去哪裡玩？')">Alice 上次去哪裡玩？</span>
-      <span class="preset" onclick="setQuery('下個月計畫帶誰去哪？')">下個月計畫帶誰去哪？</span>
-    </div>
-    <div class="query-result" id="queryResult">
-      先按「下一輪對話」注入幾段對話後，再來試試檢索。
-    </div>
-  </div>
+  </section>
 
-  <!-- Concept mapping -->
-  <div class="card">
-    <h2>💡 視覺元素 ↔ Mem0 概念對照</h2>
-    <div class="concept-grid">
-      <div class="concept"><span class="viz">節點 + 邊</span><span class="arrow">↔</span><span class="concept-name">圖記憶結構</span><br>
-        <span style="color:#94a3b8; font-size:12px;">關係是第一級公民，不是便條紙的隱含相鄰</span></div>
-      <div class="concept"><span class="viz">fade-in 三元組</span><span class="arrow">↔</span><span class="concept-name">自動抽取 Extract</span><br>
-        <span style="color:#94a3b8; font-size:12px;">每輪對話用 LLM + function calling 結構化抽取</span></div>
-      <div class="concept"><span class="viz">高亮子圖</span><span class="arrow">↔</span><span class="concept-name">語義檢索 Retrieve</span><br>
-        <span style="color:#94a3b8; font-size:12px;">只取與 query 相關的最小子圖序列化注入 prompt</span></div>
-      <div class="concept"><span class="viz">Token 節省 %</span><span class="arrow">↔</span><span class="concept-name">跨 session 效率</span><br>
-        <span style="color:#94a3b8; font-size:12px;">論文回報相較全 context 約節省 90%</span></div>
+  <!-- § 03 COMPRESSION -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 03</span>
+      Compression
+      <div class="name">壓縮率</div>
     </div>
-  </div>
+    <div class="body">
+      <h2 class="head">The <em>distance</em> from full context.</h2>
+      <p class="body-text">
+        左邊三個數字是原始對話 token、抽取後的圖節點、加總的圖記憶 token (節點+邊)。
+        最右邊是回查精確度 — 從圖節點重建答案時資訊損失多少。下方巨型數字是 token 壓縮率。
+      </p>
 
-  <footer>
-    本模擬器為教學示意，三元組抽取以預先腳本展示；真實 Mem0 使用 GPT-4o-mini + function calling 動態抽取 entity + relation triplets，並存入 Neo4j。
+      <div style="height: 26px;"></div>
+
+      <div class="figure-row">
+        <div class="figure">
+          <div class="fig-label">Raw tokens</div>
+          <div class="fig-num" id="rawTokens">—</div>
+          <div class="fig-sub">完整對話歷史</div>
+        </div>
+        <div class="figure">
+          <div class="fig-label">Graph nodes</div>
+          <div class="fig-num sage" id="nodeCount">0</div>
+          <div class="fig-sub">unique entities</div>
+        </div>
+        <div class="figure">
+          <div class="fig-label">Graph edges</div>
+          <div class="fig-num sage" id="edgeCount">0</div>
+          <div class="fig-sub">relations</div>
+        </div>
+        <div class="figure">
+          <div class="fig-label">Recall fidelity</div>
+          <div class="fig-num" id="fidelity">—</div>
+          <div class="fig-sub">節點重建精確度</div>
+        </div>
+      </div>
+
+      <div style="height: 32px;"></div>
+
+      <div class="hero-figure">
+        <div class="num" id="heroSave">—</div>
+        <div class="caption">tokens saved · graph memory vs full history</div>
+      </div>
+
+      <div class="side-note">
+        “關係是第一級公民。把對話壓成圖,不是因為節省 token,而是因為事實本來就是相連的。”
+        <span class="auth">— note on graph memory</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- § 04 TRACE -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 04</span>
+      Trace
+      <div class="name">萃取流程</div>
+    </div>
+    <div class="body">
+      <h2 class="head">A log is the <em>shape</em> of extraction.</h2>
+      <p class="body-text">
+        每一步留下:抽到什麼實體、連到哪條關係、寫進圖之後變幾個節點/幾條邊。
+        新節點標 NEW、舊節點標 HIT — 同樣的 token 在第二輪之後幾乎全是 HIT,這就是圖記憶能持續壓縮的關鍵。
+      </p>
+
+      <div style="height: 20px;"></div>
+
+      <div class="log" id="logBox">
+        <div class="ln"><span class="gutter">··</span><span class="text">尚未執行抽取 — 按 Step → 開始</span><span class="tok"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <div>
+      <span class="l">Colophon</span><br>
+      Notebook · v2<br>
+      Mem0 graph
+    </div>
+    <div>
+      教學示意 · 三元組抽取以預先腳本展示,真實 Mem0 使用 GPT-4o-mini + function calling 動態抽取
+      (subject, relation, object) 並存入 Neo4j。Token 估算採 raw ≈ 每字 1.4 token,
+      graph ≈ 節點 2t + 邊 4t,實際數字依模型 tokenizer 而異。
+      Set in <em>Schibsted Grotesk</em> &amp; Source Sans 3,
+      with <span style="font-family: var(--f-mono);">IBM Plex Mono</span> for figures.
+    </div>
   </footer>
-</div>
+
+</main>
 
 <script>
-  // Pre-scripted 5 dialog turns + their extracted triplets and entity types
+  // ============ DATA ============
+  // Three scenarios, each 5 turns with extracted triplets and types
   // Node types: person | place | thing
-  const TURNS = [
-    {
-      text: "我叫 Alice，住在台北",
-      triplets: [
-        { s: "Alice", r: "居住於", o: "台北",
-          sType: "person", oType: "place" }
-      ]
+  const SCENARIOS = {
+    family: {
+      label: '家庭 · Alice & 太太',
+      turns: [
+        { text: "我叫 Alice,住在台北", triplets: [
+          { s: "Alice", r: "居住於", o: "台北", sType: "person", oType: "place" }
+        ]},
+        { text: "我太太對花生過敏", triplets: [
+          { s: "Alice", r: "配偶", o: "太太", sType: "person", oType: "person" },
+          { s: "太太",  r: "過敏", o: "花生", sType: "person", oType: "thing" }
+        ]},
+        { text: "上週去日本京都玩", triplets: [
+          { s: "Alice", r: "旅行", o: "京都", sType: "person", oType: "place" }
+        ]},
+        { text: "在那邊吃了豆腐料理", triplets: [
+          { s: "京都", r: "飲食", o: "豆腐", sType: "place", oType: "thing" }
+        ]},
+        { text: "下個月想再帶太太去溫泉", triplets: [
+          { s: "Alice", r: "計畫", o: "溫泉", sType: "person", oType: "thing" },
+          { s: "Alice", r: "同行", o: "太太", sType: "person", oType: "person" }
+        ]}
+      ],
+      positions: {
+        "Alice":  { x: 200, y: 190 },
+        "台北":   { x: 80,  y: 80 },
+        "太太":   { x: 360, y: 110 },
+        "花生":   { x: 510, y: 60 },
+        "京都":   { x: 420, y: 270 },
+        "豆腐":   { x: 600, y: 320 },
+        "溫泉":   { x: 720, y: 200 }
+      }
     },
-    {
-      text: "我太太對花生過敏",
-      triplets: [
-        { s: "Alice", r: "配偶", o: "太太",
-          sType: "person", oType: "person" },
-        { s: "太太", r: "過敏", o: "花生",
-          sType: "person", oType: "thing" }
-      ]
+    work: {
+      label: '工作 · Bob & 專案',
+      turns: [
+        { text: "我是 Bob,在 Acme 工作", triplets: [
+          { s: "Bob", r: "任職於", o: "Acme", sType: "person", oType: "place" }
+        ]},
+        { text: "主管是 Carol", triplets: [
+          { s: "Bob", r: "彙報給", o: "Carol", sType: "person", oType: "person" }
+        ]},
+        { text: "正在做 Orion 專案", triplets: [
+          { s: "Bob", r: "負責", o: "Orion", sType: "person", oType: "thing" }
+        ]},
+        { text: "Orion 用 Postgres 當資料庫", triplets: [
+          { s: "Orion", r: "技術棧", o: "Postgres", sType: "thing", oType: "thing" }
+        ]},
+        { text: "下週要去東京和客戶開會", triplets: [
+          { s: "Bob", r: "出差", o: "東京", sType: "person", oType: "place" },
+          { s: "Bob", r: "會見", o: "客戶", sType: "person", oType: "person" }
+        ]}
+      ],
+      positions: {
+        "Bob":      { x: 180, y: 200 },
+        "Acme":     { x: 60,  y: 100 },
+        "Carol":    { x: 340, y: 90 },
+        "Orion":    { x: 460, y: 220 },
+        "Postgres": { x: 640, y: 290 },
+        "東京":     { x: 720, y: 140 },
+        "客戶":     { x: 560, y: 80 }
+      }
     },
-    {
-      text: "上週去日本京都玩",
-      triplets: [
-        { s: "Alice", r: "旅行", o: "京都",
-          sType: "person", oType: "place" }
-      ]
-    },
-    {
-      text: "在那邊吃了豆腐料理",
-      triplets: [
-        { s: "京都", r: "飲食", o: "豆腐",
-          sType: "place", oType: "thing" }
-      ]
-    },
-    {
-      text: "下個月想再帶太太去溫泉",
-      triplets: [
-        { s: "Alice", r: "計畫", o: "溫泉",
-          sType: "person", oType: "thing" },
-        { s: "Alice", r: "同行", o: "太太",
-          sType: "person", oType: "person" }
-      ]
+    hobby: {
+      label: '嗜好 · Carol & 攝影',
+      turns: [
+        { text: "我是 Carol,喜歡攝影", triplets: [
+          { s: "Carol", r: "嗜好", o: "攝影", sType: "person", oType: "thing" }
+        ]},
+        { text: "用 Fujifilm X-T5", triplets: [
+          { s: "Carol", r: "使用", o: "X-T5", sType: "person", oType: "thing" }
+        ]},
+        { text: "週末常去九份拍照", triplets: [
+          { s: "Carol", r: "造訪", o: "九份", sType: "person", oType: "place" }
+        ]},
+        { text: "九份的夜景特別美", triplets: [
+          { s: "九份", r: "風景", o: "夜景", sType: "place", oType: "thing" }
+        ]},
+        { text: "下月想去花蓮拍海岸", triplets: [
+          { s: "Carol", r: "計畫", o: "花蓮", sType: "person", oType: "place" },
+          { s: "花蓮",  r: "風景", o: "海岸", sType: "place", oType: "thing" }
+        ]}
+      ],
+      positions: {
+        "Carol":  { x: 200, y: 190 },
+        "攝影":   { x: 80,  y: 100 },
+        "X-T5":   { x: 360, y: 80 },
+        "九份":   { x: 460, y: 240 },
+        "夜景":   { x: 640, y: 300 },
+        "花蓮":   { x: 720, y: 140 },
+        "海岸":   { x: 600, y: 60 }
+      }
     }
-  ];
-
-  // Fixed positions for nodes — pseudo spring layout, looks tidy
-  const POSITIONS = {
-    "Alice":  { x: 200, y: 190 },
-    "台北":   { x: 80,  y: 80 },
-    "太太":   { x: 360, y: 110 },
-    "花生":   { x: 510, y: 60 },
-    "京都":   { x: 420, y: 270 },
-    "豆腐":   { x: 600, y: 320 },
-    "溫泉":   { x: 720, y: 200 },
   };
 
-  const TYPE_COLORS = {
-    person: "#38bdf8",
-    place:  "#a78bfa",
-    thing:  "#fb923c"
+  // Type colour mapping uses literal hex (SVG attrs can't read CSS vars)
+  // Person -> accent (slate), Place -> sage, Thing -> ink-2
+  const TYPE_STROKE = {
+    person: "#284b63",
+    place:  "#84a59d",
+    thing:  "#4e4e4e"
+  };
+  const TYPE_TEXT = {
+    person: "#284b63",
+    place:  "#4e4e4e",
+    thing:  "#2b2b2b"
   };
 
-  let state = {
-    turnIdx: 0,
-    nodes: new Map(),   // name -> {type, x, y}
-    edges: [],          // {s,r,o}
-    highlighted: { nodes: new Set(), edges: new Set() }
-  };
+  let scenario = 'family';
+  let state = freshState();
 
-  function ensureNode(name, type){
-    if(state.nodes.has(name)) return false;
-    const pos = POSITIONS[name] || { x: 100 + Math.random()*700, y: 60 + Math.random()*260 };
+  function freshState() {
+    return {
+      turnIdx: 0,
+      nodes: new Map(), // name -> {type, x, y, isNew}
+      edges: [],        // {s, r, o, isNew}
+      rawTokens: 0
+    };
+  }
+
+  function turnsRef()    { return SCENARIOS[scenario].turns; }
+  function posRef()      { return SCENARIOS[scenario].positions; }
+
+  // ============ MUTATION ============
+  function ensureNode(name, type) {
+    if (state.nodes.has(name)) return { added: false };
+    const pos = posRef()[name] || { x: 100 + Math.random()*700, y: 60 + Math.random()*260 };
     state.nodes.set(name, { type, x: pos.x, y: pos.y, isNew: true });
-    return true;
+    return { added: true };
   }
 
-  function nextTurn(){
-    if(state.turnIdx >= TURNS.length) return;
-    const t = TURNS[state.turnIdx];
-    // mark all existing nodes as not new
-    for(const n of state.nodes.values()) n.isNew = false;
-    // add triplets
-    for(const tr of t.triplets){
-      ensureNode(tr.s, tr.sType);
-      ensureNode(tr.o, tr.oType);
+  function estTokens(text) {
+    // rough: every CJK char ~ 1.4 tokens
+    return Math.round([...text].length * 1.4);
+  }
+
+  function nextTurn() {
+    const turns = turnsRef();
+    if (state.turnIdx >= turns.length) return;
+    const t = turns[state.turnIdx];
+
+    // mark prior nodes/edges not new
+    for (const n of state.nodes.values()) n.isNew = false;
+    state.edges.forEach(e => e.isNew = false);
+
+    // log header for this turn
+    logEntry(
+      `<span class="gutter">T${String(state.turnIdx+1).padStart(2,'0')}</span>` +
+      `<span class="text">user · "${escapeXML(t.text)}"</span>` +
+      `<span class="tok">${estTokens(t.text)}t</span>`,
+      'warm'
+    );
+
+    for (const tr of t.triplets) {
+      const sRes = ensureNode(tr.s, tr.sType);
+      const oRes = ensureNode(tr.o, tr.oType);
       state.edges.push({ s: tr.s, r: tr.r, o: tr.o, isNew: true });
+
+      const sTag = sRes.added ? 'NEW' : 'HIT';
+      const oTag = oRes.added ? 'NEW' : 'HIT';
+      const isHot = sRes.added || oRes.added;
+      logEntry(
+        `<span class="gutter">·</span>` +
+        `<span class="text">extract · (<span class="ent">${escapeXML(tr.s)}</span> ${sTag}) ` +
+        `—<span class="rel">${escapeXML(tr.r)}</span>→ ` +
+        `(<span class="ent">${escapeXML(tr.o)}</span> ${oTag})</span>` +
+        `<span class="tok">+1 edge</span>`,
+        isHot ? 'hot' : 'sage'
+      );
     }
-    // clear highlight on new turn
-    state.highlighted = { nodes: new Set(), edges: new Set() };
+
+    state.rawTokens += estTokens(t.text);
     state.turnIdx++;
-    renderLog();
-    renderGraph();
-    renderStats();
-    document.getElementById('progress').textContent = state.turnIdx + " / " + TURNS.length;
-    document.getElementById('nextBtn').disabled = state.turnIdx >= TURNS.length;
-    // un-flag new edges after animation
-    setTimeout(()=>{ state.edges.forEach(e=>e.isNew=false); }, 600);
+    renderAll();
+
+    // unflag isNew after a beat (drives 'fresh' chip style)
+    setTimeout(() => {
+      for (const n of state.nodes.values()) n.isNew = false;
+      state.edges.forEach(e => e.isNew = false);
+      renderTurns();
+    }, 700);
   }
 
-  function resetAll(){
-    state = { turnIdx: 0, nodes: new Map(), edges: [], highlighted: { nodes: new Set(), edges: new Set() } };
-    document.getElementById('progress').textContent = "0 / " + TURNS.length;
-    document.getElementById('nextBtn').disabled = false;
-    document.getElementById('dialogLog').innerHTML =
-      '<div style="color:#64748b; font-size:13px; text-align:center; padding:14px;">' +
-      '尚未注入任何對話。按「下一輪對話」開始建構圖。</div>';
-    document.getElementById('queryResult').innerHTML = '先按「下一輪對話」注入幾段對話後，再來試試檢索。';
-    renderGraph();
-    renderStats();
+  function runAll() {
+    const tick = () => {
+      if (state.turnIdx >= turnsRef().length) return;
+      nextTurn();
+      setTimeout(tick, 550);
+    };
+    tick();
   }
 
-  function renderLog(){
-    const log = document.getElementById('dialogLog');
-    log.innerHTML = '';
-    for(let i=0; i<state.turnIdx; i++){
-      const t = TURNS[i];
-      const div = document.createElement('div');
-      div.className = 'dialog-turn' + (i === state.turnIdx-1 ? ' new' : '');
-      const trips = t.triplets.map(tr =>
-        `<span class="t">(${tr.s}, ${tr.r}, ${tr.o})</span>`
-      ).join('');
-      div.innerHTML = `<span class="role">user:</span>${t.text}
-        <div class="triplets">→ 抽取：${trips}</div>`;
-      log.appendChild(div);
+  function resetAll() {
+    state = freshState();
+    document.getElementById('logBox').innerHTML =
+      '<div class="ln"><span class="gutter">··</span><span class="text">尚未執行抽取 — 按 Step → 開始</span><span class="tok"></span></div>';
+    renderAll();
+  }
+
+  function loadScenario(s) {
+    scenario = s;
+    resetAll();
+  }
+
+  // ============ RENDER ============
+  function renderAll() {
+    renderTurns();
+    renderGraph();
+    renderStats();
+    document.getElementById('progress').textContent = state.turnIdx + ' / ' + turnsRef().length;
+    document.getElementById('figTurn').textContent = state.turnIdx;
+    document.getElementById('nextBtn').disabled = state.turnIdx >= turnsRef().length;
+  }
+
+  function renderTurns() {
+    const box = document.getElementById('turnsBox');
+    if (state.turnIdx === 0) {
+      box.innerHTML = '<div class="turns-empty">— 尚未注入對話 · 按 Step → 開始</div>';
+      return;
     }
-    log.scrollTop = log.scrollHeight;
+    const turns = turnsRef();
+    let html = '';
+    for (let i = 0; i < state.turnIdx; i++) {
+      const t = turns[i];
+      const fresh = (i === state.turnIdx - 1);
+      const trips = t.triplets.map(tr =>
+        `<span class="trip">(${escapeXML(tr.s)}, ${escapeXML(tr.r)}, ${escapeXML(tr.o)})</span>`
+      ).join('');
+      html += `
+        <div class="turn ${fresh ? 'fresh' : ''}">
+          <div class="gut">T${String(i+1).padStart(2,'0')}</div>
+          <div class="body-line">
+            <span class="role">user</span><span class="said">${escapeXML(t.text)}</span>
+            <div class="trips">${trips}</div>
+          </div>
+        </div>`;
+    }
+    box.innerHTML = html;
   }
 
-  function renderGraph(){
+  function renderGraph() {
     const svg = document.getElementById('graph');
     svg.innerHTML = '';
 
-    const hasHighlight = state.highlighted.nodes.size > 0;
-
-    // edges first
+    // edges first (so nodes render on top)
     state.edges.forEach((e, idx) => {
       const a = state.nodes.get(e.s);
       const b = state.nodes.get(e.o);
-      if(!a || !b) return;
-      const key = idx;
-      const isHi = state.highlighted.edges.has(key);
-      const dim = hasHighlight && !isHi;
+      if (!a || !b) return;
 
-      const line = document.createElementNS("http://www.w3.org/2000/svg","line");
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
       line.setAttribute("x1", a.x);
       line.setAttribute("y1", a.y);
       line.setAttribute("x2", b.x);
       line.setAttribute("y2", b.y);
-      line.setAttribute("class", "edge" + (isHi ? " highlighted-edge" : "") + (dim ? " dim" : ""));
-      if(e.isNew) line.style.animation = "fadeIn .5s ease";
+      line.setAttribute("stroke", e.isNew ? "#284b63" : "#7c7c7c");
+      line.setAttribute("stroke-width", e.isNew ? "1.5" : "1");
       svg.appendChild(line);
 
       // edge label
-      const mx = (a.x+b.x)/2, my = (a.y+b.y)/2;
-      const label = document.createElementNS("http://www.w3.org/2000/svg","text");
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
       label.setAttribute("x", mx);
-      label.setAttribute("y", my - 4);
-      label.setAttribute("class", "edge-label" + (dim ? " dim" : ""));
+      label.setAttribute("y", my - 6);
+      label.setAttribute("text-anchor", "middle");
+      label.setAttribute("font-family", "'IBM Plex Mono', monospace");
+      label.setAttribute("font-size", "10");
+      label.setAttribute("fill", e.isNew ? "#284b63" : "#7c7c7c");
+      label.setAttribute("letter-spacing", "0.04em");
       label.textContent = e.r;
       svg.appendChild(label);
     });
 
-    // nodes
-    for(const [name, node] of state.nodes){
-      const isHi = state.highlighted.nodes.has(name);
-      const dim = hasHighlight && !isHi;
+    // nodes — paper-fill circle, coloured 1.5px stroke
+    for (const [name, node] of state.nodes) {
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
 
-      const g = document.createElementNS("http://www.w3.org/2000/svg","g");
-      g.setAttribute("class", (isHi ? "highlighted " : "") + (dim ? "dim " : "") + (node.isNew ? "node-appear" : ""));
+      const stroke = TYPE_STROKE[node.type] || "#4e4e4e";
+      const textColor = TYPE_TEXT[node.type] || "#2b2b2b";
 
-      const circle = document.createElementNS("http://www.w3.org/2000/svg","circle");
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
       circle.setAttribute("cx", node.x);
       circle.setAttribute("cy", node.y);
-      circle.setAttribute("r", 28);
-      circle.setAttribute("fill", TYPE_COLORS[node.type] || "#64748b");
-      circle.setAttribute("fill-opacity", "0.85");
-      circle.setAttribute("stroke", "#0f172a");
-      circle.setAttribute("stroke-width", "2");
-      circle.setAttribute("class", "node-circle");
+      circle.setAttribute("r", node.isNew ? 30 : 28);
+      circle.setAttribute("fill", "#faf8f8");
+      circle.setAttribute("stroke", stroke);
+      circle.setAttribute("stroke-width", node.isNew ? "2" : "1.5");
       g.appendChild(circle);
 
-      const text = document.createElementNS("http://www.w3.org/2000/svg","text");
+      // type-mark · tiny mono caption above the node
+      const tmark = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      tmark.setAttribute("x", node.x);
+      tmark.setAttribute("y", node.y - 6);
+      tmark.setAttribute("text-anchor", "middle");
+      tmark.setAttribute("font-family", "'IBM Plex Mono', monospace");
+      tmark.setAttribute("font-size", "8");
+      tmark.setAttribute("fill", "#b8b8b8");
+      tmark.setAttribute("letter-spacing", "0.1em");
+      tmark.textContent = node.type.toUpperCase();
+      g.appendChild(tmark);
+
+      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
       text.setAttribute("x", node.x);
-      text.setAttribute("y", node.y + 4);
-      text.setAttribute("class", "node-label");
-      text.setAttribute("fill", "#0f172a");
+      text.setAttribute("y", node.y + 10);
+      text.setAttribute("text-anchor", "middle");
+      text.setAttribute("font-family", "'Schibsted Grotesk', 'Noto Sans TC', sans-serif");
+      text.setAttribute("font-size", "13");
+      text.setAttribute("font-weight", "600");
+      text.setAttribute("fill", textColor);
       text.textContent = name;
       g.appendChild(text);
 
@@ -473,121 +724,54 @@
     }
   }
 
-  function renderStats(){
-    document.getElementById('nodeCount').textContent = state.nodes.size;
-    document.getElementById('edgeCount').textContent = state.edges.length;
-    if(state.edges.length > 0){
-      // Token saving estimate: full history token ~ each turn 30, mem0 ~ subgraph 4 tokens/edge
-      const fullTokens = state.turnIdx * 30;
-      const mem0Tokens = Math.max(8, state.edges.length * 3);
-      const save = Math.round((1 - mem0Tokens/fullTokens) * 100);
-      document.getElementById('tokenSave').textContent = save + "%";
-      document.getElementById('latency').textContent = (8 + state.edges.length * 1.2).toFixed(0) + " ms";
-    } else {
-      document.getElementById('tokenSave').textContent = "—";
-      document.getElementById('latency').textContent = "—";
-    }
-  }
+  function renderStats() {
+    const nodes = state.nodes.size;
+    const edges = state.edges.length;
+    document.getElementById('nodeCount').textContent = nodes;
+    document.getElementById('edgeCount').textContent = edges;
 
-  // Query matching: super lightweight keyword + entity contains
-  function runQuery(){
-    if(state.nodes.size === 0){
-      document.getElementById('queryResult').innerHTML = '請先注入至少一輪對話。';
+    if (state.turnIdx === 0) {
+      document.getElementById('rawTokens').textContent = '—';
+      document.getElementById('fidelity').innerHTML = '—';
+      document.getElementById('heroSave').textContent = '—';
       return;
     }
-    const q = document.getElementById('queryInput').value.trim();
-    if(!q){ return; }
 
-    // find candidate nodes: any node name appearing in query (loose contain)
-    const matchedNodes = new Set();
-    for(const name of state.nodes.keys()){
-      if(q.includes(name) || keywordMatch(q, name)) matchedNodes.add(name);
-    }
+    // raw tokens already accumulated
+    const raw = Math.max(1, state.rawTokens);
+    // graph memory tokens: 2t/node + 4t/edge
+    const graphTokens = nodes * 2 + edges * 4;
+    const save = Math.max(0, Math.round((1 - graphTokens / raw) * 100));
 
-    // expand: include edges where both endpoints relate, plus neighbors of matched nodes (1-hop)
-    const matchedEdges = new Set();
-    const finalNodes = new Set(matchedNodes);
-    state.edges.forEach((e, idx) => {
-      if(matchedNodes.has(e.s) || matchedNodes.has(e.o)){
-        matchedEdges.add(idx);
-        finalNodes.add(e.s);
-        finalNodes.add(e.o);
-      }
-    });
+    // recall fidelity: heuristic — more edges per turn means richer recall
+    const density = edges / Math.max(1, state.turnIdx);
+    const fid = Math.min(99, Math.round(60 + density * 14));
 
-    if(finalNodes.size === 0){
-      // fallback to keyword on edge labels
-      state.edges.forEach((e, idx) => {
-        if(q.includes(e.r)){
-          matchedEdges.add(idx);
-          finalNodes.add(e.s); finalNodes.add(e.o);
-        }
-      });
-    }
-
-    state.highlighted.nodes = finalNodes;
-    state.highlighted.edges = matchedEdges;
-    renderGraph();
-
-    // build answer narrative + token compare
-    const subgraphEdges = state.edges.filter((_,i)=> matchedEdges.has(i));
-    const mem0Tokens = Math.max(6, subgraphEdges.length * 4 + finalNodes.size * 2);
-    const fullTokens = state.turnIdx * 30 + 20;
-    const save = Math.max(0, Math.round((1 - mem0Tokens/fullTokens) * 100));
-
-    let triples = subgraphEdges.map(e=>`(${e.s}, ${e.r}, ${e.o})`).join("、");
-    if(!triples) triples = "（找不到匹配子圖，可能是還沒注入相關 turn）";
-
-    document.getElementById('queryResult').innerHTML = `
-      <strong>查詢：</strong> ${q}<br>
-      <strong>命中子圖：</strong> ${triples}<br>
-      <strong>節點：</strong> ${[...finalNodes].join("、") || "（無）"}
-      <div class="compare-bars">
-        <div class="compare-bar mem0">
-          <div class="lbl">Mem0 注入</div>
-          <div class="val">${mem0Tokens} token</div>
-          <div class="bar-fill"><div style="width:${(mem0Tokens/fullTokens)*100}%; background:#38bdf8"></div></div>
-        </div>
-        <div class="compare-bar full">
-          <div class="lbl">整段歷史注入</div>
-          <div class="val">${fullTokens} token</div>
-          <div class="bar-fill"><div style="width:100%; background:#f87171"></div></div>
-        </div>
-        <div class="compare-bar" style="border-color:rgba(167,139,250,.4)">
-          <div class="lbl">節省</div>
-          <div class="val" style="color:#a78bfa">${save}%</div>
-          <div class="bar-fill"><div style="width:${save}%; background:#a78bfa"></div></div>
-        </div>
-      </div>
-    `;
+    document.getElementById('rawTokens').innerHTML =
+      `${raw}<span class="unit">tok</span>`;
+    document.getElementById('fidelity').innerHTML =
+      `${fid}<span class="unit">%</span>`;
+    document.getElementById('heroSave').innerHTML =
+      `−${save}<span class="unit">%</span>`;
   }
 
-  function keywordMatch(q, name){
-    // light synonyms
-    const syn = {
-      "Alice": ["我","你","alice"],
-      "太太": ["老婆","太太","妻子","wife"],
-      "京都": ["京都","日本","kyoto","japan"],
-      "台北": ["台北","taipei"],
-      "花生": ["花生","peanut"],
-      "豆腐": ["豆腐","tofu"],
-      "溫泉": ["溫泉","泡湯","onsen"]
-    };
-    const list = syn[name] || [];
-    return list.some(k => q.toLowerCase().includes(k.toLowerCase()));
+  // ============ LOG ============
+  function logEntry(html, cls) {
+    const box = document.getElementById('logBox');
+    if (box.children.length === 1 && box.children[0].textContent.includes('尚未')) box.innerHTML = '';
+    const div = document.createElement('div');
+    div.className = 'ln ' + (cls || '');
+    div.innerHTML = html;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
   }
 
-  function setQuery(q){
-    document.getElementById('queryInput').value = q;
-    runQuery();
+  function escapeXML(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  // init
-  renderGraph();
-  renderStats();
-  document.getElementById('queryInput').addEventListener('keydown', e=>{
-    if(e.key === 'Enter') runQuery();
-  });
+  // ============ INIT ============
+  renderAll();
 </script>
 </body>
 </html>

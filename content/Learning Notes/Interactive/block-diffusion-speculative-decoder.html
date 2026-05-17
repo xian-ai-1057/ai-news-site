@@ -3,292 +3,512 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DFlash 區塊擴散推測解碼模擬器</title>
+<title>DFlash 區塊擴散推測解碼模擬器 · Notebook</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang TC",
-                 "Microsoft JhengHei", sans-serif;
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    color: #f1f5f9;
-    min-height: 100vh;
-    padding: 24px;
-    line-height: 1.6;
-  }
-  .container { max-width: 960px; margin: 0 auto; }
-  h1 {
-    font-size: 26px; margin-bottom: 6px;
-    background: linear-gradient(135deg,#38bdf8,#a78bfa);
-    -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .subtitle { color: #94a3b8; margin-bottom: 24px; font-size: 14px; }
+:root {
+  --paper: #faf8f8; --paper-2: #f1eeec; --card: #ffffff;
+  --ink-1: #2b2b2b; --ink-2: #4e4e4e; --ink-3: #7c7c7c; --ink-4: #b8b8b8; --ink-5: #d4d4d4;
+  --rule: rgba(43,43,43,0.10); --rule-strong: rgba(43,43,43,0.22); --rule-bold: var(--ink-1);
+  --accent: #284b63; --accent-2: #1a3445;
+  --accent-soft: rgba(40,75,99,0.10); --accent-tint: rgba(40,75,99,0.04);
+  --sage: #84a59d; --sage-soft: rgba(132,165,157,0.20); --sage-tint: rgba(132,165,157,0.08);
+  --f-display: 'Schibsted Grotesk','Noto Sans TC',-apple-system,'PingFang TC',sans-serif;
+  --f-body: 'Source Sans 3','Noto Sans TC',-apple-system,'PingFang TC',sans-serif;
+  --f-mono: 'IBM Plex Mono', ui-monospace,'SF Mono', Consolas, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--paper); }
+body {
+  font-family: var(--f-body); color: var(--ink-1); line-height: 1.6;
+  -webkit-font-smoothing: antialiased; padding: 56px 40px 88px;
+}
+.page { max-width: 1080px; margin: 0 auto; }
 
-  .card {
-    background: rgba(30,41,59,.7); backdrop-filter: blur(8px);
-    border: 1px solid rgba(148,163,184,.15);
-    border-radius: 16px; padding: 22px; margin-bottom: 20px;
-  }
-  .card h2 { font-size: 17px; margin-bottom: 14px; color: #e2e8f0; }
+/* ===== Masthead ===== */
+.masthead {
+  display: grid; grid-template-columns: 180px 1fr; gap: 32px;
+  padding-bottom: 36px; border-bottom: 1px solid var(--rule-bold); margin-bottom: 48px;
+}
+.masthead .meta { font-family: var(--f-mono); font-size: 11px; line-height: 1.7; color: var(--ink-2); letter-spacing: 0.02em; }
+.masthead .meta .label { color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.14em; font-size: 10px; display: block; }
+.masthead .meta dl { display: grid; gap: 16px; }
+.masthead .title {
+  font-family: var(--f-display); font-size: clamp(44px, 6.6vw, 72px);
+  font-weight: 600; line-height: 1.02; letter-spacing: -0.02em; color: var(--ink-1);
+}
+.masthead .title em { font-style: italic; font-weight: 500; color: var(--accent); }
+.masthead .lede { font-size: 17px; color: var(--ink-2); max-width: 56ch; margin-top: 22px; line-height: 1.65; }
+@media (max-width: 720px) { .masthead { grid-template-columns: 1fr; gap: 20px; } }
 
-  /* Controls */
-  .control-row {
-    display: flex; align-items: center; gap: 14px; margin-bottom: 12px; flex-wrap: wrap;
-  }
-  .control-row label { font-size: 13px; color: #cbd5e1; min-width: 150px; }
-  input[type="range"] {
-    flex: 1; min-width: 200px;
-    accent-color: #38bdf8;
-  }
-  .range-val {
-    font-family: ui-monospace, monospace; color: #7dd3fc;
-    min-width: 36px; text-align: right; font-size: 13px;
-  }
+/* ===== Sections ===== */
+section.note {
+  display: grid; grid-template-columns: 180px 1fr; gap: 32px;
+  padding-top: 36px; padding-bottom: 12px;
+  border-top: 1px solid var(--rule); margin-top: 24px;
+}
+section.note:first-of-type { border-top: none; }
+section.note > .marker {
+  font-family: var(--f-display); font-weight: 500;
+  font-size: 20px; line-height: 1.3; color: var(--ink-1);
+}
+section.note > .marker .num {
+  display: block; color: var(--accent);
+  font-style: italic; font-weight: 500; margin-bottom: 2px;
+}
+section.note > .marker .name {
+  font-family: var(--f-mono); font-style: normal; font-weight: 400;
+  font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3); margin-top: 6px;
+}
+section.note > .body { min-width: 0; }
+@media (max-width: 720px) { section.note { grid-template-columns: 1fr; gap: 12px; } }
 
-  button {
-    background: linear-gradient(135deg,#38bdf8,#6366f1);
-    color: white; border: none; border-radius: 10px;
-    padding: 11px 22px; font-size: 14px; font-weight: 600;
-    cursor: pointer; transition: transform .15s, box-shadow .15s;
-    font-family: inherit;
-  }
-  button:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(56,189,248,.3); }
-  button.secondary {
-    background: rgba(148,163,184,.15); color: #cbd5e1;
-  }
-  button:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+h2.head {
+  font-family: var(--f-display); font-size: 30px; font-weight: 600;
+  line-height: 1.2; margin-bottom: 10px; letter-spacing: -0.012em; color: var(--ink-1);
+}
+h2.head em { font-style: italic; font-weight: 500; color: var(--accent); }
+p.body-text { font-size: 16px; color: var(--ink-2); max-width: 60ch; line-height: 1.75; margin-bottom: 10px; }
 
-  .preset-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
-  .preset {
-    background: rgba(56,189,248,.1); color: #7dd3fc;
-    border: 1px solid rgba(56,189,248,.3);
-    padding: 5px 11px; border-radius: 999px;
-    font-size: 12px; cursor: pointer;
-  }
-  .preset:hover { background: rgba(56,189,248,.2); }
+.field-label {
+  font-family: var(--f-mono); font-size: 10px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 6px; display: block;
+}
 
-  /* Tracks */
-  .track-wrap { margin-bottom: 18px; }
-  .track-title {
-    display: flex; justify-content: space-between; align-items: baseline;
-    margin-bottom: 8px;
-  }
-  .track-title .name { font-size: 14px; color: #e2e8f0; font-weight: 600; }
-  .track-title .timer {
-    font-family: ui-monospace, monospace; font-size: 12px; color: #94a3b8;
-  }
-  .track {
-    display: flex; gap: 4px; padding: 10px;
-    background: rgba(15,23,42,.55);
-    border: 1px solid rgba(148,163,184,.1);
-    border-radius: 10px; min-height: 60px; align-items: center;
-    overflow-x: auto;
-  }
-  .cell {
-    flex: 1; min-width: 42px;
-    aspect-ratio: 1;
-    background: rgba(15,23,42,.7);
-    border: 1.5px solid #334155;
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-family: ui-monospace, monospace;
-    color: #475569;
-    transition: all .25s ease;
-    position: relative;
-  }
-  .cell.pending { color: #64748b; }
-  .cell.denoising {
-    border-color: #a78bfa;
-    background: rgba(167,139,250,.15);
-    color: #c4b5fd;
-    animation: pulse 0.25s ease-in-out infinite alternate;
-  }
-  .cell.lit {
-    border-color: #38bdf8;
-    background: linear-gradient(135deg, rgba(56,189,248,.25), rgba(99,102,241,.18));
-    color: #f0f9ff; font-weight: 600;
-    box-shadow: 0 0 14px rgba(56,189,248,.4);
-    transform: scale(1.03);
-  }
-  .cell.rejected {
-    border-color: #f87171;
-    background: rgba(248,113,113,.18);
-    color: #fecaca;
-    text-decoration: line-through;
-  }
-  @keyframes pulse {
-    from { opacity: 0.55; }
-    to   { opacity: 1; }
-  }
-  .verify-box {
-    margin-left: 8px; padding: 8px 12px;
-    background: linear-gradient(135deg, rgba(34,197,94,.18), rgba(16,185,129,.12));
-    border: 1.5px dashed #34d399;
-    border-radius: 8px; font-size: 11px; color: #6ee7b7;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    min-width: 78px; min-height: 56px; text-align: center;
-    transition: all .25s;
-  }
-  .verify-box.active {
-    background: linear-gradient(135deg, rgba(34,197,94,.4), rgba(16,185,129,.3));
-    box-shadow: 0 0 18px rgba(52,211,153,.4);
-  }
+/* ===== Sliders ===== */
+.slider-group { margin-bottom: 22px; }
+.slider-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 8px;
+}
+.slider-head .lbl { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+.slider-head .val { font-family: var(--f-mono); font-weight: 500; font-size: 16px; color: var(--accent); font-variant-numeric: tabular-nums; }
+input[type="range"] {
+  width: 100%; height: 4px; -webkit-appearance: none; appearance: none;
+  background: var(--paper-2); border-radius: 2px; outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); border: 2px solid var(--paper); cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); border: 2px solid var(--paper); cursor: pointer;
+}
 
-  /* Stats */
-  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-  @media (max-width: 700px) { .stats { grid-template-columns: repeat(2, 1fr); } }
-  .stat {
-    background: rgba(15,23,42,.6);
-    border: 1px solid #1e293b;
-    padding: 12px; border-radius: 10px; text-align: center;
-  }
-  .stat .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; }
-  .stat .value { font-size: 22px; font-weight: 700; margin-top: 4px; color: #38bdf8;
-                 font-family: ui-monospace, monospace; }
-  .stat .sub { font-size: 11px; color: #64748b; margin-top: 2px; }
-  .stat.purple .value { color: #a78bfa; }
-  .stat.amber .value { color: #fbbf24; }
-  .stat.emerald .value { color: #34d399; }
+/* ===== Buttons & pills ===== */
+.btn {
+  font-family: var(--f-body); font-size: 14px; font-weight: 500;
+  color: var(--ink-1); background: transparent;
+  border: 1px solid var(--ink-1); border-radius: 2px;
+  padding: 8px 18px; cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  letter-spacing: 0.01em;
+}
+.btn:hover { background: var(--ink-1); color: var(--paper); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+.btn.primary:disabled { background: var(--ink-4); border-color: var(--ink-4); cursor: not-allowed; }
+.btn.ghost { border-color: transparent; color: var(--ink-2); padding-left: 8px; padding-right: 8px; }
+.btn.ghost:hover { background: transparent; color: var(--accent); text-decoration: underline; text-underline-offset: 4px; }
 
-  /* Concept mapping */
-  .map-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .map-table td { padding: 9px 8px; border-bottom: 1px solid rgba(148,163,184,.1); vertical-align: top; }
-  .map-table tr:last-child td { border-bottom: none; }
-  .map-left { color: #7dd3fc; font-weight: 600; width: 38%; }
-  .map-arrow { color: #475569; width: 24px; text-align: center; }
-  .map-right { color: #cbd5e1; }
-  .note-back {
-    margin-top: 14px; padding: 10px 14px;
-    background: rgba(167,139,250,.08);
-    border-left: 3px solid #a78bfa; border-radius: 6px;
-    font-size: 13px; color: #cbd5e1;
-  }
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag-pill {
+  font-family: var(--f-body); font-size: 13px; color: var(--ink-2);
+  background: transparent; border: 1px solid var(--rule-strong);
+  border-radius: 2px; padding: 5px 12px; cursor: pointer;
+  transition: all 0.15s;
+}
+.tag-pill:hover { color: var(--accent); border-color: var(--accent); }
+.tag-pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-  footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 28px; }
+/* ===== Two-up viz ===== */
+.viz-row { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+@media (max-width: 720px) { .viz-row { grid-template-columns: 1fr; gap: 20px; } }
+
+.viz-panel { display: flex; flex-direction: column; }
+.viz-panel .cap {
+  font-family: var(--f-mono); font-size: 10px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 12px;
+}
+
+/* ===== Timeline track ===== */
+.track-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 10px;
+}
+.track-head .nm {
+  font-family: var(--f-display); font-size: 15px; font-weight: 500; color: var(--ink-1);
+  letter-spacing: -0.005em;
+}
+.track-head .nm em { font-style: italic; font-weight: 500; color: var(--accent); }
+.track-head .timer {
+  font-family: var(--f-mono); font-size: 12px; font-weight: 500;
+  color: var(--accent); font-variant-numeric: tabular-nums;
+}
+.track {
+  display: flex; gap: 4px; padding: 12px;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  min-height: 64px; align-items: center;
+  overflow-x: auto;
+}
+.cell {
+  flex: 1; min-width: 36px;
+  aspect-ratio: 1;
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--f-mono); font-size: 12px;
+  color: var(--ink-4);
+  transition: all 0.2s ease;
+  font-variant-numeric: tabular-nums;
+}
+.cell.pending { color: var(--ink-4); }
+.cell.denoising {
+  border-color: var(--sage);
+  background: var(--sage-tint);
+  color: var(--sage);
+  animation: blink 0.4s ease-in-out infinite alternate;
+}
+.cell.lit {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+  color: var(--accent);
+  font-weight: 600;
+}
+.cell.rejected {
+  border-color: var(--ink-3);
+  background: var(--paper);
+  color: var(--ink-4);
+  text-decoration: line-through;
+}
+@keyframes blink {
+  from { opacity: 0.55; }
+  to   { opacity: 1; }
+}
+.verify-box {
+  margin-left: 8px; padding: 6px 10px;
+  background: var(--paper);
+  border: 1px dashed var(--ink-3);
+  font-family: var(--f-mono); font-size: 9px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-3);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-width: 64px; min-height: 56px; text-align: center; line-height: 1.4;
+  transition: all 0.2s;
+}
+.verify-box.active {
+  border-color: var(--accent); border-style: solid;
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+
+/* ===== Figures ===== */
+.figure-row {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+}
+@media (max-width: 720px) { .figure-row { grid-template-columns: repeat(2, 1fr); } }
+.figure { padding: 22px 18px; border-right: 1px solid var(--rule); }
+.figure:last-child { border-right: none; }
+@media (max-width: 720px) { .figure:nth-child(2n) { border-right: none; } }
+.figure .fig-label {
+  font-family: var(--f-mono); font-size: 10px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 10px;
+}
+.figure .fig-num {
+  font-family: var(--f-display); font-size: 30px; font-weight: 500;
+  line-height: 1; letter-spacing: -0.025em;
+  color: var(--ink-1); font-variant-numeric: tabular-nums;
+}
+.figure .fig-num em { font-style: normal; font-weight: 600; color: var(--accent); }
+.figure .fig-num.sage { color: var(--sage); }
+.figure .fig-num .unit {
+  font-family: var(--f-body); font-size: 14px; font-weight: 400;
+  color: var(--ink-3); margin-left: 4px;
+}
+.figure .fig-sub { font-size: 13px; color: var(--ink-3); margin-top: 8px; line-height: 1.5; }
+
+.hero-figure {
+  padding: 44px 0; text-align: center;
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+}
+.hero-figure .num {
+  font-family: var(--f-display); font-weight: 600;
+  font-size: clamp(72px, 11vw, 132px);
+  line-height: 0.95; letter-spacing: -0.045em;
+  color: var(--accent); font-variant-numeric: tabular-nums;
+}
+.hero-figure .num .unit {
+  font-size: 0.28em; color: var(--ink-3);
+  font-weight: 400; letter-spacing: -0.01em; margin-left: 0.05em;
+}
+.hero-figure .caption {
+  font-family: var(--f-mono); font-size: 11px;
+  color: var(--ink-3); letter-spacing: 0.14em;
+  text-transform: uppercase; margin-top: 18px;
+}
+
+/* ===== Log ===== */
+.log {
+  font-family: var(--f-mono); font-size: 12px;
+  color: var(--ink-2);
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+  padding: 16px 0;
+  line-height: 1.95;
+  font-variant-numeric: tabular-nums;
+  min-height: 220px;
+}
+.log .ln { display: grid; grid-template-columns: 40px 1fr 80px; gap: 14px; }
+.log .ln .gutter { color: var(--ink-4); text-align: right; }
+.log .ln .text { color: var(--ink-2); }
+.log .ln .tok { color: var(--ink-3); text-align: right; }
+.log .ln.hot .text  { color: var(--accent); font-weight: 600; }
+.log .ln.hot .tok   { color: var(--accent); font-weight: 600; }
+.log .ln.warm .text { color: var(--ink-1); font-weight: 500; }
+.log .ln.warm .tok  { color: var(--ink-1); font-weight: 500; }
+.log .ln.sage .text { color: var(--sage); }
+.log .ln.sage .tok  { color: var(--sage); }
+.log .ln.dim .text  { color: var(--ink-4); }
+.log .ln.dim .tok   { color: var(--ink-4); }
+
+/* ===== Side note ===== */
+.side-note {
+  position: relative; padding-left: 18px;
+  margin: 22px 0 0 0; border-left: 2px solid var(--accent);
+  font-size: 15px; color: var(--ink-2); line-height: 1.65;
+  font-style: italic; font-family: var(--f-display); font-weight: 400;
+  max-width: 56ch;
+}
+.side-note .auth {
+  display: block; font-style: normal;
+  font-family: var(--f-mono); font-size: 10px;
+  color: var(--ink-3); letter-spacing: 0.14em;
+  text-transform: uppercase; margin-top: 8px;
+}
+
+.colophon {
+  margin-top: 64px; padding-top: 24px;
+  border-top: 1px solid var(--rule-bold);
+  display: grid; grid-template-columns: 180px 1fr; gap: 32px;
+  font-family: var(--f-mono); font-size: 11px;
+  color: var(--ink-3); line-height: 1.85; letter-spacing: 0.02em;
+}
+.colophon .l { color: var(--ink-4); text-transform: uppercase; letter-spacing: 0.14em; font-size: 10px; }
+.colophon em { font-family: var(--f-display); font-style: italic; font-weight: 500; color: var(--accent); }
+@media (max-width: 720px) { .colophon { grid-template-columns: 1fr; gap: 12px; } }
 </style>
 </head>
 <body>
-<div class="container">
 
-  <h1>⚡ DFlash 區塊擴散推測解碼模擬器</h1>
-  <p class="subtitle">對比自回歸 vs 區塊擴散兩種 drafter，感受並行 token 生成的威力。對應筆記中「草稿模型 × 區塊擴散」核心機制。</p>
+<main class="page">
 
-  <!-- Control -->
-  <div class="card">
-    <h2>🎮 控制台</h2>
-
-    <div class="control-row">
-      <label>區塊長度 K（草稿數）</label>
-      <input type="range" id="kSlider" min="2" max="20" value="5">
-      <span class="range-val" id="kVal">5</span>
+  <header class="masthead">
+    <div class="meta">
+      <dl>
+        <div><span class="label">Volume</span>Learning Note №07</div>
+        <div><span class="label">Subject</span>Block Diffusion · DFlash</div>
+        <div><span class="label">Date</span>2026 · 05 · 16</div>
+      </dl>
     </div>
-
-    <div class="control-row">
-      <label>擴散去噪步數</label>
-      <input type="range" id="dSlider" min="1" max="5" value="3">
-      <span class="range-val" id="dVal">3</span>
+    <div>
+      <h1 class="title"><em>Drafting</em> in<br>parallel.</h1>
+      <p class="lede">
+        把 K 個 token 一次性扔進擴散去噪 — DFlash 用區塊草稿模型取代逐 token 自回歸，
+        然後讓目標模型一次性驗證整批。投機採樣的接受率守住分佈不變，剩下的就只是加速比。
+      </p>
     </div>
+  </header>
 
-    <div class="control-row">
-      <button id="startBtn" onclick="startSim()">▶ 開始模擬</button>
-      <button class="secondary" onclick="resetTracks()">⟲ 重設</button>
+  <!-- § 01 SPECIMEN -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 01</span>
+      Specimen
+      <div class="name">Block · denoise steps</div>
     </div>
+    <div class="body">
+      <h2 class="head">Pick a <em>block</em>, pick the <em>steps</em>.</h2>
+      <p class="body-text">
+        K 是草稿模型一次性產出的 token 數 — 越大越激進。D 是條件擴散的去噪迭代步數 —
+        越多越精細，但代價也越高。三個 preset 標出典型、基線、極限三種情境。
+      </p>
 
-    <div class="preset-row">
-      <span class="preset" onclick="setPreset(5, 3)">K=5（典型）</span>
-      <span class="preset" onclick="setPreset(1, 1)">K=1（無加速基線）</span>
-      <span class="preset" onclick="setPreset(20, 3)">K=20（極限並行）</span>
-    </div>
-  </div>
+      <div style="height: 28px;"></div>
 
-  <!-- Tracks visualization -->
-  <div class="card">
-    <h2>📊 視覺化：兩條時間軸跑道</h2>
-
-    <div class="track-wrap">
-      <div class="track-title">
-        <span class="name">🐢 上跑道｜自回歸 Drafter（Baseline）</span>
-        <span class="timer" id="topTimer">0 ms</span>
+      <div class="slider-group">
+        <div class="slider-head">
+          <span class="lbl">Block length · K</span>
+          <span class="val" id="kVal">5</span>
+        </div>
+        <input type="range" id="kSlider" min="2" max="20" step="1" value="5">
       </div>
-      <div class="track" id="trackTop"></div>
-    </div>
 
-    <div class="track-wrap">
-      <div class="track-title">
-        <span class="name">🚀 下跑道｜區塊擴散 Drafter（DFlash）</span>
-        <span class="timer" id="botTimer">0 ms</span>
+      <div class="slider-group">
+        <div class="slider-head">
+          <span class="lbl">Denoise steps · D</span>
+          <span class="val" id="dVal">3</span>
+        </div>
+        <input type="range" id="dSlider" min="1" max="5" step="1" value="3">
       </div>
-      <div class="track" id="trackBot"></div>
-    </div>
-  </div>
 
-  <!-- Stats -->
-  <div class="card">
-    <h2>📐 即時指標</h2>
-    <div class="stats">
-      <div class="stat">
-        <div class="label">自回歸總時間</div>
-        <div class="value" id="statAR">— ms</div>
-        <div class="sub">K × 草稿延遲 + 驗證</div>
+      <span class="field-label">Presets</span>
+      <div class="chip-row" style="margin-bottom: 24px;">
+        <span class="tag-pill" data-preset="5,3">K=5 · 典型</span>
+        <span class="tag-pill" data-preset="1,1">K=1 · 無加速基線</span>
+        <span class="tag-pill" data-preset="20,3">K=20 · 極限並行</span>
       </div>
-      <div class="stat purple">
-        <div class="label">DFlash 總時間</div>
-        <div class="value" id="statDF">— ms</div>
-        <div class="sub">D 步去噪 + 驗證</div>
-      </div>
-      <div class="stat amber">
-        <div class="label">加速倍率</div>
-        <div class="value" id="statSpd">—×</div>
-        <div class="sub">自回歸 ÷ DFlash</div>
-      </div>
-      <div class="stat emerald">
-        <div class="label">Drafter 接受率</div>
-        <div class="value" id="statAcc">—%</div>
-        <div class="sub">投機驗證通過比例</div>
+
+      <div class="chip-row">
+        <button class="btn primary" id="startBtn" onclick="startSim()">Run simulation</button>
+        <button class="btn ghost" onclick="resetTracks()">↻ reset</button>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Concept mapping -->
-  <div class="card">
-    <h2>📚 概念對照：互動元件 ↔ 筆記原理</h2>
-    <table class="map-table">
-      <tr>
-        <td class="map-left">兩條跑道並排</td>
-        <td class="map-arrow">↔</td>
-        <td class="map-right">自回歸 vs 擴散草稿模型的根本差異：串行逐 token vs 並行整批</td>
-      </tr>
-      <tr>
-        <td class="map-left">下跑道 K 格「同時亮起」</td>
-        <td class="map-arrow">↔</td>
-        <td class="map-right">區塊擴散模型在單次前向中對 K 個 masked positions 並行去噪</td>
-      </tr>
-      <tr>
-        <td class="map-left">「3 步閃爍」動畫</td>
-        <td class="map-arrow">↔</td>
-        <td class="map-right">條件擴散採樣：以目標模型 hidden states 為條件，迭代 D 步去噪</td>
-      </tr>
-      <tr>
-        <td class="map-left">右側 Target Verify 方框</td>
-        <td class="map-arrow">↔</td>
-        <td class="map-right">目標模型批次驗證（一次 forward 算 K 個 token 的條件機率）</td>
-      </tr>
-      <tr>
-        <td class="map-left">「接受率」指標</td>
-        <td class="map-arrow">↔</td>
-        <td class="map-right">投機採樣（speculative sampling）的無損驗證——拒絕者重抽，總分佈不變</td>
-      </tr>
-    </table>
-    <div class="note-back">
-      ← 回到學習筆記，比對「重點原理」第 2、4 點與 mermaid 流程圖，可看到本 demo 動態重現了論文圖示的並行加速效果。
+  <!-- § 02 METHOD -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 02</span>
+      Method
+      <div class="name">Token vs block · parallel</div>
     </div>
-  </div>
+    <div class="body">
+      <h2 class="head">Two <em>timelines</em>, side by side.</h2>
+      <p class="body-text">
+        上跑道是自回歸 drafter — 一格一格依序亮起，每一步都得等前一步完成。
+        下跑道是 DFlash 區塊擴散 drafter — D 個去噪步先同時閃爍，然後 K 格瞬間一齊定下來。
+        右側方框是目標模型的批次驗證 — 兩條跑道都要付一次驗證代價。
+      </p>
 
-  <footer>
-    示意：時間參數採用合理的相對量級（草稿步 ~40ms、去噪步 ~25ms、驗證 ~50ms），<br>
-    並非真實硬體量測值。真實加速倍率視模型大小、batch size、GPU 而異。
+      <div style="height: 26px;"></div>
+
+      <div class="viz-row" style="grid-template-columns: 1fr; gap: 26px;">
+        <div class="viz-panel">
+          <div class="cap">Fig 01 · Autoregressive baseline</div>
+          <div class="track-head">
+            <span class="nm">Token-by-token drafter <em>· baseline</em></span>
+            <span class="timer" id="topTimer">0 ms</span>
+          </div>
+          <div class="track" id="trackTop"></div>
+        </div>
+
+        <div class="viz-panel">
+          <div class="cap">Fig 02 · Block diffusion (DFlash)</div>
+          <div class="track-head">
+            <span class="nm">Block-parallel drafter <em>· dflash</em></span>
+            <span class="timer" id="botTimer">0 ms</span>
+          </div>
+          <div class="track" id="trackBot"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- § 03 SPEEDUP -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 03</span>
+      Speedup
+      <div class="name">Latency · throughput</div>
+    </div>
+    <div class="body">
+      <h2 class="head">The <em>ratio</em> that matters.</h2>
+      <p class="body-text">
+        四個數字實時更新 — token 產出數、兩條跑道的延遲、加速倍率、吞吐量。
+        下方巨型數字是加速倍率本身 — DFlash 把序列依賴換成單次擴散加一次驗證。
+      </p>
+
+      <div style="height: 26px;"></div>
+
+      <div class="figure-row">
+        <div class="figure">
+          <div class="fig-label">Tokens · K</div>
+          <div class="fig-num" id="statTokens">—</div>
+          <div class="fig-sub">block size · 一次草稿產出</div>
+        </div>
+        <div class="figure">
+          <div class="fig-label">AR latency</div>
+          <div class="fig-num sage" id="statAR">—</div>
+          <div class="fig-sub">K × draft + verify</div>
+        </div>
+        <div class="figure">
+          <div class="fig-label">DFlash latency</div>
+          <div class="fig-num"><em><span id="statDF">—</span></em></div>
+          <div class="fig-sub">D × denoise + verify</div>
+        </div>
+        <div class="figure">
+          <div class="fig-label">Throughput</div>
+          <div class="fig-num" id="statTput">—</div>
+          <div class="fig-sub">tokens / second · dflash</div>
+        </div>
+      </div>
+
+      <div style="height: 32px;"></div>
+
+      <div class="hero-figure">
+        <div class="num" id="heroSpeedup">—<span class="unit">×</span></div>
+        <div class="caption">speedup · ar latency ÷ dflash latency</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- § 04 TRACE -->
+  <section class="note">
+    <div class="marker">
+      <span class="num">§ 04</span>
+      Trace
+      <div class="name">Decode log</div>
+    </div>
+    <div class="body">
+      <h2 class="head">A log of <em>every</em> step.</h2>
+      <p class="body-text">
+        三欄式 monospace 紀錄 — 行號、事件、累積延遲。
+        鼠尾草色標記去噪迭代，加重的石板藍標記被接受的區塊；劃線者為投機採樣被目標模型拒絕的 token。
+      </p>
+
+      <div style="height: 20px;"></div>
+
+      <div class="log" id="logBox">
+        <div class="ln dim"><span class="gutter">··</span><span class="text">尚未執行 — 按 Run simulation 開始</span><span class="tok"></span></div>
+      </div>
+
+      <div class="side-note">
+        “逐 token 草稿賭的是『再多算一步』；區塊擴散賭的是『一次算完一批』。
+        當接受率不崩，後者每一個 wall-clock 毫秒能換回的 token 數成倍長。”
+        <span class="auth">— note on the wager</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <div>
+      <span class="l">Colophon</span><br>
+      Notebook · v2<br>
+      DFlash · block diffusion
+    </div>
+    <div>
+      教學示意 · 時間參數採合理相對量級（草稿步 ~40ms、去噪步 ~25ms、驗證 ~50ms），
+      非真實硬體量測值；加速倍率為簡化模型。
+      Set in <em>Schibsted Grotesk</em> &amp; Source Sans 3,
+      with <span style="font-family: var(--f-mono);">IBM Plex Mono</span> for figures.
+    </div>
   </footer>
-</div>
+
+</main>
 
 <script>
   const STEP_AR_MS   = 40;   // per-token AR drafter latency
@@ -321,7 +541,7 @@
     const vb = document.createElement('div');
     vb.className = 'verify-box';
     vb.id = `${elId}_verify`;
-    vb.innerHTML = 'Target<br>Verify';
+    vb.innerHTML = 'Target<br>verify';
     el.appendChild(vb);
   }
 
@@ -333,16 +553,34 @@
     buildTrack('trackBot', state.K);
     document.getElementById('topTimer').textContent = '0 ms';
     document.getElementById('botTimer').textContent = '0 ms';
-    document.getElementById('statAR').textContent = '— ms';
-    document.getElementById('statDF').textContent = '— ms';
-    document.getElementById('statSpd').textContent = '—×';
-    document.getElementById('statAcc').textContent = '—%';
+    document.getElementById('statTokens').textContent = '—';
+    document.getElementById('statAR').textContent = '—';
+    document.getElementById('statDF').textContent = '—';
+    document.getElementById('statTput').textContent = '—';
+    document.getElementById('heroSpeedup').innerHTML = '—<span class="unit">×</span>';
+    document.getElementById('logBox').innerHTML =
+      '<div class="ln dim"><span class="gutter">··</span><span class="text">尚未執行 — 按 Run simulation 開始</span><span class="tok"></span></div>';
   }
 
   function fakeToken(i){
     const pool = ['the','a','of','is','to','and','it','in','on','for',
-                  'we','at','can','run','fast','▍','▎','▌','▋','▊'];
+                  'we','at','can','run','fast','def','let','x','y','z'];
     return pool[i % pool.length];
+  }
+
+  function appendLog(cls, gutter, text, tok){
+    const box = document.getElementById('logBox');
+    // remove placeholder dim line if it's the only thing
+    if (box.children.length === 1 && box.firstElementChild.classList.contains('dim')) {
+      box.innerHTML = '';
+    }
+    const line = document.createElement('div');
+    line.className = 'ln' + (cls ? ' ' + cls : '');
+    line.innerHTML =
+      `<span class="gutter">${gutter}</span>` +
+      `<span class="text">${text}</span>` +
+      `<span class="tok">${tok || ''}</span>`;
+    box.appendChild(line);
   }
 
   function startSim(){
@@ -353,17 +591,21 @@
 
     const K = state.K, D = state.D;
 
+    appendLog('', 'L0', `init · K=${K} block · D=${D} denoise steps`, '0 ms');
+
     // ---- Top track: AR drafter (one cell at a time) ----
     let arTime = 0;
     for(let i=0;i<K;i++){
       arTime += STEP_AR_MS;
       const t = arTime * ANIM_SCALE;
       const fixedArTime = arTime;
+      const tokIdx = i;
       state.timers.push(setTimeout(()=>{
-        const cell = document.getElementById(`trackTop_${i}`);
+        const cell = document.getElementById(`trackTop_${tokIdx}`);
         cell.className = 'cell lit';
-        cell.textContent = fakeToken(i);
+        cell.textContent = fakeToken(tokIdx);
         document.getElementById('topTimer').textContent = fixedArTime + ' ms';
+        appendLog('warm', `T${tokIdx+1}`, `ar draft · token ${tokIdx+1}/${K}`, `+${STEP_AR_MS} ms`);
       }, t));
     }
     arTime += VERIFY_MS;
@@ -371,15 +613,17 @@
     state.timers.push(setTimeout(()=>{
       document.getElementById('trackTop_verify').classList.add('active');
       document.getElementById('topTimer').textContent = arTotal + ' ms';
+      appendLog('warm', '··', `ar verify · batch`, `+${VERIFY_MS} ms`);
+      appendLog('', '··', `ar total latency`, `${arTotal} ms`);
     }, arTime * ANIM_SCALE));
 
     // ---- Bottom track: DFlash (D denoising steps, then all lit) ----
     let dfTime = 0;
-    // Denoising flicker
     for(let s=0; s<D; s++){
       dfTime += STEP_DENOISE;
       const tFlash = dfTime * ANIM_SCALE;
       const fixedDf = dfTime;
+      const step = s + 1;
       state.timers.push(setTimeout(()=>{
         for(let i=0;i<K;i++){
           const cell = document.getElementById(`trackBot_${i}`);
@@ -387,6 +631,7 @@
           cell.textContent = '~';
         }
         document.getElementById('botTimer').textContent = fixedDf + ' ms';
+        appendLog('sage', `D${step}`, `dflash denoise step ${step}/${D} · ${K} positions parallel`, `+${STEP_DENOISE} ms`);
       }, tFlash));
     }
     // Finalize: all light up together
@@ -407,18 +652,26 @@
       // Compute acceptance rate: ~95% at K=2, decay to ~60% at K=20
       const accept = Math.max(0.6, 0.97 - (K - 2) * 0.02);
       const rejected = Math.floor(K * (1 - accept) + 0.5);
-      // Mark a few rejected cells (deterministic-ish: last ones)
       for(let i=K-rejected;i<K;i++){
         const cell = document.getElementById(`trackBot_${i}`);
         if(cell) cell.className = 'cell rejected';
       }
 
+      appendLog('hot', '✦', `dflash verify · ${K-rejected}/${K} accepted (${(accept*100).toFixed(0)}%)`, `+${VERIFY_MS} ms`);
+      appendLog('hot', '··', `dflash total latency`, `${dfTotal} ms`);
+
       // Update stats
+      const spd = arTotal / dfTotal;
+      const tput = ((K - rejected) / (dfTotal / 1000));
+
+      document.getElementById('statTokens').textContent = K.toString();
       document.getElementById('statAR').textContent = arTotal + ' ms';
       document.getElementById('statDF').textContent = dfTotal + ' ms';
-      const spd = arTotal / dfTotal;
-      document.getElementById('statSpd').textContent = spd.toFixed(2) + '×';
-      document.getElementById('statAcc').textContent = (accept * 100).toFixed(0) + '%';
+      document.getElementById('statTput').textContent = tput.toFixed(0) + ' t/s';
+      document.getElementById('heroSpeedup').innerHTML =
+        spd.toFixed(2) + '<span class="unit">×</span>';
+
+      appendLog('', '··', `speedup · ar ÷ dflash`, `${spd.toFixed(2)}×`);
 
       state.running = false;
       document.getElementById('startBtn').disabled = false;
@@ -431,6 +684,11 @@
     document.getElementById('dSlider').value = d;
     document.getElementById('kVal').textContent = k;
     document.getElementById('dVal').textContent = d;
+    // active pill
+    document.querySelectorAll('.tag-pill[data-preset]').forEach(el => {
+      const [pk, pd] = el.dataset.preset.split(',').map(Number);
+      el.classList.toggle('active', pk === k && pd === d);
+    });
     resetTracks();
     setTimeout(startSim, 200);
   }
@@ -438,16 +696,29 @@
   document.getElementById('kSlider').addEventListener('input', e=>{
     state.K = parseInt(e.target.value, 10);
     document.getElementById('kVal').textContent = state.K;
+    document.querySelectorAll('.tag-pill[data-preset]').forEach(el => el.classList.remove('active'));
     if(!state.running) resetTracks();
   });
   document.getElementById('dSlider').addEventListener('input', e=>{
     state.D = parseInt(e.target.value, 10);
     document.getElementById('dVal').textContent = state.D;
+    document.querySelectorAll('.tag-pill[data-preset]').forEach(el => el.classList.remove('active'));
+  });
+  document.querySelectorAll('.tag-pill[data-preset]').forEach(el => {
+    el.addEventListener('click', () => {
+      const [k, d] = el.dataset.preset.split(',').map(Number);
+      setPreset(k, d);
+    });
   });
 
   // Init
   (function init(){
     resetTracks();
+    // mark default preset active
+    document.querySelectorAll('.tag-pill[data-preset]').forEach(el => {
+      const [pk, pd] = el.dataset.preset.split(',').map(Number);
+      el.classList.toggle('active', pk === state.K && pd === state.D);
+    });
     setTimeout(startSim, 400);
   })();
 </script>
