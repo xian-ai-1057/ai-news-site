@@ -63,4 +63,12 @@ npx quartz build
 # === 3. Copy _headers (Workers Static Assets metadata) ===
 cp _headers public/_headers
 
-echo "✅ Build complete with _headers"
+# === 4. Generate _redirects for Cloudflare Workers Static Assets ===
+# Quartz 把 Learning-Notes/INDEX 內 [..](Interactive/x.html) 改寫成 href="../Interactive/x"，
+# 但 /Learning-Notes/INDEX 沒有結尾斜線 → 解析成 /Interactive/x 而非 /Learning-Notes/Interactive/x。
+# 用 301 把 /Interactive/* 轉回正確路徑，未來新增互動工具不必動 INDEX.md。
+cat > public/_redirects <<'EOF'
+/Interactive/* /Learning-Notes/Interactive/:splat 301
+EOF
+
+echo "✅ Build complete with _headers and _redirects"
