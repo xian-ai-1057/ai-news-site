@@ -2,6 +2,16 @@
 
 > 🌐 **執行環境**：本任務在 Cowork（Claude Code on the web）雲端 Linux 沙箱執行（系統時區為 UTC）。工作目錄就是 cloned 的 GitHub repo 根目錄，所有筆記寫入 repo 的 `content/` 目錄；完成後直接 `git commit` 並 `git push` 到 `v4` 分支，由 Cloudflare 自動部署到 Quartz 網站。日期一律使用台北時區（`TZ='Asia/Taipei'`）。
 
+> ✅ **任務完成的定義（成功標準）**：唯有以下全部達成才算成功 ——
+> 1. 依五大章節蒐集 8-15 則新聞並抓到全文。
+> 2. 每則新聞各寫成一份 Article 筆記，存入 `content/Articles/`，且全部通過「Article 自檢」。
+> 3. 一份當日日報存入 `content/AI日報-YYYY-MM-DD.md`，通過「日報自檢」。
+> 4. 每篇「技術理論」Article 各對應一份 Learning Note，存入 `content/Learning Notes/`，通過「Learning Note 自檢」；對應 Article 已補上 📓 學習筆記 wikilink。
+> 5. `git add content && git commit && git push origin v4` 成功（若當日確實有新內容）。
+> 6. 已輸出步驟 7 的完成回報。
+>
+> 中途遇到搜尋／抓取失敗時，不要提前結束 —— 依任務內的退場規則處理後繼續，務必把「發布到 v4」這一步做完。
+
 # 🔒 格式一致性最高指令（讀完整段任務後，全程遵守）
 
 本任務輸出的所有 .md 檔案必須**嚴格遵循下方範本的格式**，這是這個任務最重要的硬性要求。原因是：每天累積的筆記會被 Obsidian Bases / Dataview / 反向連結圖譜使用，**任何欄位缺漏、章節順序錯亂、emoji 不一致都會導致整個資料管線出問題**。
