@@ -1,5 +1,5 @@
 ---
-title: "BMW i Ventures Launches $300M Fund III Targeting Physical AI, Agentic AI, and Industrial Automation"
+title: "BMW i Ventures 關閉 3 億美元第三支基金，鎖定 Physical AI、Agentic AI 與循環供應鏈早期新創"
 date: 2026-05-21
 source: The AI World
 url: https://theaiworld.org/news/bmw-i-ventures-launches-300m-ai-startup-fund
@@ -16,8 +16,6 @@ tags:
   - 汽車科技
 created: 2026-05-21
 ---
-
-# BMW i Ventures 關閉 3 億美元第三支基金，鎖定 Physical AI、Agentic AI 與循環供應鏈早期新創
 
 > [!info] 文章資訊
 > - **來源**：[The AI World](https://theaiworld.org/news/bmw-i-ventures-launches-300m-ai-startup-fund)
