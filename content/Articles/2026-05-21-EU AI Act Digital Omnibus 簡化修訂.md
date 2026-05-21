@@ -1,5 +1,5 @@
 ---
-title: "EU AI Act Update: Digital Omnibus Deal – Timeline Relief, Targeted Simplification, and New Prohibitions"
+title: "歐盟 AI Act 首度修訂：Digital Omnibus 協議延期 16 個月、新增 CSAM 禁令、SME 豁免擴大"
 date: 2026-05-21
 source: EU Council / Inside Privacy
 url: https://www.consilium.europa.eu/en/press/press-releases/2026/05/07/artificial-intelligence-council-and-parliament-agree-to-simplify-and-streamline-rules/

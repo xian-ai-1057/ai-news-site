@@ -1,5 +1,5 @@
 ---
-title: "Healthcare AI Platforms Race: Anthropic, OpenAI, and AWS Each Launch Purpose-Built Clinical AI in Six Months"
+title: "醫療 AI 平台三雄競逐：Anthropic、OpenAI、AWS 在六個月內各推出專用醫療 AI 平台"
 date: 2026-05-21
 source: JPMorgan Healthcare AI Analysis / McKinsey State of AI 2025
 url: https://www.jpmorgan.com/insights/banking/commercial-banking/how-ai-m-and-a-and-policy-planning-are-shaping-health-care

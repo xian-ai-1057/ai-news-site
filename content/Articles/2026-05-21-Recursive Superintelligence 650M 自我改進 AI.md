@@ -1,5 +1,5 @@
 ---
-title: "Recursive Superintelligence Raises $650M to Build Self-Improving AI Models"
+title: "Recursive Superintelligence：Richard Socher 帶領七位 AI 頂尖共同創辦人籌得 6.5 億美元"
 date: 2026-05-21
 source: SiliconANGLE / The Next Web / The Decoder
 url: https://siliconangle.com/2026/05/13/recursive-superintelligence-raises-650m-build-self-improving-ai-models/

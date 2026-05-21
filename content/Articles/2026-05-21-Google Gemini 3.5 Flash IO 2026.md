@@ -1,5 +1,5 @@
 ---
-title: "Google I/O 2026: Gemini 3.5 Flash, Gemini Omni, and the Agent-First Era"
+title: "Google I/O 2026：Gemini 3.5 Flash 登場，速度是競爭對手四倍，開啟 Agent 優先時代"
 date: 2026-05-21
 source: Google Developers Blog / Business Standard
 url: https://developers.googleblog.com/all-the-news-from-the-google-io-2026-developer-keynote/

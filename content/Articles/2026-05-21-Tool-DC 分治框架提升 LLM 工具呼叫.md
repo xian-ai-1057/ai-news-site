@@ -1,5 +1,5 @@
 ---
-title: "Try, Check and Retry: A Divide-and-Conquer Framework for Boosting Long-context Tool-Calling Performance of LLMs"
+title: "Tool-DC：分治框架解決 LLM 海量工具呼叫難題，7B 模型達 o3 水準"
 date: 2026-05-21
 source: arXiv
 url: https://arxiv.org/abs/2603.11495
