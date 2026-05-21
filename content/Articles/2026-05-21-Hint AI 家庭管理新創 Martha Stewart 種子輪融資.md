@@ -1,5 +1,5 @@
 ---
-title: "Exclusive: Martha Stewart's New AI Startup Wants to Manage Your Home Before Things Break"
+title: "Hint AI：Martha Stewart 共創 AI 家庭管家新創，完成 1000 萬美元種子輪融資"
 date: 2026-05-21
 source: Fortune
 url: https://fortune.com/2026/05/13/exclusive-martha-stewart-ai-startup-hint-seed-funding-slow-ventures/
@@ -16,7 +16,7 @@ tags:
 created: 2026-05-21
 ---
 
-# Hint AI：Martha Stewart 共同創辦家庭管理 AI 新創，獲 1000 萬美元種子輪融資
+# Hint AI：Martha Stewart 共創 AI 家庭管家新創，完成 1000 萬美元種子輪融資
 
 > [!info] 文章資訊
 > - **來源**：[Fortune](https://fortune.com/2026/05/13/exclusive-martha-stewart-ai-startup-hint-seed-funding-slow-ventures/)

@@ -1,5 +1,5 @@
 ---
-title: DeepSeek mHC：流形約束超連接架構入門
+title: "DeepSeek mHC：用「路況控制閘門」理解流形約束超連接架構"
 date: 2026-05-21
 type: learning-note
 source_article: "[[2026-05-21-DeepSeek mHC 流形約束超連接架構突破]]"

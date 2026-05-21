@@ -1,5 +1,5 @@
 ---
-title: Anthropic Dreaming：AI Agent 記憶鞏固機制入門
+title: "Anthropic Dreaming：用「睡眠記憶鞏固」理解 AI Agent 自我改進機制"
 date: 2026-05-21
 type: learning-note
 source_article: "[[2026-05-21-Anthropic Dreaming AI Agent 自我改進技術]]"

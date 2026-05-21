@@ -1,5 +1,5 @@
 ---
-title: "OpenAI and Dell Technologies Partner to Bring Codex to Hybrid and On-Premises Enterprise Environments"
+title: "OpenAI × Dell Codex：400 萬開發者使用的 AI 程式碼助理正式進入混合雲與本地端"
 date: 2026-05-21
 source: OpenAI
 url: https://openai.com/index/dell-codex-enterprise-partnership/
@@ -17,7 +17,7 @@ tags:
 created: 2026-05-21
 ---
 
-# OpenAI × Dell Codex 企業合作：AI 程式碼助理正式進入混合雲與本地端環境
+# OpenAI × Dell Codex：400 萬開發者使用的 AI 程式碼助理正式進入混合雲與本地端
 
 > [!info] 文章資訊
 > - **來源**：[OpenAI](https://openai.com/index/dell-codex-enterprise-partnership/)

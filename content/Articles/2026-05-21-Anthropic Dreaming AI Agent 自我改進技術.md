@@ -1,5 +1,5 @@
 ---
-title: "Anthropic Introduces 'Dreaming' — A System That Lets AI Agents Learn from Their Own Mistakes"
+title: "Anthropic「Dreaming」：AI Agent 任務間隙自動回顧記憶，Harvey 任務完成率提升 6 倍"
 date: 2026-05-21
 source: VentureBeat
 url: https://venturebeat.com/technology/anthropic-introduces-dreaming-a-system-that-lets-ai-agents-learn-from-their-own-mistakes
@@ -16,7 +16,7 @@ tags:
 created: 2026-05-21
 ---
 
-# Anthropic「Dreaming」技術：讓 AI Agent 在任務間隙自動回顧並改進記憶
+# Anthropic「Dreaming」：AI Agent 任務間隙自動回顧記憶，Harvey 任務完成率提升 6 倍
 
 > [!info] 文章資訊
 > - **來源**：[VentureBeat](https://venturebeat.com/technology/anthropic-introduces-dreaming-a-system-that-lets-ai-agents-learn-from-their-own-mistakes)

@@ -1,5 +1,5 @@
 ---
-title: "mHC: Manifold-Constrained Hyper-Connections — DeepSeek 提出訓練穩定性三階量級突破"
+title: "DeepSeek mHC：流形約束讓梯度放大從 3000x 降至 1.6x，兆參數模型訓練穩定性三階量級突破"
 date: 2026-05-21
 source: arXiv / DeepSeek
 url: https://arxiv.org/abs/2512.24880
@@ -16,7 +16,7 @@ tags:
 created: 2026-05-21
 ---
 
-# mHC：DeepSeek 流形約束超連接架構，梯度放大倍數從 3000x 降至 1.6x
+# DeepSeek mHC：流形約束讓梯度放大從 3000x 降至 1.6x，兆參數模型訓練穩定性三階量級突破
 
 > [!info] 文章資訊
 > - **來源**：[arXiv 2512.24880 / DeepSeek](https://arxiv.org/abs/2512.24880)

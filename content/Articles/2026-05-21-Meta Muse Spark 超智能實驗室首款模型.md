@@ -1,5 +1,5 @@
 ---
-title: "Meta Debuts Muse Spark, First AI Model Under Alexandr Wang's Superintelligence Labs"
+title: "Meta Muse Spark：Alexandr Wang 領銜超智能實驗室，多 Agent 並行推理架構首款旗艦模型"
 date: 2026-05-21
 source: TechCrunch
 url: https://techcrunch.com/2026/04/08/meta-debuts-the-muse-spark-model-in-a-ground-up-overhaul-of-its-ai/
@@ -16,7 +16,7 @@ tags:
 created: 2026-05-21
 ---
 
-# Meta Muse Spark：Alexandr Wang 領導的超智能實驗室首款旗艦模型正式亮相
+# Meta Muse Spark：Alexandr Wang 領銜超智能實驗室，多 Agent 並行推理架構首款旗艦模型
 
 > [!info] 文章資訊
 > - **來源**：[TechCrunch](https://techcrunch.com/2026/04/08/meta-debuts-the-muse-spark-model-in-a-ground-up-overhaul-of-its-ai/)

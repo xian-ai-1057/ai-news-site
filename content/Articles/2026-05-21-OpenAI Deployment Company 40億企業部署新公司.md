@@ -1,5 +1,5 @@
 ---
-title: "OpenAI Launches the OpenAI Deployment Company to Help Businesses Build Around Intelligence"
+title: "OpenAI 成立 40 億美元 Deployment Company：把 AI 工程師直接派駐企業，同步收購 Tomoro"
 date: 2026-05-21
 source: OpenAI
 url: https://openai.com/index/openai-launches-the-deployment-company/
@@ -16,7 +16,7 @@ tags:
 created: 2026-05-21
 ---
 
-# OpenAI 啟動 40 億美元「Deployment Company」：把 AI 工程師直接派駐企業內部
+# OpenAI 成立 40 億美元 Deployment Company：把 AI 工程師直接派駐企業，同步收購 Tomoro
 
 > [!info] 文章資訊
 > - **來源**：[OpenAI](https://openai.com/index/openai-launches-the-deployment-company/)

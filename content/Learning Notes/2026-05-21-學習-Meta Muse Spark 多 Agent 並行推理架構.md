@@ -1,5 +1,5 @@
 ---
-title: Meta Muse Spark：多 Agent 並行推理架構入門
+title: "Meta Muse Spark：用「會議室頭腦風暴」理解多 Agent 並行推理架構"
 date: 2026-05-21
 type: learning-note
 source_article: "[[2026-05-21-Meta Muse Spark 超智能實驗室首款模型]]"
