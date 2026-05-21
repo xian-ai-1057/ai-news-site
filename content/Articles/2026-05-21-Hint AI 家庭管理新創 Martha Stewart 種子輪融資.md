@@ -16,8 +16,6 @@ tags:
 created: 2026-05-21
 ---
 
-# Hint AI：Martha Stewart 共創 AI 家庭管家新創，完成 1000 萬美元種子輪融資
-
 > [!info] 文章資訊
 > - **來源**：[Fortune](https://fortune.com/2026/05/13/exclusive-martha-stewart-ai-startup-hint-seed-funding-slow-ventures/)
 > - **發布日期**：2026-05-13

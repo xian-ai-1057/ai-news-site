@@ -17,8 +17,6 @@ tags:
 created: 2026-05-21
 ---
 
-# Stanford AI Index 2026：性能飛躍、投資暴增，但透明度急劇下滑，就業衝擊已成現實
-
 > [!info] 文章資訊
 > - **來源**：[Stanford HAI](https://hai.stanford.edu/news/inside-the-ai-index-12-takeaways-from-the-2026-report)
 > - **發布日期**：2026-04（報告發布）

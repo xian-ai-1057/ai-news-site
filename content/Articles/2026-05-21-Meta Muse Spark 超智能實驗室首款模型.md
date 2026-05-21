@@ -16,8 +16,6 @@ tags:
 created: 2026-05-21
 ---
 
-# Meta Muse Spark：Alexandr Wang 領銜超智能實驗室，多 Agent 並行推理架構首款旗艦模型
-
 > [!info] 文章資訊
 > - **來源**：[TechCrunch](https://techcrunch.com/2026/04/08/meta-debuts-the-muse-spark-model-in-a-ground-up-overhaul-of-its-ai/)
 > - **發布日期**：2026-04-08

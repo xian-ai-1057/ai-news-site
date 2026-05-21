@@ -17,8 +17,6 @@ tags:
 created: 2026-05-21
 ---
 
-# OpenAI × Dell Codex：400 萬開發者使用的 AI 程式碼助理正式進入混合雲與本地端
-
 > [!info] 文章資訊
 > - **來源**：[OpenAI](https://openai.com/index/dell-codex-enterprise-partnership/)
 > - **發布日期**：2026-05-18

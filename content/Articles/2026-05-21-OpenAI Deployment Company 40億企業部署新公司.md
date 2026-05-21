@@ -16,8 +16,6 @@ tags:
 created: 2026-05-21
 ---
 
-# OpenAI 成立 40 億美元 Deployment Company：把 AI 工程師直接派駐企業，同步收購 Tomoro
-
 > [!info] 文章資訊
 > - **來源**：[OpenAI](https://openai.com/index/openai-launches-the-deployment-company/)
 > - **發布日期**：2026-05-12

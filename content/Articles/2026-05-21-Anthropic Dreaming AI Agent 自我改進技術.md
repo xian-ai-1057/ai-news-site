@@ -16,8 +16,6 @@ tags:
 created: 2026-05-21
 ---
 
-# Anthropic「Dreaming」：AI Agent 任務間隙自動回顧記憶，Harvey 任務完成率提升 6 倍
-
 > [!info] 文章資訊
 > - **來源**：[VentureBeat](https://venturebeat.com/technology/anthropic-introduces-dreaming-a-system-that-lets-ai-agents-learn-from-their-own-mistakes)
 > - **發布日期**：2026-05-06
