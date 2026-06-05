@@ -84,7 +84,9 @@ create index if not exists dri_article_idx on public.daily_report_items (article
 
 -- ── updated_at 觸發器 ─────────────────────────────────────────────────
 create or replace function public.set_updated_at() returns trigger
-language plpgsql as $$
+language plpgsql
+set search_path = ''
+as $$
 begin new.updated_at = now(); return new; end $$;
 
 drop trigger if exists articles_set_updated_at on public.articles;
