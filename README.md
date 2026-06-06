@@ -1,17 +1,78 @@
-# Quartz v4
+# AI 日報 — Markdown → Supabase DB-first 內容管線
 
-> “[One] who works with the door open gets all kinds of interruptions, but [they] also occasionally gets clues as to what the world is and what might be important.” — Richard Hamming
+這是什麼：**AI 日報**是一個繁體中文 AI 新聞知識庫的後端內容管線。原為 Quartz 靜態網站，現已轉型為 **Supabase DB-first** 架構：Markdown 原始檔由 ingest CLI 解析後直接寫入 Postgres；介面（前端閱讀 App）為獨立專案，尚在規劃中，**不再使用 Quartz**。
 
-Quartz is a set of tools that helps you publish your [digital garden](https://jzhao.xyz/posts/networked-thought) and notes as a website for free.
+## 架構（三層內容）
 
-🔗 Read the documentation and get started: https://quartz.jzhao.xyz/
+```
+daily_reports → daily_report_items → articles ← learning_notes
+```
 
-[Join the Discord Community](https://discord.gg/cRFFHYye7t)
+| 資料類型 | 說明 | 現有數量 |
+|---|---|---|
+| `daily_reports` | 每日 AI 日報 | 23 份 |
+| `articles` | 個別新聞文章 | 214 篇 |
+| `learning_notes` | 技術學習筆記 | 61 份 |
 
-## Sponsors
+## 目錄結構
 
-<p align="center">
-  <a href="https://github.com/sponsors/jackyzha0">
-    <img src="https://cdn.jsdelivr.net/gh/jackyzha0/jackyzha0/sponsorkit/sponsors.svg" />
-  </a>
-</p>
+```
+ingest/
+  parser/   — Markdown 解析（frontmatter + body → records）
+  db/       — records → Supabase upsert
+  cli/      — 批次回填 & 單日入庫 CLI
+supabase/
+  migrations/ — DB schema DDL（進版控）
+specs/        — 規格文件（每層一份 spec.md）
+content/      — 歷史種子 / 回填來源（已非內容來源，DB 為準）
+  Articles/
+  Learning Notes/
+  AI日報-YYYY-MM-DD.md（×23）
+```
+
+> `content/` 僅作為可重現回填的種子與歷史備份，**不再是內容的唯一來源；資料庫（Supabase）才是唯一事實**。
+
+## 環境設定與常用指令
+
+1. 複製環境變數範本並填入金鑰：
+   ```bash
+   cp .env.example .env
+   # 填入 SUPABASE_URL 與 SUPABASE_SERVICE_ROLE_KEY
+   ```
+
+2. 安裝相依套件：
+   ```bash
+   npm install
+   ```
+
+3. 型別檢查：
+   ```bash
+   npm run typecheck
+   ```
+
+4. 執行測試：
+   ```bash
+   npm test
+   ```
+
+5. 歷史內容全量回填（需 Supabase 金鑰）：
+   ```bash
+   npm run ingest:backfill
+   ```
+
+6. 單日入庫（需 Supabase 金鑰）：
+   ```bash
+   npm run ingest:day -- content/
+   ```
+
+## 待辦事項
+
+- **新 UI**：獨立前端 App，直接讀取 Supabase，尚未開始
+- **Cloudflare `ai-news` Workers 專案**：需手動在 Cloudflare Dashboard 停用（repo 外操作）
+- **中文全文搜尋**：Postgres `pg_jieba` 或 `pgroonga` 擴充，尚在評估
+
+## 技術棧
+
+- Node ≥ 22、TypeScript、Zod、`@supabase/supabase-js`、`gray-matter`、`tsx`
+- Supabase（Postgres + PostgREST）
+- GitHub Actions CI（typecheck + parser 測試）

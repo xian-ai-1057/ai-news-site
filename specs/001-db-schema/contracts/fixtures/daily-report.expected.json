@@ -1,0 +1,18 @@
+{
+  "slug": "AI日報-2026-05-19",
+  "reportDate": "2026-05-19",
+  "title": "AI 日報 2026-05-19",
+  "summaryMd": "重大新聞主軸：",
+  "tags": ["AI", "日報", "新聞"],
+  "createdDate": "2026-05-19",
+  "items": [
+    { "reportSlug": "AI日報-2026-05-19", "section": "技術理論", "position": 0, "articleSlug": "2026-05-19-VibeServe Agent 自動合成 LLM 服務系統", "blurbMd": "業界第一個讓 AI Agent 端到端合成" },
+    { "reportSlug": "AI日報-2026-05-19", "section": "技術理論", "position": 1, "articleSlug": "2026-05-19-Mixture-Model-like Ensemble 重新定義 LLM 整合", "blurbMd": "把 LLM 整合" },
+    { "reportSlug": "AI日報-2026-05-19", "section": "技術理論", "position": 2, "articleSlug": "2026-05-19-MARLIN 賽局 RL 永續 LLM 推理", "blurbMd": "揭示" },
+    { "reportSlug": "AI日報-2026-05-19", "section": "市場情況", "position": 0, "articleSlug": "2026-05-19-AI 治理市場破 5 億美元 Colorado AI Act", "blurbMd": "全球 72 國" },
+    { "reportSlug": "AI日報-2026-05-19", "section": "重大新聞", "position": 0, "articleSlug": "2026-05-19-Google IO 2026 Gemini 3.2 Flash Aluminium OS", "blurbMd": "Google I/O 2026 keynote" },
+    { "reportSlug": "AI日報-2026-05-19", "section": "企業應用導入", "position": 0, "articleSlug": "2026-05-19-銀行業 AI 部署 78% 18 個月 ROI", "blurbMd": "McKinsey 估全球銀行業" },
+    { "reportSlug": "AI日報-2026-05-19", "section": "企業應用導入", "position": 1, "articleSlug": "2026-05-19-Kaiser Permanente Abridge 環境記錄 40 醫院", "blurbMd": "Kaiser Permanente 跨 40 醫院" },
+    { "reportSlug": "AI日報-2026-05-19", "section": "新創公司", "position": 0, "articleSlug": "2026-05-19-Sierra 募資 950M 估值 15B 企業 AI Agent", "blurbMd": "前 Twitter CEO" }
+  ]
+}

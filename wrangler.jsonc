@@ -1,9 +1,0 @@
-{
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "ai-news",
-  "compatibility_date": "2024-12-01",
-  "assets": {
-    "directory": "./public",
-    "not_found_handling": "404-page"
-  }
-}

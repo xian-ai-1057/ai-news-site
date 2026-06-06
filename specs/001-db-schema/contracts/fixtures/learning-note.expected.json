@@ -1,0 +1,11 @@
+{
+  "slug": "2026-05-15-學習-Subquadratic 稀疏注意力架構",
+  "title": "Subquadratic 稀疏注意力架構",
+  "noteDate": "2026-05-15",
+  "topic": "Subquadratic Sparse Attention / Transformer 架構替代方案",
+  "difficulty": "中階",
+  "sourceArticleSlug": "2026-05-15-SubQ Subquadratic LLM 架構突破",
+  "contentMd": "# Subquadratic 稀疏注意力架構：打破 Transformer 的計算詛咒",
+  "tags": ["AI", "學習筆記", "Transformer", "注意力機制", "稀疏注意力", "架構創新"],
+  "createdDate": "2026-05-15"
+}
