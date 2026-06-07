@@ -4,7 +4,7 @@ node_modules
 .env
 .env.local
 dist
-public
+/public
 prof
 tsconfig.tsbuildinfo
 .obsidian

@@ -1,0 +1,113 @@
+/* ============================================================
+   MarkdownView 元件樣式（Spec 006 §3.3）
+   - callout：Obsidian 風格提示框（info / note / warning 變體）
+   - mermaid：圖表容器（置中、限寬、橫向捲動）
+   亮/暗皆可讀：沿用 globals.css 的 CSS 變數（--accent / --ink / --bg-2 …），
+   本檔自我包含，不修改 globals.css。
+   ============================================================ */
+
+/* ── Obsidian callout ──────────────────────────────────── */
+.callout {
+  margin: 1.4em 0;
+  padding: 16px 20px;
+  border-radius: 12px;
+  border-left: 4px solid var(--accent, #4b3ff7);
+  background: var(--bg-2, #f5f4f9);
+  color: var(--ink-2, #56526a);
+}
+
+.callout-title {
+  font-weight: 700;
+  color: var(--ink, #15131f);
+  margin-bottom: 6px;
+  font-size: 0.95em;
+  letter-spacing: 0.01em;
+  text-transform: capitalize;
+}
+
+.callout-body > :first-child {
+  margin-top: 0;
+}
+
+.callout-body > :last-child {
+  margin-bottom: 0;
+}
+
+/* 變體：用左邊框 + 標題色區分類型，背景以 color-mix 帶一點色相。 */
+.callout-info,
+.callout-tip,
+.callout-abstract,
+.callout-summary {
+  border-left-color: #2f81f7;
+  background: color-mix(in srgb, #2f81f7 8%, var(--bg-2, #f5f4f9));
+}
+.callout-info .callout-title,
+.callout-tip .callout-title,
+.callout-abstract .callout-title,
+.callout-summary .callout-title {
+  color: #2f81f7;
+}
+
+.callout-note {
+  border-left-color: var(--accent, #4b3ff7);
+  background: color-mix(in srgb, var(--accent, #4b3ff7) 8%, var(--bg-2, #f5f4f9));
+}
+.callout-note .callout-title {
+  color: var(--accent, #4b3ff7);
+}
+
+.callout-warning,
+.callout-caution,
+.callout-attention {
+  border-left-color: #e3a008;
+  background: color-mix(in srgb, #e3a008 10%, var(--bg-2, #f5f4f9));
+}
+.callout-warning .callout-title,
+.callout-caution .callout-title,
+.callout-attention .callout-title {
+  color: #b67c05;
+}
+
+.callout-danger,
+.callout-error,
+.callout-bug {
+  border-left-color: #e5484d;
+  background: color-mix(in srgb, #e5484d 9%, var(--bg-2, #f5f4f9));
+}
+.callout-danger .callout-title,
+.callout-error .callout-title,
+.callout-bug .callout-title {
+  color: #e5484d;
+}
+
+/* ── Mermaid 圖容器 ────────────────────────────────────── */
+.mermaid-diagram {
+  margin: 1.6em 0;
+  display: flex;
+  justify-content: center;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 8px 0;
+}
+
+.mermaid-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 渲染失敗時的 fallback：顯示原始碼，頁面不崩。 */
+.mermaid-fallback {
+  background: var(--bg-2, #f5f4f9);
+  border: 1px solid var(--line, #e9e7f0);
+  border-radius: 12px;
+  padding: 18px;
+  overflow: auto;
+  margin: 1.6em 0;
+}
+.mermaid-fallback code {
+  background: none;
+  padding: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.9em;
+  white-space: pre;
+}

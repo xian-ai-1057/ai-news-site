@@ -1,0 +1,97 @@
+{
+  "date": "2026-06-05",
+  "weekday": "週五",
+  "issue": 23,
+  "summary": "技術面：OpenAI GPT-5.5 以 84.9% GDPval 和 82.7% Terminal-Bench 2.0 刷新代理 AI 基準。",
+  "observation": "今日新聞呈現出技術理論與企業應用之間的清晰對應。",
+  "items": [
+    {
+      "catKey": "tech",
+      "lead": false,
+      "title": "GPT-5.5 完整代理模型發布：超越任務完成，打造 AI 超應用",
+      "articleSlug": "2026-06-05-GPT-5.5完整代理模型發布超越任務完成",
+      "source": "OpenAI / MarkTechPost",
+      "url": "https://openai.com/index/introducing-gpt-5-5/",
+      "industry": null,
+      "points": "OpenAI 4 月 23 日發布完全重訓的 GPT-5.5，在 Terminal-Bench 2.0 達 82.7%。",
+      "noteSlug": "2026-06-05-學習-GPT-5.5代理架構設計與超任務完成能力"
+    },
+    {
+      "catKey": "tech",
+      "lead": false,
+      "title": "Transformer 早期退出架構：以強化學習激勵外化推理，自適應減少計算量",
+      "articleSlug": "2026-06-05-Transformer早期退出架構以強化學習激勵外化推理",
+      "source": "arXiv",
+      "url": "https://arxiv.org/abs/2603.21376",
+      "industry": null,
+      "points": "劍橋大學等六人團隊提出在 Transformer 中間層插入「早期退出」機制。",
+      "noteSlug": "2026-06-05-學習-Transformer早期退出架構外化推理機制"
+    },
+    {
+      "catKey": "market",
+      "lead": false,
+      "title": "科羅拉多州 AI 法全面重寫：CADMA 取代舊法，企業合規責任大幅收窄",
+      "articleSlug": "2026-06-05-科羅拉多州AI法CADMA取代舊法企業合規全面調整",
+      "source": "Crowell & Moring / Holland & Knight",
+      "url": "https://www.crowell.com/en/insights/client-alerts/colorado-hits-reset-on-ai-regulation-sb-26-189-repeals-and-reenacts-the-colorado-ai-act",
+      "industry": null,
+      "points": "科羅拉多州 5 月 14 日簽署 SB 26-189，廢除原定 6 月 30 日生效的舊 AI 法，以《自動決策技術法》（CADMA）取代。",
+      "noteSlug": null
+    },
+    {
+      "catKey": "news",
+      "lead": true,
+      "title": "Anthropic 估值衝破 9650 億美元，同步發布 Claude Opus 4.8 動態工作流程",
+      "articleSlug": "2026-06-05-Anthropic估值9650億美元Claude Opus 4.8動態工作流程發布",
+      "source": "TechCrunch / MarkTechPost / SiliconANGLE",
+      "url": "https://techcrunch.com/2026/05/28/anthropic-releases-opus-4-8-with-new-dynamic-workflow-tool/",
+      "industry": null,
+      "points": "Anthropic 5 月 28 日同日宣布完成 650 億 Series H（估值 9650 億美元），並發布 Opus 4.8。",
+      "noteSlug": null
+    },
+    {
+      "catKey": "enterprise",
+      "lead": false,
+      "title": "Accenture 全球 743,000 員工全員部署 Microsoft 365 Copilot：史上最大企業 AI 部署",
+      "articleSlug": "2026-06-05-Accenture全球743000員工最大企業AI部署紀錄",
+      "source": "allwork.space / Windows News",
+      "url": "https://allwork.space/2026/04/microsoft-brings-copilot-to-743000-accenture-workers-in-biggest-test-yet-of-ai-productivity-at-scale/",
+      "industry": "其他",
+      "points": "4 月 28 日宣布全球最大企業 AI 部署，覆蓋 120 多國。",
+      "noteSlug": null
+    },
+    {
+      "catKey": "enterprise",
+      "lead": false,
+      "title": "Microsoft 365 Copilot Q1 2026 達 4.2 億月活，企業 AI 全面落地：數據與挑戰並存",
+      "articleSlug": "2026-06-05-Microsoft 365 Copilot Q1 2026達4.2億月活企業AI全面落地",
+      "source": "StackMatix / XtendedView",
+      "url": "https://www.stackmatix.com/blog/microsoft-copilot-enterprise-adoption-2026",
+      "industry": "其他",
+      "points": "Q1 2026 月活躍用戶 4.2 億（YoY +83%），企業付費座位超 2,000 萬。",
+      "noteSlug": null
+    },
+    {
+      "catKey": "startup",
+      "lead": false,
+      "title": "OpenEvidence 醫療 AI 獲 2.5 億美元 D 輪融資：65% 美國醫師每日使用，估值 120 億美元",
+      "articleSlug": "2026-06-05-OpenEvidence醫療AI獲2.5億美元D輪65%美國醫師每日使用",
+      "source": "FierceHealthcare / CNBC",
+      "url": "https://www.fiercehealthcare.com/ai-and-machine-learning/openevidence-clinches-250m-series-d-rapidly-growing-its-reach-doctors",
+      "industry": null,
+      "points": "2026 年 1 月以 2.5 億美元 D 輪估值 120 億美元（三個月翻倍）。",
+      "noteSlug": null
+    },
+    {
+      "catKey": "startup",
+      "lead": false,
+      "title": "Rhoda AI 獲 4.5 億美元 A 輪融資：以視頻預測控制技術，讓機器人走出實驗室",
+      "articleSlug": "2026-06-05-Rhoda AI獲4.5億美元A輪以視頻預測控制推動機器人現實部署",
+      "source": "BusinessWire / Robotics and Automation News",
+      "url": "https://www.businesswire.com/news/home/20260310715139/en/Rhoda-AI-Exits-Stealth-with-$450-Million-Series-A-to-Bring-Robots-Out-of-the-Lab-and-Into-the-Real-World",
+      "industry": null,
+      "points": "隱身 18 個月後以 4.5 億 Series A（估值 17 億美元）亮相。",
+      "noteSlug": null
+    }
+  ]
+}

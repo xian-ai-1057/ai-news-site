@@ -1,0 +1,89 @@
+{
+  "date": "2026-06-05",
+  "weekday": "週五",
+  "issue": 23,
+  "summary": "技術面：OpenAI GPT-5.5 以 84.9% GDPval 和 82.7% Terminal-Bench 2.0 刷新代理 AI 基準，Transformer 早期退出架構研究揭示下一代推理效率方向。市場面：科羅拉多州廢除舊 AI 法、改以更窄範圍的 CADMA 取代，標誌美國 AI 監管向「輕度合規」路線回擺。企業應用面：Accenture 全球 743,000 員工完成微軟 Copilot 全員部署，締造史上最大企業 AI 部署紀錄，Microsoft 365 Copilot Q1 月活躍用戶達 4.2 億。新創面：OpenEvidence 以廣告模式讓 65% 美國醫師每日使用，估值衝至 120 億美元；Rhoda AI 以視頻預測控制技術讓機器人走出實驗室。",
+  "observation": "今日新聞呈現出技術理論與企業應用之間的清晰對應：GPT-5.5 的代理架構突破（Terminal-Bench 82.7%、OSWorld 78.7%）和 Claude Opus 4.8 的動態工作流程（1,000 個平行子代理），正在被直接轉化為企業端的規模化部署能力——Accenture 743,000 人的 Copilot 部署就是最佳證明。Transformer 早期退出架構則預示下一個研究方向：如何在保持性能的同時降低大規模代理任務的推理成本，這對企業 AI 的 TCO（總擁有成本）有直接影響。\n\n另一個值得關注的結構性趨勢：同一週科羅拉多州廢除嚴格 AI 法、Anthropic 以 9650 億美元估值超越 OpenAI、OpenEvidence 靠廣告模式征服 65% 美國醫師——三條線索共同指向「AI 商業化正在全面加速」的主旋律，監管收窄、資本集中、用戶習慣養成都在同步推進。這種加速態勢也正在強化技術有能力、規模有資金、合規有空間的企業的先發優勢。",
+  "items": [
+    {
+      "catKey": "tech",
+      "lead": false,
+      "title": "GPT-5.5 完整代理模型發布：超越任務完成，打造 AI 超應用",
+      "source": "OpenAI / MarkTechPost",
+      "url": "https://openai.com/index/introducing-gpt-5-5/",
+      "industry": null,
+      "points": "OpenAI 4 月 23 日發布完全重訓的 GPT-5.5，在 Terminal-Bench 2.0 達 82.7%（最高分）、GDPval 達 84.9%、OSWorld 達 78.7%，定位「超應用」核心模型，整合 ChatGPT、Codex 與 AI 瀏覽器，支援跨工具自主完成複雜任務。",
+      "noteSlug": "2026-06-05-學習-GPT-5.5代理架構設計與超任務完成能力"
+    },
+    {
+      "catKey": "tech",
+      "lead": false,
+      "title": "Transformer 早期退出架構：以強化學習激勵外化推理，自適應減少計算量",
+      "source": "arXiv",
+      "url": "https://arxiv.org/abs/2603.21376",
+      "industry": null,
+      "points": "劍橋大學等六人團隊提出在 Transformer 中間層插入「早期退出」機制，以強化學習訓練模型對「容易」的 token 在淺層提前終止前向傳播，初步實驗在小型推理模型上驗證了自適應減少計算量的可行性。",
+      "noteSlug": "2026-06-05-學習-Transformer早期退出架構外化推理機制"
+    },
+    {
+      "catKey": "market",
+      "lead": false,
+      "title": "科羅拉多州 AI 法全面重寫：CADMA 取代舊法，企業合規責任大幅收窄",
+      "source": "Crowell & Moring / Holland & Knight",
+      "url": "https://www.crowell.com/en/insights/client-alerts/colorado-hits-reset-on-ai-regulation-sb-26-189-repeals-and-reenacts-the-colorado-ai-act",
+      "industry": null,
+      "points": "科羅拉多州 5 月 14 日簽署 SB 26-189，廢除原定 6 月 30 日生效的舊 AI 法，以《自動決策技術法》（CADMA）取代；新法移除風險評估、算法歧視義務，僅保留四項通知/揭露要求，2027 年 1 月生效；聯邦政府介入阻止原法是關鍵推力。",
+      "noteSlug": null
+    },
+    {
+      "catKey": "news",
+      "lead": true,
+      "title": "Anthropic 估值衝破 9650 億美元，同步發布 Claude Opus 4.8 動態工作流程",
+      "source": "TechCrunch / MarkTechPost / SiliconANGLE",
+      "url": "https://techcrunch.com/2026/05/28/anthropic-releases-opus-4-8-with-new-dynamic-workflow-tool/",
+      "industry": null,
+      "points": "Anthropic 5 月 28 日同日宣布完成 650 億 Series H（估值 9650 億美元，超越 OpenAI 的 8520 億美元），並發布 Opus 4.8；「動態工作流程」支援最多 1,000 個平行子代理，已驗證 75 萬行代碼庫 11 天 Zig→Rust 遷移達 99.8% 測試通過率；Fast Mode 速度 2.5 倍、成本降低 3 倍。",
+      "noteSlug": null
+    },
+    {
+      "catKey": "enterprise",
+      "lead": false,
+      "title": "Accenture 全球 743,000 員工全員部署 Microsoft 365 Copilot：史上最大企業 AI 部署",
+      "source": "allwork.space / Windows News",
+      "url": "https://allwork.space/2026/04/microsoft-brings-copilot-to-743000-accenture-workers-in-biggest-test-yet-of-ai-productivity-at-scale/",
+      "industry": "其他",
+      "points": "4 月 28 日宣布全球最大企業 AI 部署，覆蓋 120 多國；背後有 200,000 人規模的內部研究支撐（97% 員工例行任務提速最多 15 倍，53% 報告生產力顯著提升）；幫助 Microsoft Copilot 突破 2,000 萬付費企業座位里程碑。",
+      "noteSlug": null
+    },
+    {
+      "catKey": "enterprise",
+      "lead": false,
+      "title": "Microsoft 365 Copilot Q1 2026 達 4.2 億月活，企業 AI 全面落地：數據與挑戰並存",
+      "source": "StackMatix / XtendedView",
+      "url": "https://www.stackmatix.com/blog/microsoft-copilot-enterprise-adoption-2026",
+      "industry": "其他",
+      "points": "Q1 2026 月活躍用戶 4.2 億（YoY +83%），企業付費座位超 2,000 萬；金融服務（71%）和科技業（68%）領先；Forrester 計算三年 ROI 達 116%；但僅 29% 企業報告顯著 ROI，揭示工具採購與業務轉型間的落差。",
+      "noteSlug": null
+    },
+    {
+      "catKey": "startup",
+      "lead": false,
+      "title": "OpenEvidence 醫療 AI 獲 2.5 億美元 D 輪融資：65% 美國醫師每日使用，估值 120 億美元",
+      "source": "FierceHealthcare / CNBC",
+      "url": "https://www.fiercehealthcare.com/ai-and-machine-learning/openevidence-clinches-250m-series-d-rapidly-growing-its-reach-doctors",
+      "industry": null,
+      "points": "2026 年 1 月以 2.5 億美元 D 輪估值 120 億美元（三個月翻倍）；65% 美國醫師每日使用，月臨床諮詢量 1,800 萬次（一年 6 倍增長）；年收入破億美元；廣告免費模式繞過漫長醫院採購流程，成為醫師點位決策的預設工具。",
+      "noteSlug": null
+    },
+    {
+      "catKey": "startup",
+      "lead": false,
+      "title": "Rhoda AI 獲 4.5 億美元 A 輪融資：以視頻預測控制技術，讓機器人走出實驗室",
+      "source": "BusinessWire / Robotics and Automation News",
+      "url": "https://www.businesswire.com/news/home/20260310715139/en/Rhoda-AI-Exits-Stealth-with-$450-Million-Series-A-to-Bring-Robots-Out-of-the-Lab-and-Into-the-Real-World",
+      "industry": null,
+      "points": "隱身 18 個月後以 4.5 億 Series A（估值 17 億美元）亮相；DVA（直接視頻行動）模型以閉環視頻預測控制讓機器人在動態真實環境實時調整行為；FutureVision 平台定位授權給第三方硬體廠商；製造測試中 2 分鐘自主完成元件處理週期，超越客戶 KPI。",
+      "noteSlug": null
+    }
+  ]
+}
