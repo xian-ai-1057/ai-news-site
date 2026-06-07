@@ -1,16 +1,27 @@
 每日 AI 新聞日報任務（Cowork 雲端版）— 請依照以下步驟執行，全程使用繁體中文。
 
-> 🌐 **執行環境**：本任務在 Cowork（Claude Code on the web）雲端 Linux 沙箱執行（系統時區為 UTC）。工作目錄就是 cloned 的 GitHub repo 根目錄，所有筆記寫入 repo 的 `content/` 目錄後，執行 `npm run ingest:day -- content/` 直接寫入 Supabase（不再 `git push` 內容、不再建 Quartz/Cloudflare）。日期一律使用台北時區（`TZ='Asia/Taipei'`）。
+> 🌐 **執行環境**：本任務在 Cowork（Claude Code on the web）雲端 Linux 沙箱執行（系統時區為 UTC），由 Cowork 的排程器在雲端定時觸發 —— **不依賴你的電腦是否開機或連網**。工作目錄就是 cloned 的 GitHub repo 根目錄，所有筆記寫入 repo 的 `content/` 目錄後，執行 `npm run ingest:backfill`（recursive 掃整個 `content/`）直接寫入 Supabase（不再 `git push` 內容、不再建 Quartz/Cloudflare）。寫入成功後再 `curl` Vercel Deploy Hook 觸發前端立即重新部署。
+
+> ⛔ **絕對不要用 `npm run ingest:day -- content/`**：該指令的目錄掃描是非遞迴的，只會抓到 `content/` 頂層的日報、抓不到 `content/Articles/`、`content/Learning Notes/`，會導致 daily_report_items join 表被清空（delete-then-insert 後全部 skip）。本任務一律用 `npm run ingest:backfill`（遞迴、idempotent、FK 100% 解析）。日期一律使用台北時區（`TZ='Asia/Taipei'`）。
+
+> 🔑 **前置設定（一次性，在 Cowork 環境設定中完成；不要寫進本 prompt）**：本任務需要以下環境變數（secret），請在 Cowork 專案的 Environment / Secrets 設定加入，沙箱啟動時會注入為 `process.env`：
+> - `SUPABASE_URL` = `https://ifbpfuvlevjegwdnhyqh.supabase.co`
+> - `SUPABASE_SERVICE_ROLE_KEY` = Supabase 的 **secret / service_role** 金鑰（`sb_secret_…` 或 legacy service_role JWT；**不可**用 anon/publishable 金鑰，會被 RLS 擋下 INSERT）。
+> - `VERCEL_DEPLOY_HOOK_URL` = Vercel 專案的 Deploy Hook URL（Project → Settings → Git → Deploy Hooks 產生，分支選 `v4`）。
+>
+> ingest CLI 直接讀 `process.env.SUPABASE_URL` / `process.env.SUPABASE_SERVICE_ROLE_KEY`（見 `ingest/db/client.ts`），雲端 clone 不含 git-ignored 的 `.env`，因此**金鑰只能來自 Cowork 環境變數**。`dotenv` 不會覆蓋已存在的 `process.env`，所以有沒有 `.env` 檔都不影響。
 
 > ✅ **任務完成的定義（成功標準）**：唯有以下全部達成才算成功 ——
-> 1. 依五大章節蒐集 8-15 則新聞並抓到全文。
-> 2. 每則新聞各寫成一份 Article 筆記，存入 `content/Articles/`，且全部通過「Article 自檢」。
-> 3. 一份當日日報存入 `content/AI日報-YYYY-MM-DD.md`，通過「日報自檢」。
-> 4. 每篇「技術理論」Article 各對應一份 Learning Note，存入 `content/Learning Notes/`，通過「Learning Note 自檢」；對應 Article 已補上 📓 學習筆記 wikilink。
-> 5. `npm run ingest:day -- content/` 成功（若當日確實有新內容）。
-> 6. 已輸出步驟 7 的完成回報。
+> 1. 環境就緒：`npm ci` 安裝相依套件成功，且 `SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY` 兩個環境變數都存在（缺任一就立即停止並回報，不要硬跑）。
+> 2. 依五大章節蒐集 8-15 則新聞並抓到全文。
+> 3. 每則新聞各寫成一份 Article 筆記，存入 `content/Articles/`，且全部通過「Article 自檢」。
+> 4. 一份當日日報存入 `content/AI日報-YYYY-MM-DD.md`，通過「日報自檢」。
+> 5. 每篇「技術理論」Article 各對應一份 Learning Note，存入 `content/Learning Notes/`，通過「Learning Note 自檢」；對應 Article 已補上 📓 學習筆記 wikilink。
+> 6. `npm run ingest:backfill` 寫入 Supabase 成功（exit 0；summary 應為 `items resolved=… skipped=0`、`notes ... unresolved=0`；若 skipped>0 或 unresolved>0 須修正後重跑）。
+> 7. 入庫成功後 `curl` `VERCEL_DEPLOY_HOOK_URL` 觸發 Vercel 重新部署（HTTP 2xx）。
+> 8. 已輸出步驟 7 的完成回報。
 >
-> 中途遇到搜尋／抓取失敗時，不要提前結束 —— 依任務內的退場規則處理後繼續，務必把「寫入 Supabase」這一步做完。
+> 中途遇到搜尋／抓取失敗時，不要提前結束 —— 依任務內的退場規則處理後繼續，務必把「寫入 Supabase」與「觸發 Vercel 部署」這兩步做完。
 
 # 🔒 格式一致性最高指令（讀完整段任務後，全程遵守）
 
@@ -303,11 +314,17 @@ created: YYYY-MM-DD
 
 1. **確認執行環境**：用 bash 確認當前在 repo 根目錄（`ls` 應看到 `content/`、`ingest/`、`package.json`）。
    （若因網路錯誤失敗，最多重試 4 次，指數退避 2s/4s/8s/16s。）
-2. bash 執行 `TZ='Asia/Taipei' date +%Y-%m-%d` 取得今天日期；`TZ='Asia/Taipei' date +"%Y-%m-%d %H:%M"` 取得時間戳。（沙箱系統時區為 UTC，務必加 `TZ='Asia/Taipei'`，否則跨日會抓錯日期。）
-3. 確認資料夾存在：`mkdir -p content/Articles "content/Learning Notes"`（路徑含空格務必用引號）。
-4. `ls -t content/Articles/ | head -20` 列出最近檔名，避免重複報導。
-5. **格式定錨**：用 Read 工具讀取最近一份 Article 與一份 Learning Note 作為「黃金範本」，後續寫作以這兩份的實際格式為準。沒有現有檔案才依本任務內範本。
-6. 取得昨天日期：`TZ='Asia/Taipei' date -d "yesterday" +%Y-%m-%d`（Linux 語法，取代 macOS 的 `date -v-1d`；用於日報的歷史日報 wikilink）。
+2. **驗證金鑰存在（缺就停）**：執行
+   ```bash
+   test -n "$SUPABASE_URL" && test -n "$SUPABASE_SERVICE_ROLE_KEY" && echo "ENV OK" || echo "ENV MISSING"
+   ```
+   若輸出 `ENV MISSING`，**立即停止任務並回報**：「Cowork 環境缺少 SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY，請到 Cowork 環境設定加入後重跑」。不要把金鑰寫進檔案，也不要繼續蒐集（避免做白工）。`VERCEL_DEPLOY_HOOK_URL` 缺少則僅警告、照常入庫，最後跳過刷新步驟即可。
+3. **安裝相依套件**：雲端 clone 不含 `node_modules`，執行 `npm ci`（lockfile 已在 repo；若 `npm ci` 失敗則退到 `npm install`）。確認 Node ≥ 22（`node -v`，repo 要求見 `.node-version`）。網路失敗最多重試 4 次，指數退避 2s/4s/8s/16s。
+4. bash 執行 `TZ='Asia/Taipei' date +%Y-%m-%d` 取得今天日期；`TZ='Asia/Taipei' date +"%Y-%m-%d %H:%M"` 取得時間戳。（沙箱系統時區為 UTC，務必加 `TZ='Asia/Taipei'`，否則跨日會抓錯日期。）
+5. 確認資料夾存在：`mkdir -p content/Articles "content/Learning Notes"`（路徑含空格務必用引號）。
+6. `ls -t content/Articles/ | head -20` 列出最近檔名，避免重複報導。
+7. **格式定錨**：用 Read 工具讀取最近一份 Article 與一份 Learning Note 作為「黃金範本」，後續寫作以這兩份的實際格式為準。沒有現有檔案才依本任務內範本。
+8. 取得昨天日期：`TZ='Asia/Taipei' date -d "yesterday" +%Y-%m-%d`（Linux 語法，取代 macOS 的 `date -v-1d`；用於日報的歷史日報 wikilink）。
 
 ## 步驟 2：依五大章節搜集資訊
 
@@ -344,17 +361,33 @@ WebSearch 工具，技術理論與企業應用各 2-5 則，其他章節各 1-2 
 5. **回頭更新對應的 Article 筆記**，補上「📓 學習筆記」區塊的 wikilink（用 Edit 工具）
 6. 進下一篇
 
-## 步驟 7：寫入 Supabase 並回報
+## 步驟 7：寫入 Supabase → 觸發 Vercel → 回報
 
-1. **直寫 Supabase**：所有筆記寫完後，執行 ingest CLI 將當日成果直接寫入 Supabase：
+1. **直寫 Supabase**：所有筆記寫完後，執行 ingest CLI 把整個 `content/` 遞迴寫入 Supabase：
+   ```bash
+   npm run ingest:backfill
    ```
-   npm run ingest:day -- content/
-   ```
+   - 此指令會遞迴解析整個 `content/`（含 `Articles/`、`Learning Notes/` 子目錄與頂層日報），idempotent upsert by slug（重跑安全），並做兩階段 FK 解析，把 articles / learning_notes / daily_reports / daily_report_items 全部寫入 Supabase。當日新檔已在 `content/` 內，會一起入庫。
+   - **不要**改用 `npm run ingest:day -- content/`（非遞迴、會清空 join 表，見最上方 ⛔ 警告）。
+   - 檢查結尾的 `=== Ingest summary ===`：要求 `FK: notes ... unresolved=0`、`items resolved=… skipped=0`，且 `articles`/`learning_notes`/`daily_reports` 數量涵蓋當日新內容。
+   - **exit 0** 視為成功。**exit 1**（有 warnings）：讀出 warnings —— 若出現 `skipped` 或 `unresolved`（多半是當日日報的 wikilink 檔名與實際 Article 檔名不一致），回頭修正檔名／wikilink 後重跑，直到 `skipped=0 unresolved=0`。
    - 若指令因網路錯誤失敗，最多重試 4 次，指數退避 2s/4s/8s/16s。
    - **不再** `git add content && git commit && git push`；**不再**建 Quartz 或觸發 Cloudflare 部署。
 
-2. **完成回報**：
-   - 已入庫確認：「已執行 `npm run ingest:day`，當日內容已直寫 Supabase」，並列出本次處理的檔案清單。
+2. **觸發 Vercel 立即刷新**：入庫成功後，`curl` Deploy Hook 讓前端立即重新部署（不必等 ISR 的 1 小時）：
+   ```bash
+   if [ -n "$VERCEL_DEPLOY_HOOK_URL" ]; then
+     curl -fsS -X POST "$VERCEL_DEPLOY_HOOK_URL" && echo "VERCEL DEPLOY TRIGGERED"
+   else
+     echo "VERCEL_DEPLOY_HOOK_URL 未設定，略過立即刷新（ISR 1 小時內仍會自動更新）"
+   fi
+   ```
+   - URL 一律從環境變數讀取，**不要**把 hook URL 明文寫進 prompt 或檔案。
+   - curl 失敗（非 2xx）最多重試 4 次，指數退避 2s/4s/8s/16s；仍失敗則記為警告（內容已入庫，前端最慢 1 小時內仍會經 ISR 自動更新）。
+
+3. **完成回報**：
+   - 已入庫確認：「已執行 `npm run ingest:backfill`，當日內容已直寫 Supabase」，貼上 `=== Ingest summary ===` 數字（含 `items resolved / skipped`、`notes ... unresolved`），並列出本次新增/更新的當日檔案清單。
+   - Vercel 觸發結果：「已觸發 Deploy Hook，前端將重新部署」或「Deploy Hook 未設定/失敗，靠 ISR 自動更新」。
    - 2-3 句跨章節關鍵脈絡。
    - 今天生成的學習筆記清單（檔名 + 主題一句話）。
    - 自檢清單通過狀況（例：「Article 自檢 ✅ 8/8、Learning Note 自檢 ✅ 3/3、日報自檢 ✅」）。
@@ -370,12 +403,14 @@ WebSearch 工具，技術理論與企業應用各 2-5 則，其他章節各 1-2 
 5. 技術理論與企業應用為雙重點章節，各 2-5 則。
 6. 企業應用筆記務必填寫 `industry` 欄位與日報的「產業」列。
 7. 每篇技術理論文章 → 對應一份學習筆記。
-8. **步驟 7 必須執行 `npm run ingest:day -- content/`**，把當日筆記直寫 Supabase。**不再** `git push` 內容，**不再**觸發 Cloudflare 部署。
+8. **步驟 7 必須依序執行 `npm run ingest:backfill`（寫 Supabase）→ `curl $VERCEL_DEPLOY_HOOK_URL`（觸發 Vercel）**。**不再** `git push` 內容，**不再**觸發 Cloudflare 部署。嚴禁用 `ingest:day -- content/`（會清空 daily_report_items）。
 9. 同一則新聞只歸入一個章節。
 10. 每篇 Article 必須有完整全文（defuddle 或 WebFetch 抓取）。
 11. 檔名禁止 `/ \ : * ? " < > |`。
 12. 中文新聞保留原文；英文新聞翻譯成繁體中文（專有名詞保留英文）。
 13. wikilinks 用 `[[檔名|顯示文字]]`，檔名不含 .md 與路徑。
 14. 路徑含空格（`content/Learning Notes/`），bash 指令務必用引號。
-15. 執行順序：搜集 → 抓全文 → Article 筆記 → 日報 → Learning Note → commit & push 到 v4 → 回報。
+15. 執行順序：驗環境＋`npm ci` → 搜集 → 抓全文 → Article 筆記 → 日報 → Learning Note → `npm run ingest:backfill` → `curl` Vercel Deploy Hook → 回報。
 16. 任務在 Cowork 雲端 Linux 沙箱（系統時區 UTC）執行：日期指令一律加 `TZ='Asia/Taipei'`；用 `date -d "yesterday"`（Linux）而非 `date -v-1d`（macOS）；`content/` 已存在於 repo 內，無需建立 Obsidian vault。
+17. **金鑰只走環境變數**：`SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`、`VERCEL_DEPLOY_HOOK_URL` 全部從 Cowork 環境設定注入；絕不可把任何金鑰／hook URL 明文寫進 prompt、`content/` 或任何會進版控的檔案。
+18. **雲端 clone 無 `node_modules`**：步驟 1 一定要先 `npm ci`（或 `npm install`）才能跑 `tsx`／`npm run ingest:backfill`。

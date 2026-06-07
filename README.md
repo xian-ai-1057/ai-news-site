@@ -55,14 +55,20 @@ content/      — 歷史種子 / 回填來源（已非內容來源，DB 為準�
    npm test
    ```
 
-5. 歷史內容全量回填（需 Supabase 金鑰）：
+5. 全量入庫 / 每日入庫（需 Supabase 金鑰）—— 遞迴掃整個 `content/`、idempotent upsert、兩階段 FK 解析：
    ```bash
    npm run ingest:backfill
    ```
 
-6. 單日入庫（需 Supabase 金鑰）：
+6. 單日增量入庫（需 Supabase 金鑰）—— 只傳「當日」的檔案路徑，不可傳 `content/` 目錄：
    ```bash
-   npm run ingest:day -- content/
+   # ✅ 正確：明確列出當日檔案（含子資料夾路徑）
+   npm run ingest:day -- content/Articles/2026-06-07-*.md "content/Learning Notes/2026-06-07-*.md" content/AI日報-2026-06-07.md
+
+   # ⛔ 不要這樣用：ingest:day 的目錄掃描是「非遞迴」的，傳 content/ 只會抓到頂層日報、
+   #    抓不到 Articles/ 與 Learning Notes/，且 daily_report_items 採 delete-then-insert，
+   #    會把 join 表清空。要對整個 content/ 入庫，請改用上面的 ingest:backfill。
+   # npm run ingest:day -- content/
    ```
 
 ## 待辦事項
