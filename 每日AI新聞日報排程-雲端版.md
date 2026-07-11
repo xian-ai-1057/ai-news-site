@@ -17,7 +17,11 @@
 > - `VERCEL_DEPLOY_HOOK_URL` = Vercel 專案的 Deploy Hook URL（分支 `v4`）。
 > - （選填）`INGEST_TRIGGER_SRC=routine` — 讓 ingestion_runs 記錄觸發來源。
 >
-> ⚠️ **網路白名單**：Routine 環境預設「Trusted」網路會 **403 擋掉任意網域**。本任務**全文抽取已搬到伺服端**（extract-fulltext Edge Function，見步驟 3），routine 本身**不再直接抓新聞網站**，只需連 Supabase（`ifbpfuvlevjegwdnhyqh.supabase.co`）。因此環境的 **Network access 設 Custom、只放行 `ifbpfuvlevjegwdnhyqh.supabase.co` 即可**（WebSearch 走 Anthropic、自動放行）。若 `npm run candidates` / `fulltext` / `ingest:json` 回 `403 host_not_allowed`，代表 Supabase 網域未加進白名單——請在 routine 的 environment 補上後重跑。
+> ⚠️ **網路白名單**：Routine 環境預設「Trusted」網路會 **403 擋掉任意網域**。本任務**全文抽取已搬到伺服端**（extract-fulltext Edge Function，見步驟 3），routine 本身**不再直接抓新聞網站**。環境的 **Network access 設 Custom，放行這兩個網域即可**：
+> - `ifbpfuvlevjegwdnhyqh.supabase.co` — candidates／fulltext／ingest:json 讀寫 Supabase
+> - `api.vercel.com` — 步驟 6 觸發 Vercel deploy hook
+>
+> （WebSearch 走 Anthropic、自動放行。）若 `candidates` / `fulltext` / `ingest:json` 或 step 6 的 `curl` 回 `403 host_not_allowed`，代表對應網域漏加白名單——在 routine 的 environment 補上後重跑。
 >
 > ingest CLI 直接讀 `process.env`（見 `ingest/db/client.ts`）；雲端 clone 不含 git-ignored 的 `.env`，金鑰只能來自 routine 的 environment variables。
 
