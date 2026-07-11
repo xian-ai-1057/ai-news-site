@@ -52,7 +52,7 @@ insert into public.sources (name, kind, feed_url, default_category, language, co
   ('arXiv cs.CL', 'arxiv-api',
    'https://export.arxiv.org/api/query?search_query=cat:cs.CL&sortBy=submittedDate&sortOrder=descending&max_results=30',
    '技術理論', 'en', '{"note":"arXiv Atom API"}'),
-  ('Hugging Face Papers', 'rss', 'https://huggingface.co/papers/rss', '技術理論', 'en', '{}'),
+  ('Hugging Face Blog', 'rss', 'https://huggingface.co/blog/feed.xml', '技術理論', 'en', '{}'),
   ('OpenAI News', 'rss', 'https://openai.com/news/rss.xml', '重大新聞', 'en', '{}'),
   ('Google DeepMind Blog', 'rss', 'https://deepmind.google/blog/rss.xml', '技術理論', 'en', '{}'),
   ('TechCrunch AI', 'rss', 'https://techcrunch.com/category/artificial-intelligence/feed/', '重大新聞', 'en', '{}'),
@@ -62,5 +62,5 @@ insert into public.sources (name, kind, feed_url, default_category, language, co
   ('iThome', 'rss', 'https://www.ithome.com.tw/rss', '重大新聞', 'zh-TW', '{}'),
   ('科技新報 TechNews', 'rss', 'https://technews.tw/feed/', '重大新聞', 'zh-TW', '{}'),
   ('INSIDE', 'rss', 'https://www.inside.com.tw/feed/rss', '新創公司', 'zh-TW', '{}'),
-  ('數位時代 BusinessNext', 'rss', 'https://www.bnext.com.tw/rss', '新創公司', 'zh-TW', '{}')
+  ('TechOrange 科技報橘', 'rss', 'https://buzzorange.com/techorange/feed/', '新創公司', 'zh-TW', '{}')
 on conflict (name) do nothing;

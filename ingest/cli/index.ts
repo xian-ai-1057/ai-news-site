@@ -366,10 +366,17 @@ function isMainModule(): boolean {
 }
 
 if (isMainModule()) {
+  // 不可直接 process.exit()：大輸出（如 candidates 的 CANDIDATES_JSON）會在
+  // stdout 未 flush 完時被截斷在 64KB。設 exitCode 讓行程自然結束；
+  // 若有殘留 handle 撐住 event loop，2 秒後強制收尾。
   main()
-    .then((code) => process.exit(code))
+    .then((code) => {
+      process.exitCode = code;
+      setTimeout(() => process.exit(code), 2_000).unref();
+    })
     .catch((err) => {
       console.error(err instanceof Error ? err.stack ?? err.message : String(err));
-      process.exit(1);
+      process.exitCode = 1;
+      setTimeout(() => process.exit(1), 2_000).unref();
     });
 }
