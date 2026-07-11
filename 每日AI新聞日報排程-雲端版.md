@@ -1,22 +1,25 @@
-每日 AI 新聞日報任務（Cowork 雲端版 v2 — JSON 結構化通道）— 請依照以下步驟執行，全程使用繁體中文。
+每日 AI 新聞日報任務（Claude Code Routine 版 v2 — JSON 結構化通道）— 請依照以下步驟執行，全程使用繁體中文。
 
-> 🌐 **執行環境**：本任務在 Cowork（Claude Code on the web）雲端 Linux 沙箱執行（系統時區為 UTC），由 Cowork 的排程器在雲端定時觸發 —— **不依賴你的電腦是否開機或連網**。工作目錄就是 cloned 的 GitHub repo 根目錄。
+> 🌐 **執行環境**：本任務由 **Claude Code Routine**（排程觸發）在 Anthropic 雲端沙箱執行（系統時區為 UTC）—— **不依賴你的電腦是否開機或連網**。每次執行都是從 GitHub repo 的 default 分支（`v4`）**全新 clone**，工作目錄即 repo 根目錄。沙箱為暫時性、結束即銷毀：`daily-bundle.json` 只存在於本次沙箱、不進版控（已 gitignore）；**不需要也不要 `git push` 任何內容**（資料一律寫進 Supabase）。（本 prompt 亦相容 Cowork 排程，差別僅在下方「前置設定」的設定位置。）
 >
 > **v2 重大變更（Spec 007）**：不再把筆記寫成 `content/` 的 Markdown 檔。改為組裝**一份 `daily-bundle.json`**（符合 `specs/007-structured-channel/contracts/daily-bundle.schema.ts` 契約），執行 `npm run ingest:json -- daily-bundle.json` 直接寫入 Supabase。Markdown（`raw_md`）由 ingest 的渲染器自動從資料產生，你不需要維護任何 emoji 章節格式。寫入成功後 `curl` Vercel Deploy Hook 觸發前端重新部署。
 
 > ⛔ **禁止事項**：
 > - **禁止** `npm run ingest:backfill`：已降級為「種子復原工具」，會把凍結於 2026-06-07 的 `content/` 種子整批覆蓋回 DB（較新的內容會被舊資料蓋掉）。日常入庫**只能**用 `ingest:json`。
 > - **禁止** `npm run ingest:day -- content/`（歷史 footgun，會清空 daily_report_items）。
-> - **禁止**寫入 `content/` 目錄（已凍結為歷史種子）。
+> - **禁止**寫入 `content/` 目錄（已凍結為歷史種子）；**禁止** `git push`（Routine 預設只能推 `claude/` 分支，且本任務本就不需要 push）。
 > - 日期一律使用台北時區（`TZ='Asia/Taipei'`）。
 
-> 🔑 **前置設定（一次性，在 Cowork 環境設定中完成；不要寫進本 prompt）**：
+> 🔑 **前置設定（一次性；在 Routine 的 cloud environment 設定，不要寫進本 prompt）**：
+> 在 [claude.ai/code/routines](https://claude.ai/code/routines) 建立 routine → 選 repo `xian-ai-1057/ai-news-site` → **Environment → Environment variables** 加入下列變數；**Setup script** 填 `npm ci`。
 > - `SUPABASE_URL` = `https://ifbpfuvlevjegwdnhyqh.supabase.co`
 > - `SUPABASE_SERVICE_ROLE_KEY` = Supabase 的 **secret / service_role** 金鑰（**不可**用 anon/publishable 金鑰，會被 RLS 擋下 INSERT）。
 > - `VERCEL_DEPLOY_HOOK_URL` = Vercel 專案的 Deploy Hook URL（分支 `v4`）。
-> - （選填）`INGEST_TRIGGER_SRC=cowork` — 讓 ingestion_runs 記錄觸發來源。
+> - （選填）`INGEST_TRIGGER_SRC=routine` — 讓 ingestion_runs 記錄觸發來源。
 >
-> ingest CLI 直接讀 `process.env`（見 `ingest/db/client.ts`）；雲端 clone 不含 git-ignored 的 `.env`，金鑰只能來自 Cowork 環境變數。
+> ⚠️ **網路白名單**：Routine 環境預設「Trusted」網路會 **403 擋掉任意網域**。本任務需連 Supabase（`ifbpfuvlevjegwdnhyqh.supabase.co`）、Vercel deploy hook，以及**抓各家新聞全文**（網域無法預先列舉）。因此環境的 **Network access 需設為 Full**（或至少 Custom 並加入 Supabase／Vercel 網域）。若 defuddle／WebFetch 回 `403 host_not_allowed`，那是網路政策、不是程式錯誤——請在 routine 的 environment 調整後重跑。WebSearch 走 Anthropic、免白名單。
+>
+> ingest CLI 直接讀 `process.env`（見 `ingest/db/client.ts`）；雲端 clone 不含 git-ignored 的 `.env`，金鑰只能來自 routine 的 environment variables。
 
 > ✅ **任務完成的定義（成功標準）**：唯有以下全部達成才算成功 ——
 > 1. 環境就緒：`npm ci` 成功，且 `SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY` 都存在（缺任一就立即停止並回報）。
@@ -41,7 +44,7 @@
   "learningNotes": [ /* 每篇技術理論文章一份 */ ],
   "dailyReport": { /* 一份，見下 */ },
   "meta": {
-    "generator": "cowork-daily-routine",
+    "generator": "claude-code-routine",
     "promptVersion": "v2",
     "generatedAt": "YYYY-MM-DD HH:MM"  // 台北時間
   }

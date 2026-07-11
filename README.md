@@ -1,7 +1,7 @@
 # AI 日報 — Supabase DB-first 內容管線
 
 這是什麼：**AI 日報**是一個繁體中文 AI 新聞知識庫。內容存於 **Supabase Postgres**
-（唯一事實），由 Claude routine（Cowork 雲端排程）每日策展入庫，前端為
+（唯一事實），由 Claude Code Routine（雲端排程）每日策展入庫，前端為
 `web/` 的 Next.js 16 閱讀 App（Vercel 部署）。原 Quartz 靜態站已除役。
 
 ## 架構（v2 — 結構化通道，Specs 007–010）
@@ -10,7 +10,7 @@
 外部來源（arXiv API / RSS/Atom）
    └─ fetch-sources Edge Function（Supabase Cron 每 4h）
         └─ raw_items 候選池（url_hash 跨日去重）
-             └─ Claude routine（Cowork 排程：讀候選池 → WebSearch 補缺 → 策展/摘要/翻譯）
+             └─ Claude Code Routine（雲端排程：讀候選池 → WebSearch 補缺 → 策展/摘要/翻譯）
                   └─ daily-bundle.json（Zod 契約驗證）
                        └─ ingest:json（品質閘門 → 當日 upsert → ingestion_runs）
                             ├─ Supabase（articles / learning_notes / daily_reports / items）
@@ -20,7 +20,11 @@
 
 - **確定性程式**（抓取、去重、儲存、向量化、健檢）跑在 Supabase/Vercel；
   **AI 環節只有一個**：Claude routine 負責選材、摘要、翻譯。
-- Routine prompt：`每日AI新聞日報排程-雲端版.md`（v2）；舊 Markdown 流程備份於
+- 排程：**Claude Code Routine**（[claude.ai/code/routines](https://claude.ai/code/routines)，訂閱制、雲端、不需開機）。
+  Routine 設定：repo `xian-ai-1057/ai-news-site`、Environment 變數
+  `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`/`VERCEL_DEPLOY_HOOK_URL`、Setup script `npm ci`、
+  **Network access = Full**（需抓任意新聞網域全文）、Schedule 觸發（台北時間，早於健檢 14:00）。
+  Instructions 指向本 repo 的 `每日AI新聞日報排程-雲端版.md`。舊 Markdown 流程備份於
   `每日AI新聞日報排程-雲端版-v1.md`。
 
 ### 三層內容 + 管線表
@@ -90,17 +94,21 @@ Cron 排程 SQL 見各 spec（008 §8、009 §5、010 §6）。
 
 | Secret | 位置 | 用途 |
 |---|---|---|
-| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | Cowork env / 本機 .env | ingest 寫入 |
-| `VERCEL_DEPLOY_HOOK_URL` | Cowork env | 入庫後觸發前端重建 |
+| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | Routine environment 變數 / 本機 .env | ingest 寫入 |
+| `VERCEL_DEPLOY_HOOK_URL` | Routine environment 變數 | 入庫後觸發前端重建 |
 | `SUPABASE_ACCESS_TOKEN` | GitHub Actions secret | 自動部署 Edge Functions |
 | `SLACK_WEBHOOK_URL` | Edge Function secret | 健檢告警 |
 | `OPENAI_API_KEY` | Edge Function secret＋Vercel server env | embeddings / 語意搜尋 |
 
 ## 待辦事項
 
-- Migrations 0002–0005 套用到正式庫後：seed sources 觀察 3-4 天 → 確認候選池健康
+- **建立 Claude Code Routine**（[claude.ai/code/routines](https://claude.ai/code/routines)）：設 env 變數＋Setup script＋Network=Full＋daily 排程；先 Run now 試跑驗證，穩定後停用舊 Cowork 排程
+- Edge Function secrets：`SLACK_WEBHOOK_URL`（健檢告警）、`OPENAI_API_KEY`（embeddings＋語意搜尋；Vercel 也需一份 server env）
+- GitHub secret `SUPABASE_ACCESS_TOKEN`（deploy-functions workflow 自動部署 Edge Functions）
+- seed sources 觀察 3-4 天 → 確認候選池健康後再把 routine prompt 切為兩層選材主通道
 - 舊文 embedding backfill（重複 invoke `embed-articles` 至補完）
 - `articles.url_normalized` 清理舊資料後升級 unique index
+- （選配收緊）把新聞全文抽取搬進 Edge Function，讓 routine network 從 Full 降為 Custom（只留 Supabase／Vercel）
 - **Cloudflare `ai-news` Workers 專案**：需手動在 Cloudflare Dashboard 停用（repo 外操作）
 
 ## 技術棧
