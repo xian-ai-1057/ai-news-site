@@ -20,6 +20,7 @@ import { runGates, type ExistingUrlLookup } from "../gates/index";
 import { fillRawMd } from "../render/markdown";
 import { startRun, gateResultsJson } from "../db/runs";
 import { formatCandidates, type CandidateRow } from "./candidates";
+import { parseUrlsInput, dedupeHttpUrls } from "./fulltext";
 // Parser interface (Spec 002). May not exist while this is developed in isolation;
 // the import resolves at runtime when the CLI is actually invoked.
 import {
@@ -216,6 +217,54 @@ async function triggerEmbedFunction(): Promise<void> {
   }
 }
 
+/**
+ * Spec 011 §4 — `fulltext <urls.json | url...>` 子命令。
+ * 呼叫 extract-fulltext Edge Function 伺服端抽全文，印 FULLTEXT_JSON 供 routine 消費。
+ * routine 只需連 Supabase，不必自己抓新聞網站。
+ */
+export async function runFulltextCommand(args: string[]): Promise<number> {
+  const fileArg = args.find(
+    (a) => !a.startsWith("--") && !/^https?:\/\//i.test(a) && (a.endsWith(".json") || a.endsWith(".txt")),
+  );
+  let urls: string[];
+  try {
+    urls = fileArg
+      ? parseUrlsInput(readFileSync(fileArg, "utf8"))
+      : dedupeHttpUrls(args.filter((a) => !a.startsWith("--")));
+  } catch (err) {
+    console.error(`無法讀取 URL 清單：${err instanceof Error ? err.message : String(err)}`);
+    return 2;
+  }
+  if (urls.length === 0) {
+    console.error("Usage: ingest fulltext <urls.json | url ...>");
+    return 2;
+  }
+
+  const base = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!base || !key) {
+    console.error("Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY in environment.");
+    return 2;
+  }
+  try {
+    const res = await fetch(`${base}/functions/v1/extract-fulltext`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+      body: JSON.stringify({ urls }),
+      signal: AbortSignal.timeout(120_000),
+    });
+    if (!res.ok) {
+      console.error(`extract-fulltext HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
+      return 3;
+    }
+    console.log("FULLTEXT_JSON: " + JSON.stringify(await res.json()));
+    return 0;
+  } catch (err) {
+    console.error(`extract-fulltext 呼叫失敗：${err instanceof Error ? err.message : String(err)}`);
+    return 3;
+  }
+}
+
 /** Spec 007 — `json <bundle.json> [--dry-run]` 子命令。 */
 export async function runJsonCommand(
   args: string[],
@@ -315,6 +364,9 @@ async function main(): Promise<number> {
   if (cmd === "candidates") {
     return runCandidatesCommand(rest);
   }
+  if (cmd === "fulltext") {
+    return runFulltextCommand(rest);
+  }
 
   let bundle: IngestBundle;
   if (cmd === "backfill") {
@@ -343,7 +395,7 @@ async function main(): Promise<number> {
     bundle = await buildDayBundle(rest);
   } else {
     console.error(
-      `Unknown command "${cmd ?? ""}". Use: json <bundle.json> [--dry-run] | candidates [--hours N] | backfill --force-seed | day <paths...>`,
+      `Unknown command "${cmd ?? ""}". Use: json <bundle.json> [--dry-run] | candidates [--hours N] | fulltext <urls.json|url...> | backfill --force-seed | day <paths...>`,
     );
     return 2;
   }

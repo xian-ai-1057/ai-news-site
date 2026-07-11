@@ -1,6 +1,8 @@
 {
   "imports": {
     "fast-xml-parser": "npm:fast-xml-parser@4.5.3",
-    "@supabase/supabase-js": "npm:@supabase/supabase-js@2"
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2",
+    "@mozilla/readability": "npm:@mozilla/readability@0.5.0",
+    "linkedom": "npm:linkedom@0.18.11"
   }
 }

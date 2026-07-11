@@ -17,7 +17,7 @@
 > - `VERCEL_DEPLOY_HOOK_URL` = Vercel 專案的 Deploy Hook URL（分支 `v4`）。
 > - （選填）`INGEST_TRIGGER_SRC=routine` — 讓 ingestion_runs 記錄觸發來源。
 >
-> ⚠️ **網路白名單**：Routine 環境預設「Trusted」網路會 **403 擋掉任意網域**。本任務需連 Supabase（`ifbpfuvlevjegwdnhyqh.supabase.co`）、Vercel deploy hook，以及**抓各家新聞全文**（網域無法預先列舉）。因此環境的 **Network access 需設為 Full**（或至少 Custom 並加入 Supabase／Vercel 網域）。若 defuddle／WebFetch 回 `403 host_not_allowed`，那是網路政策、不是程式錯誤——請在 routine 的 environment 調整後重跑。WebSearch 走 Anthropic、免白名單。
+> ⚠️ **網路白名單**：Routine 環境預設「Trusted」網路會 **403 擋掉任意網域**。本任務**全文抽取已搬到伺服端**（extract-fulltext Edge Function，見步驟 3），routine 本身**不再直接抓新聞網站**，只需連 Supabase（`ifbpfuvlevjegwdnhyqh.supabase.co`）。因此環境的 **Network access 設 Custom、只放行 `ifbpfuvlevjegwdnhyqh.supabase.co` 即可**（WebSearch 走 Anthropic、自動放行）。若 `npm run candidates` / `fulltext` / `ingest:json` 回 `403 host_not_allowed`，代表 Supabase 網域未加進白名單——請在 routine 的 environment 補上後重跑。
 >
 > ingest CLI 直接讀 `process.env`（見 `ingest/db/client.ts`）；雲端 clone 不含 git-ignored 的 `.env`，金鑰只能來自 routine 的 environment variables。
 
@@ -68,10 +68,10 @@
   "tags": ["AI", "章節名稱", "相關標籤"],
   "createdDate": "YYYY-MM-DD",
   "rawMd": "",                           // 留空字串，渲染器會自動產生
-  "origin": { "channel": "raw-item", "rawItemId": "候選池項目的 uuid", "fetchMethod": "defuddle" }
+  "origin": { "channel": "raw-item", "rawItemId": "候選池項目的 uuid", "fetchMethod": "edge-extract" }
     // 出處追溯（Spec 008）：來自候選池 → channel="raw-item" + rawItemId（CANDIDATES_JSON 內的 id）；
     // 來自 WebSearch → channel="websearch" + rawItemId=null。
-    // fetchMethod 填實際抓全文的方式："defuddle" 或 "webfetch"
+    // fetchMethod 固定 "edge-extract"（全文由 extract-fulltext Edge Function 伺服端抽取，見步驟 3）
 }
 ```
 
@@ -192,7 +192,7 @@ npm run candidates -- --hours 36
 
 - 讀輸出的 `CANDIDATES_JSON`（依 `category_hint` 分組、新→舊）。逐章節挑選合適候選；
   被選中的候選記下它的 `id`，寫進該文章的 `origin.rawItemId`（channel 填 `"raw-item"`）。
-- `category_hint` 只是提示，**最終分類由你判斷**；候選的 summary 只供選材，全文仍照步驟 3 抓。
+- `category_hint` 只是提示，**最終分類由你判斷**；候選的 summary 只供初步選材，全文由步驟 3 的伺服端抽取取得。
 - **Fallback（來源層故障不擋日報）**：若指令失敗、輸出為空、或某章節池內無合適候選 →
   該章節改用第二層 WebSearch，流程照舊。
 
@@ -211,9 +211,24 @@ npm run candidates -- --hours 36
 
 關鍵字參考：「latest LLM paper」「new AI architecture」「AI market size 2026」「major AI news today」「enterprise AI adoption」「AI startup funding」「台灣 企業 AI 應用」等。
 
-## 步驟 3：抓取每篇文章完整內容
+## 步驟 3：抓取每篇文章完整內容（伺服端抽取）
 
-對每一則新聞用 `anthropic-skills:defuddle` skill 抓全文（.md 結尾的 URL 或 defuddle 不可用時改用 WebFetch）。**兩者都失敗 → 放棄該篇、換一篇**（品質閘門會擋樣板字與短文，不要硬塞抓取失敗的內容）。記下實際用的方式（defuddle / webfetch），填進 `origin.fetchMethod`。
+全文抽取已搬到伺服端——**你不要用 defuddle/WebFetch 自己抓新聞網站**（環境網路只放行 Supabase）。作法：
+
+1. 把步驟 2 選中文章的 url 收成一個 JSON 陣列，用 Write 存成 `selected-urls.json`：
+   ```json
+   ["https://…第1篇…", "https://…第2篇…"]
+   ```
+   （候選池文章的 url 來自 `CANDIDATES_JSON`；WebSearch 補缺文章的 url 來自搜尋結果。兩者都放進來。）
+2. 執行：
+   ```bash
+   npm run fulltext -- selected-urls.json
+   ```
+3. 讀輸出的 `FULLTEXT_JSON`（`{ results: [{ url, title, contentText, chars, status }] }`）。以每篇的 `contentText` 為底，翻譯／改寫成繁體中文 `contentMd`（中文原文保留）。
+4. 某 url 的 `status` **非** `fetched` 或 `cached-feed`（即 `failed: …`，多為 403 或內容過薄）→ **放棄該篇、回步驟 2 另選一篇**。池內上千筆，替代充足；不要硬塞抓取失敗的內容（品質閘門也會擋）。
+5. 所有文章的 `origin.fetchMethod` 一律填 `"edge-extract"`。
+
+> 伺服端會優先用候選池既有的 feed 全文（`cached-feed`，RSS 常已含全文），沒有才實際抓取（`fetched`）。抽取品質由伺服端 Readability 處理，你只需負責翻譯與改寫。
 
 ## 步驟 4：逐篇組裝 daily-bundle.json
 
@@ -268,7 +283,7 @@ curl 失敗（非 2xx）最多重試 4 次；仍失敗記為警告（內容已�
 5. 企業應用導入文章務必填 `industry`。
 6. 同一則新聞只歸一個章節；每篇必須有完整全文（抓不到就換）。
 7. 中文新聞保留原文；英文翻譯成繁體中文（專有名詞保留英文）。
-8. 執行順序：驗環境＋`npm ci` → 搜集 → 抓全文 → 組 bundle → `ingest:json`（修復迴圈）→ `curl` Deploy Hook → 回報。
+8. 執行順序：驗環境＋`npm ci` → `candidates` 選材 → `fulltext` 伺服端抽全文 → 組 bundle → `ingest:json`（修復迴圈）→ `curl` Deploy Hook → 回報。
 9. 沙箱系統時區 UTC：日期指令一律加 `TZ='Asia/Taipei'`。
 10. **金鑰只走環境變數**，絕不可寫進任何檔案或輸出。
 11. **回滾備援**：若 `ingest:json` 因程式錯誤（非 gate fail）連續失敗且無法修復，回報錯誤全文並停止；不要改用 backfill。舊版 Markdown 流程保留於 `每日AI新聞日報排程-雲端版-v1.md`（僅供人工決策回滾用）。

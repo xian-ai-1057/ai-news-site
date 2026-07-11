@@ -13,6 +13,7 @@
     "test": "tsx --test \"tests/**/*.test.ts\"",
     "ingest:json": "tsx ingest/cli/index.ts json",
     "candidates": "tsx ingest/cli/index.ts candidates",
+    "fulltext": "tsx ingest/cli/index.ts fulltext",
     "ingest:backfill": "tsx ingest/cli/index.ts backfill --force-seed",
     "ingest:day": "tsx ingest/cli/index.ts day"
   },

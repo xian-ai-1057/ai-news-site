@@ -23,7 +23,7 @@
 - 排程：**Claude Code Routine**（[claude.ai/code/routines](https://claude.ai/code/routines)，訂閱制、雲端、不需開機）。
   Routine 設定：repo `xian-ai-1057/ai-news-site`、Environment 變數
   `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`/`VERCEL_DEPLOY_HOOK_URL`、Setup script `npm ci`、
-  **Network access = Full**（需抓任意新聞網域全文）、Schedule 觸發（台北時間，早於健檢 14:00）。
+  **Network access = Custom，只放行 `ifbpfuvlevjegwdnhyqh.supabase.co`**（全文抽取已搬伺服端，routine 不碰新聞網站；WebSearch 走 Anthropic 自動放行）、Schedule 觸發（台北時間，早於健檢 14:00）。
   Instructions 指向本 repo 的 `每日AI新聞日報排程-雲端版.md`。舊 Markdown 流程備份於
   `每日AI新聞日報排程-雲端版-v1.md`。
 
@@ -83,6 +83,7 @@ npm run ingest:backfill        # = ingest backfill --force-seed
 | Function | 觸發 | 用途 |
 |---|---|---|
 | `fetch-sources` | Supabase Cron 每 4h | 抓 arXiv/RSS 進 `raw_items` 候選池 |
+| `extract-fulltext` | routine 呼叫（on-demand） | 伺服端抽全文（Readability，優先用 feed 全文）；讓 routine 不必自己抓新聞 |
 | `daily-healthcheck` | Cron（台北 11:00 / 14:00） | 檢查日報/來源，失敗 POST Slack |
 | `embed-articles` | Cron 每小時＋ingest 後觸發 | OpenAI embeddings → pgvector |
 
@@ -108,7 +109,7 @@ Cron 排程 SQL 見各 spec（008 §8、009 §5、010 §6）。
 - seed sources 觀察 3-4 天 → 確認候選池健康後再把 routine prompt 切為兩層選材主通道
 - 舊文 embedding backfill（重複 invoke `embed-articles` 至補完）
 - `articles.url_normalized` 清理舊資料後升級 unique index
-- （選配收緊）把新聞全文抽取搬進 Edge Function，讓 routine network 從 Full 降為 Custom（只留 Supabase／Vercel）
+- ~~把新聞全文抽取搬進 Edge Function，讓 routine network 降為 Custom~~ ✅ 完成（Spec 011：extract-fulltext）
 - **Cloudflare `ai-news` Workers 專案**：需手動在 Cloudflare Dashboard 停用（repo 外操作）
 
 ## 技術棧
