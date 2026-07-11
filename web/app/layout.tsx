@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { getSearchIndex } from "@/lib/queries";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import SearchOverlay from "@/components/SearchOverlay";
 
 export const metadata: Metadata = {
@@ -48,6 +49,7 @@ export default async function RootLayout({
       <body>
         <Header />
         {children}
+        <Footer />
         <SearchOverlay rows={rows} />
       </body>
     </html>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CATS, CAT_ORDER } from "@/lib/categories";
 import type { CatKey, SearchRow } from "@/lib/viewmodel";
+import { articleUrl, digestUrl } from "@/lib/routes";
 import Mark from "./Mark";
 
 interface CatBrowserProps {
@@ -155,7 +156,7 @@ export default function CatBrowser({ rows }: CatBrowserProps) {
               {sec.items.map((r, i) => (
                 <div className="ritem" key={`${r.date}-${r.title}-${i}`}>
                   <h3>
-                    <Link href={r.articleSlug ? `/articles/${r.articleSlug}` : `/digest/${r.date}`}>
+                    <Link href={r.articleSlug ? articleUrl(r.articleSlug) : digestUrl(r.date)}>
                       <Mark text={r.title} q={q} />
                     </Link>
                   </h3>

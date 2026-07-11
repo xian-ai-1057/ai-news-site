@@ -1,5 +1,6 @@
 // Phase 6 — 資料層查詢（supabase-js / PostgREST 巢狀 embedding，全部 async 唯讀）。
 // 把 DB 列整形成 view-model（@/lib/types）。嚴禁寫 DB / 改 schema。
+import { cache } from "react";
 import { supabase } from "./supabase";
 import { CATEGORY_KEY } from "./categories";
 import type { Article, CatKey, Digest, DigestItem, Note, SearchRow } from "./viewmodel";
@@ -89,15 +90,16 @@ function shapeReport(row: RawReport, issue: number): Digest {
   };
 }
 
-/** 全部 report_date（升冪）。供 generateStaticParams 與 issue 計算。 */
-export async function getDigestDates(): Promise<string[]> {
+/** 全部 report_date（升冪）。供 generateStaticParams 與 issue 計算。
+ *  以 React cache() 包裹：同一請求內（generateMetadata + page）去重，只打一次 DB。 */
+export const getDigestDates = cache(async (): Promise<string[]> => {
   const { data, error } = await supabase
     .from("daily_reports")
     .select("report_date")
     .order("report_date", { ascending: true });
   if (error) throw error;
   return (data ?? []).map((r) => r.report_date as string);
-}
+});
 
 /** 全部日報（新到舊），每期套 shape（不帶 raw_md）。 */
 export async function getDigests(): Promise<Digest[]> {
@@ -112,8 +114,9 @@ export async function getDigests(): Promise<Digest[]> {
   );
 }
 
-/** 單期日報（含 issue）。找不到 → null。 */
-export async function getDigest(date: string): Promise<Digest | null> {
+/** 單期日報（含 issue）。找不到 → null。
+ *  以 React cache() 包裹：同一請求內 generateMetadata 與 page 共用同一次查詢。 */
+export const getDigest = cache(async (date: string): Promise<Digest | null> => {
   const datesAsc = await getDigestDates();
   const { data, error } = await supabase
     .from("daily_reports")
@@ -126,7 +129,7 @@ export async function getDigest(date: string): Promise<Digest | null> {
     data as unknown as RawReport,
     deriveIssue(datesAsc, date),
   );
-}
+});
 
 /** 全部文章扁平搜尋索引（一篇文章一列）。 */
 export async function getSearchIndex(): Promise<SearchRow[]> {
@@ -166,8 +169,9 @@ interface RawNote {
   source_article_slug: string | null;
 }
 
-/** 單筆學習筆記。找不到 → null。 */
-export async function getNote(slug: string): Promise<Note | null> {
+/** 單筆學習筆記。找不到 → null。
+ *  以 React cache() 包裹：generateMetadata 與 page 共用同一次查詢。 */
+export const getNote = cache(async (slug: string): Promise<Note | null> => {
   const { data, error } = await supabase
     .from("learning_notes")
     .select(
@@ -187,7 +191,7 @@ export async function getNote(slug: string): Promise<Note | null> {
     contentMd: n.content_md ?? "",
     sourceArticleSlug: n.source_article_slug ?? null,
   };
-}
+});
 
 // articles 列（getArticle / getTagArticles 共用）。
 // learning_notes 為反向 FK（陣列，取 [0]）；
@@ -242,8 +246,9 @@ function shapeArticle(a: RawArticleFull): Article {
   };
 }
 
-/** 單篇文章。找不到 → null。 */
-export async function getArticle(slug: string): Promise<Article | null> {
+/** 單篇文章。找不到 → null。
+ *  以 React cache() 包裹：generateMetadata 與 page 共用同一次查詢。 */
+export const getArticle = cache(async (slug: string): Promise<Article | null> => {
   const { data, error } = await supabase
     .from("articles")
     .select(ARTICLE_SELECT)
@@ -252,7 +257,7 @@ export async function getArticle(slug: string): Promise<Article | null> {
   if (error) throw error;
   if (!data) return null;
   return shapeArticle(data as unknown as RawArticleFull);
-}
+});
 
 /** 全部文章 slug。供 generateStaticParams。 */
 export async function getArticleSlugs(): Promise<string[]> {
@@ -261,8 +266,9 @@ export async function getArticleSlugs(): Promise<string[]> {
   return (data ?? []).map((r) => r.slug as string);
 }
 
-/** 含某 tag 的文章（按 article_date 新→舊）。 */
-export async function getTagArticles(tag: string): Promise<Article[]> {
+/** 含某 tag 的文章（按 article_date 新→舊）。
+ *  以 React cache() 包裹：generateMetadata 與 page 共用同一次查詢。 */
+export const getTagArticles = cache(async (tag: string): Promise<Article[]> => {
   const { data, error } = await supabase
     .from("articles")
     .select(ARTICLE_SELECT)
@@ -270,7 +276,7 @@ export async function getTagArticles(tag: string): Promise<Article[]> {
     .order("article_date", { ascending: false });
   if (error) throw error;
   return ((data ?? []) as unknown as RawArticleFull[]).map(shapeArticle);
-}
+});
 
 // ── Spec 009 — status page（ingestion_runs / source_health 皆 public-read）──
 

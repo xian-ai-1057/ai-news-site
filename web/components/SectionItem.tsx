@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { DigestItem } from "@/lib/viewmodel";
+import { articleUrl, noteUrl } from "@/lib/routes";
+import InlineMd from "./InlineMd";
 
 interface Props {
   item: DigestItem;
@@ -10,7 +12,7 @@ export default function SectionItem({ item }: Props) {
     <div className="ritem">
       <h3>
         {item.articleSlug ? (
-          <Link href={"/articles/" + item.articleSlug}>{item.title}</Link>
+          <Link href={articleUrl(item.articleSlug)}>{item.title}</Link>
         ) : (
           item.title
         )}
@@ -26,9 +28,9 @@ export default function SectionItem({ item }: Props) {
           </a>
         )}
       </div>
-      <p>{item.points}</p>
+      <p><InlineMd text={item.points} /></p>
       {item.noteSlug && (
-        <Link className="nt" href={"/notes/" + item.noteSlug}>
+        <Link className="nt" href={noteUrl(item.noteSlug)}>
           📓 入門學習筆記 →
         </Link>
       )}

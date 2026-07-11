@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CATS } from "@/lib/categories";
 import type { SearchRow } from "@/lib/viewmodel";
+import { articleUrl, digestUrl } from "@/lib/routes";
 import Mark from "./Mark";
 
 interface SearchOverlayProps {
@@ -16,14 +18,24 @@ function matches(r: SearchRow, q: string): boolean {
   return hay.includes(q);
 }
 
+/** 單列結果對應的目標網址（含 % 的 slug 需經 encode，見 lib/routes）。 */
+function rowHref(r: SearchRow): string {
+  return r.articleSlug ? articleUrl(r.articleSlug) : digestUrl(r.date);
+}
+
 /**
  * 全站 ⌘K 全文搜尋 overlay。空查詢顯示前 8 筆，有查詢最多 20 筆。
  * ⌘K/Ctrl-K toggle、Esc 關、點遮罩空白關、window 'open-search' 事件開。
+ * 鍵盤：↑↓ 選取、Enter 開啟、Tab 焦點陷阱於浮層內。
  */
 export default function SearchOverlay({ rows }: SearchOverlayProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
 
   // ⌘K / Ctrl-K toggle、Esc 關；window 'open-search' 事件開。
   useEffect(() => {
@@ -63,6 +75,53 @@ export default function SearchOverlay({ rows }: SearchOverlayProps) {
 
   const hasQuery = q.trim().length > 0;
 
+  // 查詢變更由 input onChange 重置選取（見下方 handler），避免 effect 內同步 setState。
+
+  // 捲動使選中項可見。
+  useEffect(() => {
+    if (!open) return;
+    itemRefs.current[activeIndex]?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex, open, results]);
+
+  const optionId = (i: number) => `search-opt-${i}`;
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex((i) => Math.min(i + 1, results.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex((i) => Math.max(i - 1, 0));
+    } else if (e.key === "Enter") {
+      const target = results[activeIndex];
+      if (target) {
+        e.preventDefault();
+        setOpen(false);
+        router.push(rowHref(target));
+      }
+    } else if (e.key === "Tab") {
+      // 簡單焦點陷阱：僅在浮層內的可聚焦元素間循環。
+      const focusables = boxRef.current?.querySelectorAll<HTMLElement>(
+        'input, a[href], button, [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusables || focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const activeEl = document.activeElement as HTMLElement | null;
+      if (e.shiftKey) {
+        if (activeEl === first || !boxRef.current?.contains(activeEl)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (activeEl === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+  }
+
   return (
     <div
       className={open ? "ov on" : "ov"}
@@ -70,7 +129,14 @@ export default function SearchOverlay({ rows }: SearchOverlayProps) {
         if (e.target === e.currentTarget) setOpen(false);
       }}
     >
-      <div className="ov-box">
+      <div
+        className="ov-box"
+        ref={boxRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="搜尋"
+        onKeyDown={onKeyDown}
+      >
         <div className="ov-in">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="11" cy="11" r="7" />
@@ -79,20 +145,34 @@ export default function SearchOverlay({ rows }: SearchOverlayProps) {
           <input
             ref={inputRef}
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setActiveIndex(0);
+            }}
             placeholder="搜尋所有日報與新聞…"
             aria-label="搜尋所有日報與新聞"
+            aria-controls="search-results"
+            aria-activedescendant={
+              results.length > 0 ? optionId(activeIndex) : undefined
+            }
           />
         </div>
-        <div className="ov-res">
+        <div className="ov-res" role="listbox" id="search-results">
           {results.length === 0 ? (
             <div className="ov-empty">找不到符合條件的文章</div>
           ) : (
             results.map((r, i) => (
               <Link
                 key={`${r.date}-${r.title}-${i}`}
-                className="r2"
-                href={r.articleSlug ? `/articles/${r.articleSlug}` : `/digest/${r.date}`}
+                ref={(el) => {
+                  itemRefs.current[i] = el;
+                }}
+                id={optionId(i)}
+                role="option"
+                aria-selected={i === activeIndex}
+                className={i === activeIndex ? "r2 active" : "r2"}
+                href={rowHref(r)}
+                onMouseEnter={() => setActiveIndex(i)}
                 onClick={() => setOpen(false)}
               >
                 <span
@@ -112,7 +192,7 @@ export default function SearchOverlay({ rows }: SearchOverlayProps) {
           )}
         </div>
         <div className="ov-hint">
-          <span>即時全文搜尋</span>
+          <span>即時搜尋</span>
           <span>Esc 關閉</span>
         </div>
       </div>

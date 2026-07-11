@@ -97,7 +97,8 @@ function MermaidDiagram({ chart }: { chart: string }) {
 const components: Components = {
   code(props) {
     // 去掉 react-markdown 注入的 hast `node`，避免傳進 DOM 元素。
-    const { node: _node, className, children, ...rest } = props;
+    const { node, className, children, ...rest } = props;
+    void node;
     const cls = className ?? "";
     if (/\blanguage-mermaid\b/.test(cls)) {
       const chart = String(children ?? "").replace(/\n$/, "");
@@ -111,7 +112,8 @@ const components: Components = {
   },
 
   blockquote(props) {
-    const { node: _node, children, ...rest } = props;
+    const { node, children, ...rest } = props;
+    void node;
     const parsed = extractCallout(children);
     if (!parsed) {
       return <blockquote {...rest}>{children}</blockquote>;
@@ -121,6 +123,37 @@ const components: Components = {
       <div className={"callout callout-" + type}>
         <div className="callout-title">{title || type.toUpperCase()}</div>
         <div className="callout-body">{content}</div>
+      </div>
+    );
+  },
+
+  // 外部連結（http/https）另開分頁並加 rel；站內連結維持預設行為，與手寫連結一致。
+  a(props) {
+    const { node, href, children, ...rest } = props;
+    void node;
+    const isExternal =
+      typeof href === "string" && /^https?:\/\//i.test(href);
+    if (isExternal) {
+      return (
+        <a href={href} target="_blank" rel="noopener noreferrer" {...rest}>
+          {children}
+        </a>
+      );
+    }
+    return (
+      <a href={href} {...rest}>
+        {children}
+      </a>
+    );
+  },
+
+  // 寬表格包一層可橫向捲動容器，避免撐破 760px reader。
+  table(props) {
+    const { node, children, ...rest } = props;
+    void node;
+    return (
+      <div className="table-wrap">
+        <table {...rest}>{children}</table>
       </div>
     );
   },
@@ -159,18 +192,23 @@ function extractCallout(
   const leading = innerArr[0];
   if (typeof leading !== "string") return null;
 
-  const match = leading.match(/^\s*\[!([A-Za-z]+)\]\s*(.*)$/);
+  // marker 行：[!type] 後接可選標題（至該行結束）。若同一文字節點內以軟換行接續
+  // 內文（Obsidian 常見寫法：標題與正文各一行、其間無空行 → 收斂成同一 <p>），
+  // 需把第一行當標題、\n 之後留為 body。舊版正則 `(.*)$`（無 m 旗標且 `.` 不跨行）
+  // 遇此軟換行即整段失配 → callout 原樣顯示（本次修復點：[!abstract] 一句話理解…）。
+  const match = leading.match(
+    /^\s*\[!([A-Za-z]+)\][ \t]*([^\n]*)(?:\n([\s\S]*))?$/
+  );
   if (!match) return null;
 
   const type = match[1].toLowerCase();
-  const rest = match[2];
-
-  // 標題：標記同行剩餘文字（trim 後若空則無標題）。整行（[!type] 標題）皆屬 callout
-  // header，故從 body 完全移除——不可把標題文字塞回首段，否則標題會重複出現。
-  const title = rest.trim();
+  // 標題：marker 同一行剩餘文字（trim 後若空則以 type 當標題）。
+  const title = match[2].trim();
+  // body 起始：marker 行之後（同節點軟換行）的文字，回填首段供正常渲染。
+  const bodyRemainder = match[3] ?? "";
 
   const newInner = [...innerArr];
-  newInner[0] = "";
+  newInner[0] = bodyRemainder;
   const allBlank = newInner.every(
     (c) => typeof c === "string" && c.trim() === ""
   );
@@ -180,7 +218,7 @@ function extractCallout(
     // 首段只剩 marker（無同段內文）→ 整段移除，避免殘留空 <p>。
     newArr.splice(firstIdx, 1);
   } else {
-    // 首段 marker 同段尚有內文（軟換行）→ 僅移除 marker 行，保留其餘。
+    // 首段 marker 同段尚有內文（軟換行）→ 保留其餘內文為 body。
     newArr[firstIdx] = cloneWithChildren(first, newInner);
   }
 
@@ -214,8 +252,53 @@ function transformWikilinks(src: string): string {
   });
 }
 
-export default function MarkdownView({ content }: { content: string }) {
-  const processed = transformWikilinks(content);
+// ── 內部連結目的地含未編碼空白 ──
+// [標題](/articles/2026-05-25-Google Gemini Omni …) 的空白使 CommonMark 不視為連結，
+// 原始碼直接顯示。將 ](...) 群組內的空白 percent-encode 讓其正常解析。沿用 wikilink
+// 前處理的單純 replace 策略（不特別剖析 fenced code；此類站內路徑不會出現於程式碼區塊）。
+// 置於 transformWikilinks 之後，順帶修正 wikilink 產生、target 含空白的連結。
+function encodeLinkSpaces(src: string): string {
+  return src.replace(/\]\(([^)\n]*)\)/g, (full, dest: string) => {
+    if (!dest.includes(" ")) return full;
+    return "](" + dest.replace(/ /g, "%20") + ")";
+  });
+}
+
+// ── 去除與頁面標題重複的 body 開頭 H1 ──
+// 筆記/文章頁 header 已有 <h1>，body 第一行常是同名 `# 標題` → 連續重複。
+// 僅當 body 第一個非空行是與 dedupeTitle 正規化後相等的 H1 時移除；否則不動。
+function normalizeHeading(s: string): string {
+  return s.replace(/\s+/g, " ").trim();
+}
+function stripDuplicateH1(src: string, dedupeTitle: string): string {
+  const target = normalizeHeading(dedupeTitle);
+  if (!target) return src;
+  const lines = src.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim() === "") continue; // 跳過開頭空行
+    const m = lines[i].match(/^#\s+(.*)$/);
+    if (m && normalizeHeading(m[1]) === target) {
+      lines.splice(i, 1);
+      // 順帶移除緊接的空行，避免留下多餘間距。
+      if (lines[i] !== undefined && lines[i].trim() === "") lines.splice(i, 1);
+    }
+    break; // 僅檢查第一個非空行（body 開頭 H1）
+  }
+  return lines.join("\n");
+}
+
+export default function MarkdownView({
+  content,
+  dedupeTitle,
+}: {
+  content: string;
+  dedupeTitle?: string;
+}) {
+  let processed = dedupeTitle
+    ? stripDuplicateH1(content, dedupeTitle)
+    : content;
+  processed = transformWikilinks(processed);
+  processed = encodeLinkSpaces(processed);
   return (
     <Markdown remarkPlugins={[remarkGfm]} components={components}>
       {processed}

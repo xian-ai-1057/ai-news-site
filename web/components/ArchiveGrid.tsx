@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Digest } from "@/lib/viewmodel";
 import { CAT_ORDER, CATS } from "@/lib/categories";
 import { fmtDate } from "@/lib/shape";
+import InlineMd from "./InlineMd";
 
 interface ArchiveGridProps {
   digests: Digest[];
@@ -41,7 +42,7 @@ export default function ArchiveGrid({ digests }: ArchiveGridProps) {
                 <span className="iss">第 {d.issue} 期</span>
               </div>
               <h4>{leadItem?.title ?? ""}</h4>
-              <p className="ex">{d.summary}</p>
+              <p className="ex"><InlineMd text={d.summary} /></p>
               <div className="tags">
                 {CAT_ORDER.filter((k) => catCounts[k] !== undefined).map(
                   (k) => (

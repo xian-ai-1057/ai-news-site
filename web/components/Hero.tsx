@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Digest } from "@/lib/viewmodel";
 import { fmtDate } from "@/lib/shape";
+import InlineMd from "./InlineMd";
 
 interface HeroProps {
   digest: Digest;
@@ -29,7 +30,7 @@ export default function Hero({ digest }: HeroProps) {
         <span>第 {digest.issue} 期</span>
         <span>收錄 {digest.items.length} 則</span>
       </div>
-      <p className="lede">{digest.summary}</p>
+      <p className="lede"><InlineMd text={digest.summary} /></p>
       <Link className="cta" href={"/digest/" + digest.date}>
         閱讀今日完整日報 <span className="disp">→</span>
       </Link>

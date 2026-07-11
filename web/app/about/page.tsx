@@ -13,10 +13,12 @@ export default function AboutPage() {
 
       <div className="sub-card">
         <h3>訂閱 · SUBSCRIBE</h3>
-        <p>輸入 Email，每日第一手 AI 日報直送信箱。不推送廣告，隨時可取消訂閱。</p>
+        <p style={{ color: "var(--ink-3)" }}>訂閱功能即將推出，敬請期待。</p>
         <form className="sub-form">
-          <input type="email" placeholder="you@example.com" />
-          <button type="button">訂閱 →</button>
+          <input type="email" placeholder="you@example.com" disabled />
+          <button type="button" disabled>
+            即將推出
+          </button>
         </form>
       </div>
 

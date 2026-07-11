@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { CAT_ORDER, CATS } from "@/lib/categories";
 import type { Digest } from "@/lib/viewmodel";
+import { fmtDate } from "@/lib/shape";
 import SectionItem from "./SectionItem";
+import InlineMd from "./InlineMd";
 
 interface Props {
   digest: Digest;
@@ -21,6 +23,10 @@ export default function DigestReader({ digest, prevDate, nextDate }: Props) {
     ? digest.observation.split("\n\n").filter(Boolean)
     : [];
 
+  // 大標題用中文日期格式（如「2026 年 7 月 11 日」）
+  const { year, month, day } = fmtDate(digest.date);
+  const titleDate = `${year} 年 ${month} 月 ${day} 日`;
+
   return (
     <>
       <Link className="back" href="/">
@@ -29,16 +35,15 @@ export default function DigestReader({ digest, prevDate, nextDate }: Props) {
 
       <div className="rhead">
         <div className="eb">每日彙整 · 第 {digest.issue} 期</div>
-        <h1>{digest.date}</h1>
+        <h1>{titleDate}</h1>
         <div className="rm">
-          <span className="v">{digest.date}</span>
           <span>{digest.weekday}</span>
           <span>收錄 {digest.items.length} 則新聞</span>
         </div>
       </div>
 
       {digest.summary && (
-        <div className="lede-box">{digest.summary}</div>
+        <div className="lede-box"><InlineMd text={digest.summary} /></div>
       )}
 
       {grouped.map(({ key, items }) => {
@@ -67,7 +72,7 @@ export default function DigestReader({ digest, prevDate, nextDate }: Props) {
         <div className="obs">
           <div className="ok">📌 今日觀察 · Editor&apos;s Analysis</div>
           {obsParagraphs.map((p, i) => (
-            <p key={i}>{p}</p>
+            <p key={i}><InlineMd text={p} /></p>
           ))}
         </div>
       )}
