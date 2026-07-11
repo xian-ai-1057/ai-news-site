@@ -11,12 +11,15 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "tsx --test \"tests/**/*.test.ts\"",
-    "ingest:backfill": "tsx ingest/cli/index.ts backfill",
+    "ingest:json": "tsx ingest/cli/index.ts json",
+    "candidates": "tsx ingest/cli/index.ts candidates",
+    "ingest:backfill": "tsx ingest/cli/index.ts backfill --force-seed",
     "ingest:day": "tsx ingest/cli/index.ts day"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.10",
     "dotenv": "^16.4.7",
+    "fast-xml-parser": "^4.5.7",
     "gray-matter": "^4.0.3",
     "zod": "^3.24.1"
   },

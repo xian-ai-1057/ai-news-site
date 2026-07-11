@@ -271,3 +271,107 @@ export async function getTagArticles(tag: string): Promise<Article[]> {
   if (error) throw error;
   return ((data ?? []) as unknown as RawArticleFull[]).map(shapeArticle);
 }
+
+// ── Spec 009 — status page（ingestion_runs / source_health 皆 public-read）──
+
+export interface RunSummary {
+  runDate: string;
+  channel: string;
+  triggerSrc: string;
+  phase: string;
+  counts: Record<string, number>;
+  gateResults: { gate: string; status: string; detail: string }[];
+  warnings: string[];
+  error: string | null;
+  startedAt: string;
+  finishedAt: string | null;
+}
+
+/** 近 N 次 ingestion run（新→舊）。表不存在（migration 未套用）或網路失敗 → 空陣列。 */
+export async function getRuns(limit = 14): Promise<RunSummary[]> {
+  let data: Record<string, unknown>[] | null;
+  try {
+    const res = await supabase
+      .from("ingestion_runs")
+      .select("run_date, channel, trigger_src, phase, counts, gate_results, warnings, error, started_at, finished_at")
+      .order("started_at", { ascending: false })
+      .limit(limit);
+    if (res.error) return [];
+    data = res.data;
+  } catch {
+    return [];
+  }
+  return (data ?? []).map((r) => ({
+    runDate: r.run_date as string,
+    channel: (r.channel as string) ?? "",
+    triggerSrc: (r.trigger_src as string) ?? "",
+    phase: (r.phase as string) ?? "",
+    counts: (r.counts as Record<string, number>) ?? {},
+    gateResults: (r.gate_results as RunSummary["gateResults"]) ?? [],
+    warnings: (r.warnings as string[]) ?? [],
+    error: (r.error as string | null) ?? null,
+    startedAt: r.started_at as string,
+    finishedAt: (r.finished_at as string | null) ?? null,
+  }));
+}
+
+// ── Spec 010 — 相關文章（pgvector RPC；embedding 未就緒或 RPC 不存在 → 空）──
+
+export interface RelatedArticle {
+  slug: string;
+  title: string;
+  articleDate: string;
+  catKey: CatKey;
+}
+
+export async function getRelatedArticles(slug: string, limit = 5): Promise<RelatedArticle[]> {
+  try {
+    const { data, error } = await supabase.rpc("related_articles", {
+      p_slug: slug,
+      lim: limit,
+    });
+    if (error) return [];
+    return ((data ?? []) as Array<{ slug: string; title: string; article_date: string; category: string }>)
+      .filter((r) => CATEGORY_KEY[r.category])
+      .map((r) => ({
+        slug: r.slug,
+        title: r.title,
+        articleDate: r.article_date,
+        catKey: CATEGORY_KEY[r.category] as CatKey,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+export interface SourceHealth {
+  name: string;
+  kind: string;
+  active: boolean;
+  lastFetchedAt: string | null;
+  lastStatus: string;
+  items48h: number;
+}
+
+/** 來源新鮮度（source_health sanitized view）。view 不存在或網路失敗 → 空陣列。 */
+export async function getSourceHealth(): Promise<SourceHealth[]> {
+  let data: Record<string, unknown>[] | null;
+  try {
+    const res = await supabase
+      .from("source_health")
+      .select("name, kind, active, last_fetched_at, last_status, items_48h")
+      .order("name", { ascending: true });
+    if (res.error) return [];
+    data = res.data;
+  } catch {
+    return [];
+  }
+  return (data ?? []).map((s) => ({
+    name: s.name as string,
+    kind: s.kind as string,
+    active: Boolean(s.active),
+    lastFetchedAt: (s.last_fetched_at as string | null) ?? null,
+    lastStatus: (s.last_status as string) ?? "",
+    items48h: Number(s.items_48h ?? 0),
+  }));
+}

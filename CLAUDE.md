@@ -15,12 +15,18 @@
 - 學習筆記 `content/Learning Notes/*學習*.md`（61，排除 INDEX/Interactive）
 
 ## 目錄
-- `specs/` — 規格、契約、golden fixtures
-- `supabase/migrations/` — DB schema（進版控）
-- `ingest/{parser,db,cli}/` — Markdown → records → Supabase
-- `content/` — 歷史種子/回填來源（**已非內容來源，DB 為準**）
+- `specs/` — 規格、契約、golden fixtures（索引見 `specs/CLAUDE.md`）
+- `supabase/migrations/` — DB schema（進版控）；`supabase/functions/` — Edge Functions
+- `ingest/{parser,gates,render,db,cli}/` — JSON bundle → 閘門 → Supabase（parser 僅種子復原）
+- `web/` — Next.js 16 閱讀 App（獨立子專案；先讀 `web/AGENTS.md`）
+- `content/` — **凍結歷史種子**（≤2026-06-07），禁止寫入；DB 為唯一事實
+
+## 日常通道（Spec 007+）
+- 入庫走 `npm run ingest:json -- daily-bundle.json`（Zod 契約＋品質閘門＋ingestion_runs）。
+- `ingest:backfill` = 種子復原工具（`--force-seed`），會以舊種子覆蓋新 DB 資料，勿日常使用。
+- 候選池：`npm run candidates`（Spec 008；fetch-sources Edge Function 供池）。
 
 ## 環境
-- Node ≥ 22、TypeScript、Zod、`@supabase/supabase-js`、`gray-matter`、`tsx`。
+- Node ≥ 22、TypeScript、Zod、`@supabase/supabase-js`、`gray-matter`、`fast-xml-parser`、`tsx`。
 - 金鑰：`.env`（`SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`），**不得 commit**。
-- 常用：`npm run typecheck`、`npm test`、`npm run ingest:backfill`、`npm run ingest:day -- <dir>`。
+- 常用：`npm run typecheck`、`npm test`、`npm run ingest:json -- <bundle>`、`npm run candidates`。

@@ -1,310 +1,163 @@
-每日 AI 新聞日報任務（Cowork 雲端版）— 請依照以下步驟執行，全程使用繁體中文。
+每日 AI 新聞日報任務（Cowork 雲端版 v2 — JSON 結構化通道）— 請依照以下步驟執行，全程使用繁體中文。
 
-> 🌐 **執行環境**：本任務在 Cowork（Claude Code on the web）雲端 Linux 沙箱執行（系統時區為 UTC），由 Cowork 的排程器在雲端定時觸發 —— **不依賴你的電腦是否開機或連網**。工作目錄就是 cloned 的 GitHub repo 根目錄，所有筆記寫入 repo 的 `content/` 目錄後，執行 `npm run ingest:backfill`（recursive 掃整個 `content/`）直接寫入 Supabase（不再 `git push` 內容、不再建 Quartz/Cloudflare）。寫入成功後再 `curl` Vercel Deploy Hook 觸發前端立即重新部署。
-
-> ⛔ **絕對不要用 `npm run ingest:day -- content/`**：該指令的目錄掃描是非遞迴的，只會抓到 `content/` 頂層的日報、抓不到 `content/Articles/`、`content/Learning Notes/`，會導致 daily_report_items join 表被清空（delete-then-insert 後全部 skip）。本任務一律用 `npm run ingest:backfill`（遞迴、idempotent、FK 100% 解析）。日期一律使用台北時區（`TZ='Asia/Taipei'`）。
-
-> 🔑 **前置設定（一次性，在 Cowork 環境設定中完成；不要寫進本 prompt）**：本任務需要以下環境變數（secret），請在 Cowork 專案的 Environment / Secrets 設定加入，沙箱啟動時會注入為 `process.env`：
-> - `SUPABASE_URL` = `https://ifbpfuvlevjegwdnhyqh.supabase.co`
-> - `SUPABASE_SERVICE_ROLE_KEY` = Supabase 的 **secret / service_role** 金鑰（`sb_secret_…` 或 legacy service_role JWT；**不可**用 anon/publishable 金鑰，會被 RLS 擋下 INSERT）。
-> - `VERCEL_DEPLOY_HOOK_URL` = Vercel 專案的 Deploy Hook URL（Project → Settings → Git → Deploy Hooks 產生，分支選 `v4`）。
+> 🌐 **執行環境**：本任務在 Cowork（Claude Code on the web）雲端 Linux 沙箱執行（系統時區為 UTC），由 Cowork 的排程器在雲端定時觸發 —— **不依賴你的電腦是否開機或連網**。工作目錄就是 cloned 的 GitHub repo 根目錄。
 >
-> ingest CLI 直接讀 `process.env.SUPABASE_URL` / `process.env.SUPABASE_SERVICE_ROLE_KEY`（見 `ingest/db/client.ts`），雲端 clone 不含 git-ignored 的 `.env`，因此**金鑰只能來自 Cowork 環境變數**。`dotenv` 不會覆蓋已存在的 `process.env`，所以有沒有 `.env` 檔都不影響。
+> **v2 重大變更（Spec 007）**：不再把筆記寫成 `content/` 的 Markdown 檔。改為組裝**一份 `daily-bundle.json`**（符合 `specs/007-structured-channel/contracts/daily-bundle.schema.ts` 契約），執行 `npm run ingest:json -- daily-bundle.json` 直接寫入 Supabase。Markdown（`raw_md`）由 ingest 的渲染器自動從資料產生，你不需要維護任何 emoji 章節格式。寫入成功後 `curl` Vercel Deploy Hook 觸發前端重新部署。
+
+> ⛔ **禁止事項**：
+> - **禁止** `npm run ingest:backfill`：已降級為「種子復原工具」，會把凍結於 2026-06-07 的 `content/` 種子整批覆蓋回 DB（較新的內容會被舊資料蓋掉）。日常入庫**只能**用 `ingest:json`。
+> - **禁止** `npm run ingest:day -- content/`（歷史 footgun，會清空 daily_report_items）。
+> - **禁止**寫入 `content/` 目錄（已凍結為歷史種子）。
+> - 日期一律使用台北時區（`TZ='Asia/Taipei'`）。
+
+> 🔑 **前置設定（一次性，在 Cowork 環境設定中完成；不要寫進本 prompt）**：
+> - `SUPABASE_URL` = `https://ifbpfuvlevjegwdnhyqh.supabase.co`
+> - `SUPABASE_SERVICE_ROLE_KEY` = Supabase 的 **secret / service_role** 金鑰（**不可**用 anon/publishable 金鑰，會被 RLS 擋下 INSERT）。
+> - `VERCEL_DEPLOY_HOOK_URL` = Vercel 專案的 Deploy Hook URL（分支 `v4`）。
+> - （選填）`INGEST_TRIGGER_SRC=cowork` — 讓 ingestion_runs 記錄觸發來源。
+>
+> ingest CLI 直接讀 `process.env`（見 `ingest/db/client.ts`）；雲端 clone 不含 git-ignored 的 `.env`，金鑰只能來自 Cowork 環境變數。
 
 > ✅ **任務完成的定義（成功標準）**：唯有以下全部達成才算成功 ——
-> 1. 環境就緒：`npm ci` 安裝相依套件成功，且 `SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY` 兩個環境變數都存在（缺任一就立即停止並回報，不要硬跑）。
+> 1. 環境就緒：`npm ci` 成功，且 `SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY` 都存在（缺任一就立即停止並回報）。
 > 2. 依五大章節蒐集 8-15 則新聞並抓到全文。
-> 3. 每則新聞各寫成一份 Article 筆記，存入 `content/Articles/`，且全部通過「Article 自檢」。
-> 4. 一份當日日報存入 `content/AI日報-YYYY-MM-DD.md`，通過「日報自檢」。
-> 5. 每篇「技術理論」Article 各對應一份 Learning Note，存入 `content/Learning Notes/`，通過「Learning Note 自檢」；對應 Article 已補上 📓 學習筆記 wikilink。
-> 6. `npm run ingest:backfill` 寫入 Supabase 成功（exit 0；summary 應為 `items resolved=… skipped=0`、`notes ... unresolved=0`；若 skipped>0 或 unresolved>0 須修正後重跑）。
-> 7. 入庫成功後 `curl` `VERCEL_DEPLOY_HOOK_URL` 觸發 Vercel 重新部署（HTTP 2xx）。
-> 8. 已輸出步驟 7 的完成回報。
+> 3. 組裝出一份通過契約驗證的 `daily-bundle.json`（含 articles、learningNotes、dailyReport）。
+> 4. `npm run ingest:json -- daily-bundle.json` **exit 0 或 1**，且輸出的 `GATE_REPORT_JSON` 無任何 `"status":"fail"`；`=== Ingest summary ===` 顯示 `items resolved=… skipped=0`、`notes ... unresolved=0`。
+> 5. 入庫成功後 `curl` `VERCEL_DEPLOY_HOOK_URL` 觸發 Vercel 重新部署（HTTP 2xx）。
+> 6. 已輸出步驟 6 的完成回報。
 >
-> 中途遇到搜尋／抓取失敗時，不要提前結束 —— 依任務內的退場規則處理後繼續，務必把「寫入 Supabase」與「觸發 Vercel 部署」這兩步做完。
-
-# 🔒 格式一致性最高指令（讀完整段任務後，全程遵守）
-
-本任務輸出的所有 .md 檔案必須**嚴格遵循下方範本的格式**，這是這個任務最重要的硬性要求。原因是：每天累積的筆記會被 Obsidian Bases / Dataview / 反向連結圖譜使用，**任何欄位缺漏、章節順序錯亂、emoji 不一致都會導致整個資料管線出問題**。
-
-## ⚙️ 防止資訊遺漏的執行守則
-
-當你執行這個任務時，context 可能會因為 defuddle 抓取多篇長文而被壓縮（compaction）。為了確保格式不會在壓縮過程中走樣，**請遵守以下守則**：
-
-1. **參考現有檔案作為範本**：在開始寫第一篇 Article 筆記之前，先用 Read 工具讀取 `content/Articles/` 中任意一個近期檔案作為「黃金範本」。在寫第一份 Learning Note 前同樣 Read 一份 `content/Learning Notes/` 中的現有檔案。沒有現有檔案才依本任務內的範本。
-2. **逐篇完成、寫完一篇再寫下一篇**：不要一次擬好所有筆記的草稿再批次輸出，因為 context 壓縮容易發生在中段。完成一篇 → 寫入磁碟 → 才開始下一篇。
-3. **每寫完一份筆記，做格式自檢**（見下方「📋 格式自檢清單」），缺項立刻補。
-4. **絕對不要省略任何 frontmatter 欄位**，即使該欄位內容是空的也要保留欄位名稱與冒號（例如 `tags:` 後留空）。
-5. **章節標題（含 emoji）必須與範本一字不差**，包括順序。emoji 不能替換、不能省略。
-6. **wikilinks 格式固定為 `[[檔名|顯示文字]]`**，檔名不含 .md 副檔名與路徑。
-7. **頁尾簽名固定**：Article 與 Learning Note 用 `*由 Claude 自動整理於 YYYY-MM-DD*`；日報用 `*本日報由 Claude 自動整理 - YYYY-MM-DD HH:MM*`。
-8. **若你發現 context 已被壓縮且不確定格式**：停下來，先 Read 一份昨天或前天的同類筆記，依其格式繼續。**寧可慢，不可格式錯亂**。
+> 中途遇到搜尋／抓取失敗時，不要提前結束 —— 依任務內的退場規則處理後繼續，務必把「寫入 Supabase」與「觸發 Vercel 部署」做完。
 
 ---
 
-## 資料夾結構（固定不變）
+# 📦 daily-bundle.json 契約說明
 
+完整契約：`specs/007-structured-channel/contracts/daily-bundle.schema.ts`（Zod）。頂層結構：
+
+```jsonc
+{
+  "runDate": "YYYY-MM-DD",            // 今天（台北時區）
+  "articles": [ /* 8-15 篇，見下 */ ],
+  "learningNotes": [ /* 每篇技術理論文章一份 */ ],
+  "dailyReport": { /* 一份，見下 */ },
+  "meta": {
+    "generator": "cowork-daily-routine",
+    "promptVersion": "v2",
+    "generatedAt": "YYYY-MM-DD HH:MM"  // 台北時間
+  }
+}
 ```
-content/
-├── AI日報-YYYY-MM-DD.md             ← 當日日報
-├── Articles/                          ← 個別文章完整內容
-│   └── YYYY-MM-DD-文章標題.md
-└── Learning Notes/                    ← 技術文章的學習筆記
-    └── YYYY-MM-DD-學習-技術標題.md
+
+## Article（articles[] 的每一項）
+
+```jsonc
+{
+  "slug": "YYYY-MM-DD-簡短中文標題",     // 唯一鍵；禁用字元 / \ : * ? " < > |
+  "title": "原文標題（中文）",
+  "articleDate": "YYYY-MM-DD",
+  "source": "來源網站名稱",
+  "url": "https://…",                    // 必填、必須是合法 http(s) URL（會被閘門驗證）
+  "category": "技術理論",                // 五選一：技術理論｜市場情況｜重大新聞｜企業應用導入｜新創公司
+  "industry": "金融",                    // 僅企業應用導入需填；其他章節填 ""
+  "summaryMd": "3-5 句繁體中文重點摘要（Markdown，≥20 字元）",
+  "contentMd": "完整全文內容（Markdown，≥200 字元；英文翻譯成繁中、專有名詞保留英文；保留段落/子標題/清單結構）",
+  "observationsMd": "1-2 段觀察與啟發（企業應用導入請說明：適用產業/角色、導入門檻、可借鏡之處）",
+  "tags": ["AI", "章節名稱", "相關標籤"],
+  "createdDate": "YYYY-MM-DD",
+  "rawMd": "",                           // 留空字串，渲染器會自動產生
+  "origin": { "channel": "raw-item", "rawItemId": "候選池項目的 uuid", "fetchMethod": "defuddle" }
+    // 出處追溯（Spec 008）：來自候選池 → channel="raw-item" + rawItemId（CANDIDATES_JSON 內的 id）；
+    // 來自 WebSearch → channel="websearch" + rawItemId=null。
+    // fetchMethod 填實際抓全文的方式："defuddle" 或 "webfetch"
+}
 ```
 
-> 任務在 Cowork 雲端沙箱執行，工作目錄為 cloned repo 根目錄，所有路徑相對於 repo 根。`content/`、`content/Articles/`、`content/Learning Notes/` 已存在於 repo 內，無需另外建立 Obsidian vault。
+## Learning Note（learningNotes[] 的每一項；每篇「技術理論」文章一份）
 
-## 五大章節分類（固定不變）
+```jsonc
+{
+  "slug": "YYYY-MM-DD-學習-簡短中文技術主題",
+  "title": "學習主題（中文）",
+  "noteDate": "YYYY-MM-DD",
+  "topic": "核心技術主題（如 Transformer / RLHF / MoE）",
+  "difficulty": "入門",                  // 三選一：入門｜中階｜進階
+  "sourceArticleSlug": "對應文章的 slug", // 必須與 articles[] 中某篇的 slug 一字不差
+  "contentMd": "筆記 body（Markdown，結構見下方「筆記 body 範本」）",
+  "tags": ["AI", "學習筆記", "技術領域標籤"],
+  "createdDate": "YYYY-MM-DD",
+  "rawMd": ""
+}
+```
 
-| 章節 | 內容範圍 | 建議來源 | 每日則數 |
-|---|---|---|---|
-| 🔬 **技術理論** | 論文發表、新模型架構、演算法突破、benchmark 表現、研究方法 | arXiv、Hugging Face Papers、Anthropic Research、OpenAI Research、Google DeepMind、Meta AI、各大 AI lab 部落格 | **2-5 則（重點）** |
-| 📊 **市場情況** | 市場規模、產業趨勢、投資金額統計、政策法規、地緣競爭、AI 晶片供需 | Bloomberg、Reuters、CB Insights、IDC、Gartner、經濟學人、財經媒體 | 1-2 則 |
-| 📰 **重大新聞** | 影響廣泛的 AI 大事件、企業重大公告、人事異動、爭議與監管、安全事件 | TechCrunch、The Verge、WSJ、FT、科技新報、iThome | 1-2 則 |
-| 🏢 **企業應用導入** | 大型企業導入 AI 案例、數位轉型、產業 AI 化、ROI 實績、行業解決方案、AI Agent 部署 | VentureBeat、HBR、MIT Tech Review、Forbes、產業專業媒體、企業官方公告、Microsoft / Google / AWS 案例庫 | **2-5 則（重點）** |
-| 🚀 **新創公司** | 新創募資、新產品發布、估值變動、IPO/併購、創辦人動態 | TechCrunch、The Information、Crunchbase、INSIDE、數位時代 | 1-2 則 |
-
----
-
-# 📐 三種筆記的格式範本（不可變動）
-
-## 範本 A：Article 筆記（content/Articles/ 資料夾）
-
-檔名規則：`YYYY-MM-DD-{簡短中文標題}.md`，禁用特殊字元 `/ \ : * ? " < > |`
+**筆記 body 範本**（放進 `contentMd`，保持這個章節結構）：
 
 ```markdown
----
-title: {原文標題}
-date: YYYY-MM-DD
-source: {來源網站名稱}
-url: {原文連結}
-category: {必填，且必須是這五者之一：技術理論｜市場情況｜重大新聞｜企業應用導入｜新創公司}
-industry: {僅企業應用導入需填，例如：金融｜製造｜零售｜醫療｜法律｜教育｜政府｜HR｜其他；其他章節留空字串 ""}
-tags:
-  - AI
-  - {章節名稱}
-  - {相關標籤}
-created: YYYY-MM-DD
----
-
-# {文章標題（中文）}
-
-> [!info] 文章資訊
-> - **來源**：[{來源網站}]({url})
-> - **發布日期**：YYYY-MM-DD
-> - **分類**：{章節}
-
-## 📝 重點摘要
-（3-5 句繁體中文總結文章核心）
-
-## 📖 全文內容
-（將 defuddle 抓到的完整內容貼上，並翻譯成繁體中文。若原文已是中文則保留。
-保留段落結構、子標題、清單、引用、圖片標記等格式。）
-
-## 💡 觀察與啟發
-（1-2 段個人觀察。若 category 為「企業應用導入」，請特別說明：哪種產業／角色可參考、導入門檻、可借鏡之處。）
-
-## 🔗 相關連結
-- [原文連結]({url})
-- 相關閱讀：（若有）
-
-## 📓 學習筆記
-{若 category 為「技術理論」，填入：}
-- [[YYYY-MM-DD-學習-技術標題|查看深入學習筆記]]
-{若非技術理論，整段「📓 學習筆記」區塊省略不寫，不要留空標題。}
-
----
-*由 Claude 自動整理於 YYYY-MM-DD*
-```
-
-## 範本 B：Learning Note 學習筆記（content/Learning Notes/ 資料夾）
-
-檔名規則：`YYYY-MM-DD-學習-{簡短中文技術主題}.md`
-
-```markdown
----
-title: {學習主題（中文）}
-date: YYYY-MM-DD
-type: learning-note
-source_article: "[[YYYY-MM-DD-技術文章標題]]"
-topic: {核心技術主題，如：Transformer / RLHF / MoE / Constitutional AI}
-difficulty: {必填，三選一：入門｜中階｜進階}
-tags:
-  - AI
-  - 學習筆記
-  - {技術領域標籤}
-created: YYYY-MM-DD
----
-
-# {學習主題}
-
 > [!abstract] 一句話理解
-> 用「這是一個用來 ___ 的 ___，特別之處在於 ___」格式，一句話講清楚。
+> 用「這是一個用來 ___ 的 ___，特別之處在於 ___」格式講清楚。
 
 ## 🎯 為什麼重要
-
-**它解決了什麼問題？**
-2-3 段說明：在此技術出現前的困難、既有解法的不足、這個新方法帶來什麼改變。
+**它解決了什麼問題？** 2-3 段：此技術出現前的困難、既有解法的不足、帶來什麼改變。
 
 ## 🧠 入門解說（用類比理解）
-
-用日常生活的類比、比喻或故事說明運作原理。
-範例：RAG → 考試時可以翻課本的學生；MoE → 醫院的分診制度。
-目標：完全不懂的人也能直覺理解。
+用日常類比說明運作原理（例：RAG → 考試可翻課本的學生）。完全不懂的人也能直覺理解。
 
 ## 🔑 重點原理
-
-條列 3-7 個核心原理／關鍵步驟／重要概念，每點 2-4 句話：
-
-1. **{概念名稱}**：說明
-2. **{概念名稱}**：說明
-3. **{概念名稱}**：說明
+條列 3-7 個核心原理，每點 2-4 句。
 
 ## 📊 視覺化說明
-
-**至少要有一個**：mermaid 流程圖或比較表。
-
-### 流程圖（若涉及流程）
-```mermaid
-graph LR
-  A[輸入] --> B[步驟1]
-  B --> C[步驟2]
-  C --> D[輸出]
-```
-
-### 比較表（若涉及對比）
-| 維度 | 傳統方法 | 新方法 |
-|---|---|---|
-| xxx | xxx | xxx |
+至少一個 mermaid 流程圖或比較表。
 
 ## 🔍 與既有技術的差異
-
-說明與相近技術（前代方法、競爭方案）的關鍵差別。
+與前代方法/競爭方案的關鍵差別。
 
 ## 📚 關鍵詞對照表
-
-| 中文 | 英文 | 簡短解釋 |
-|---|---|---|
-| xxx | xxx | xxx |
-
-（5-10 個本篇關鍵術語）
+| 中文 | 英文 | 簡短解釋 |（5-10 個術語）
 
 ## 🛠️ 可能的應用場景
-
 3-5 個實際應用方向。
 
 ## 📖 學習路徑建議
-
-1. **先讀**：（基礎前置知識）
-2. **再讀**：（這篇文章本身）
-3. **進階**：（後續延伸論文、實作教學）
+1. **先讀**：… 2. **再讀**：… 3. **進階**：…
 
 ## 🔗 延伸閱讀
-- 原文連結：[{原文標題}]({url})
-- 對應新聞筆記：[[YYYY-MM-DD-技術文章標題]]
-- 相關論文／部落格：（若有）
-
----
-*由 Claude 自動整理於 YYYY-MM-DD*
+- 原文連結：[標題](url)
 ```
 
-## 範本 C：當日日報（content/ 根目錄）
+## Daily Report（dailyReport）
 
-檔名規則：`AI日報-YYYY-MM-DD.md`
-
-```markdown
----
-title: AI 日報 YYYY-MM-DD
-date: YYYY-MM-DD
-tags:
-  - AI
-  - 日報
-  - 新聞
-created: YYYY-MM-DD
----
-
-# AI 日報 YYYY-MM-DD
-
-> [!summary] 今日重點
-> 用 3-5 句話總結今天五大領域最重要的 AI 動向，特別點出技術理論與企業應用兩大重點章節的核心發現。
-
-## 🔬 技術理論
-
-### [[YYYY-MM-DD-技術文章-1|{中文標題-1}]]
-- **來源**：xxx ｜ **連結**：[原文](url)
-- **重點**：2-3 句重點摘要
-- 📓 **學習筆記**：[[YYYY-MM-DD-學習-技術標題-1|查看入門解說]]
-
-（依當日素材列 2-5 則）
-
-## 📊 市場情況
-
-### [[YYYY-MM-DD-市場文章|{中文標題}]]
-- **來源**：xxx ｜ **連結**：[原文](url)
-- **重點**：2-3 句重點摘要
-
-## 📰 重大新聞
-
-### [[YYYY-MM-DD-新聞文章|{中文標題}]]
-- **來源**：xxx ｜ **連結**：[原文](url)
-- **重點**：2-3 句重點摘要
-
-## 🏢 企業應用導入
-
-### [[YYYY-MM-DD-企業文章-1|{中文標題-1}]]
-- **來源**：xxx ｜ **連結**：[原文](url)
-- **產業**：{金融 / 製造 / 零售 / 醫療 / 政府 / 其他}
-- **重點**：2-3 句重點摘要（含導入規模、效益、可借鏡之處）
-
-（依當日素材列 2-5 則）
-
-## 🚀 新創公司
-
-### [[YYYY-MM-DD-新創文章|{中文標題}]]
-- **來源**：xxx ｜ **連結**：[原文](url)
-- **重點**：2-3 句重點摘要
-
-## 📌 今日觀察
-> [!note] 趨勢觀察
-> 1-2 段對今日五大領域整體脈絡的觀察、跨章節的關聯。
-> 特別點出：技術理論的進展如何對應到企業應用？哪些研究突破已被誰落地？
-
-## 📚 歷史日報
-- [[AI日報-{昨天日期}]]
-
----
-*本日報由 Claude 自動整理 - YYYY-MM-DD HH:MM*
+```jsonc
+{
+  "slug": "AI日報-YYYY-MM-DD",           // 固定格式，日期 = runDate（閘門會驗證）
+  "reportDate": "YYYY-MM-DD",            // 必須等於 runDate
+  "title": "AI 日報 YYYY-MM-DD",
+  "summaryMd": "3-5 句總結今日五大領域動向，點出技術理論與企業應用的核心發現（純文字，不要加 > 前綴）",
+  "observationsMd": "1-2 段跨章節趨勢觀察：技術進展如何對應到企業應用？哪些研究已被誰落地？",
+  "tags": ["AI", "日報", "新聞"],
+  "createdDate": "YYYY-MM-DD",
+  "rawMd": "",
+  "items": [                             // 每篇文章一項
+    {
+      "reportSlug": "AI日報-YYYY-MM-DD",
+      "articleSlug": "對應文章 slug",     // 必須在 articles[] 內（閘門會驗證）
+      "section": "技術理論",              // = 該文章的 category
+      "position": 0,                      // 同章節內由 0 起算
+      "blurbMd": "該則在日報中的 2-3 句重點"
+    }
+  ]
+}
 ```
 
-## 📋 格式自檢清單（每寫完一份必對照）
+## 🚦 品質閘門（`ingest:json` 會自動檢查，fail 就不入庫）
 
-### Article 自檢
-- [ ] frontmatter 八個欄位齊全：title、date、source、url、category、industry、tags、created
-- [ ] category 是五大章節之一（一字不差）
-- [ ] industry 欄位存在（即使是空字串）
-- [ ] 章節順序：📝 重點摘要 → 📖 全文內容 → 💡 觀察與啟發 → 🔗 相關連結 → (📓 學習筆記，僅技術理論)
-- [ ] 全文內容是繁體中文（中文新聞除外，保留原文）
-- [ ] 頁尾簽名：`*由 Claude 自動整理於 YYYY-MM-DD*`
-
-### Learning Note 自檢
-- [ ] frontmatter 八個欄位齊全：title、date、type、source_article、topic、difficulty、tags、created
-- [ ] type 固定為 `learning-note`
-- [ ] difficulty 是「入門 / 中階 / 進階」之一
-- [ ] 章節順序：> [!abstract] → 🎯 為什麼重要 → 🧠 入門解說 → 🔑 重點原理 → 📊 視覺化說明 → 🔍 與既有技術的差異 → 📚 關鍵詞對照表 → 🛠️ 可能的應用場景 → 📖 學習路徑建議 → 🔗 延伸閱讀
-- [ ] 📊 視覺化說明區塊內至少有一個 mermaid 圖或比較表
-- [ ] 📚 關鍵詞對照表至少 5 個術語
-- [ ] source_article 的 wikilink 對應到正確的 Article 檔名
-- [ ] 頁尾簽名：`*由 Claude 自動整理於 YYYY-MM-DD*`
-
-### 日報自檢
-- [ ] frontmatter 五個欄位齊全：title、date、tags、created（含 tags 三項）
-- [ ] 章節順序固定：🔬 技術理論 → 📊 市場情況 → 📰 重大新聞 → 🏢 企業應用導入 → 🚀 新創公司 → 📌 今日觀察 → 📚 歷史日報
-- [ ] 每章節每則使用 `### [[...]]` wikilink 包頭
-- [ ] 技術理論章節每則含「📓 學習筆記」連結列
-- [ ] 企業應用導入章節每則含「產業」列
-- [ ] 開頭有 `> [!summary] 今日重點`，結尾觀察區有 `> [!note] 趨勢觀察`
-- [ ] 頁尾簽名：`*本日報由 Claude 自動整理 - YYYY-MM-DD HH:MM*`
+| 閘門 | 規則 | 你要做什麼 |
+|---|---|---|
+| url-format | 每篇 url 必須是合法 http(s) | 貼真實原文連結，不要杜撰 |
+| url-dedup | 與 DB 既往文章同 URL 會被自動剔除 | 搜集時先避開已報導過的 URL |
+| content-quality | contentMd ≥200 字、summaryMd ≥20 字、不得含「全文抓取失敗」「Access Denied」「Just a moment」等樣板字 | 抓不到全文就換一篇新聞，不要硬塞 |
+| article-count | 剔除後 8-15 篇 | 準備 1-2 篇備用文章以防 dedup 剔除 |
+| report-date | reportDate/slug 必須等於 runDate | 用台北時區日期 |
+| note-coverage | 每篇技術理論文章必須有對應筆記 | sourceArticleSlug 一字不差 |
+| item-integrity | 每個 item 指向 articles[] 內的 slug | slug 拼寫一致 |
 
 ---
 
@@ -312,105 +165,107 @@ created: YYYY-MM-DD
 
 ## 步驟 1：準備工作
 
-1. **確認執行環境**：用 bash 確認當前在 repo 根目錄（`ls` 應看到 `content/`、`ingest/`、`package.json`）。
-   （若因網路錯誤失敗，最多重試 4 次，指數退避 2s/4s/8s/16s。）
-2. **驗證金鑰存在（缺就停）**：執行
+1. 確認在 repo 根目錄（`ls` 應看到 `ingest/`、`specs/`、`package.json`）。網路錯誤最多重試 4 次，指數退避 2s/4s/8s/16s。
+2. **驗證金鑰存在（缺就停）**：
    ```bash
    test -n "$SUPABASE_URL" && test -n "$SUPABASE_SERVICE_ROLE_KEY" && echo "ENV OK" || echo "ENV MISSING"
    ```
-   若輸出 `ENV MISSING`，**立即停止任務並回報**：「Cowork 環境缺少 SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY，請到 Cowork 環境設定加入後重跑」。不要把金鑰寫進檔案，也不要繼續蒐集（避免做白工）。`VERCEL_DEPLOY_HOOK_URL` 缺少則僅警告、照常入庫，最後跳過刷新步驟即可。
-3. **安裝相依套件**：雲端 clone 不含 `node_modules`，執行 `npm ci`（lockfile 已在 repo；若 `npm ci` 失敗則退到 `npm install`）。確認 Node ≥ 22（`node -v`，repo 要求見 `.node-version`）。網路失敗最多重試 4 次，指數退避 2s/4s/8s/16s。
-4. bash 執行 `TZ='Asia/Taipei' date +%Y-%m-%d` 取得今天日期；`TZ='Asia/Taipei' date +"%Y-%m-%d %H:%M"` 取得時間戳。（沙箱系統時區為 UTC，務必加 `TZ='Asia/Taipei'`，否則跨日會抓錯日期。）
-5. 確認資料夾存在：`mkdir -p content/Articles "content/Learning Notes"`（路徑含空格務必用引號）。
-6. `ls -t content/Articles/ | head -20` 列出最近檔名，避免重複報導。
-7. **格式定錨**：用 Read 工具讀取最近一份 Article 與一份 Learning Note 作為「黃金範本」，後續寫作以這兩份的實際格式為準。沒有現有檔案才依本任務內範本。
-8. 取得昨天日期：`TZ='Asia/Taipei' date -d "yesterday" +%Y-%m-%d`（Linux 語法，取代 macOS 的 `date -v-1d`；用於日報的歷史日報 wikilink）。
+   `ENV MISSING` → 立即停止並回報。`VERCEL_DEPLOY_HOOK_URL` 缺少則僅警告、照常入庫。
+3. `npm ci`（失敗退 `npm install`；確認 Node ≥ 22）。
+4. 取日期與時間戳：
+   ```bash
+   TZ='Asia/Taipei' date +%Y-%m-%d
+   TZ='Asia/Taipei' date +"%Y-%m-%d %H:%M"
+   ```
+5. 查近期已報導的內容避免重複：`npx tsx -e "…"` 不需要 —— 直接放心蒐集，url-dedup 閘門會自動剔除重複 URL；但仍建議多備 1-2 篇候補。
 
-## 步驟 2：依五大章節搜集資訊
+## 步驟 2：依五大章節搜集資訊（兩層選材，Spec 008）
 
-WebSearch 工具，技術理論與企業應用各 2-5 則，其他章節各 1-2 則，總計 8-15 則。當天或最近 24 小時內為主，找不到放寬至 3 天。
+**第一層 — 候選池優先**：Edge Function 每 4 小時自動抓取 arXiv/RSS 進候選池，先讀池選材：
 
-關鍵字參考：
+```bash
+npm run candidates -- --hours 36
+```
 
-- 技術理論：「latest LLM paper」、「new AI architecture」、「Anthropic research」、「arxiv ai」、「最新 AI 論文」、「new AI model release」、「LLM benchmark」
-- 市場情況：「AI market size 2026」、「AI industry trend」、「AI regulation」、「AI 投資 趨勢」
-- 重大新聞：「major AI news today」、「OpenAI announcement」、「AI 重大消息」
-- 企業應用：「enterprise AI adoption」、「Fortune 500 AI use case」、「企業 導入 AI」、「AI Agent enterprise」、「Copilot deployment case study」、「banking AI」、「manufacturing AI」、「台灣 企業 AI 應用」
-- 新創公司：「AI startup funding」、「AI startup launch」、「AI 新創 募資」
+- 讀輸出的 `CANDIDATES_JSON`（依 `category_hint` 分組、新→舊）。逐章節挑選合適候選；
+  被選中的候選記下它的 `id`，寫進該文章的 `origin.rawItemId`（channel 填 `"raw-item"`）。
+- `category_hint` 只是提示，**最終分類由你判斷**；候選的 summary 只供選材，全文仍照步驟 3 抓。
+- **Fallback（來源層故障不擋日報）**：若指令失敗、輸出為空、或某章節池內無合適候選 →
+  該章節改用第二層 WebSearch，流程照舊。
+
+**第二層 — WebSearch 補缺口**：對池覆蓋不足的章節用 WebSearch 補齊（**市場情況通常都需要**，
+池內無此類 feed）。WebSearch 來源的文章 `origin.channel` 填 `"websearch"`。
+
+配額不變：技術理論與企業應用導入各 2-5 則（雙重點章節），其他章節各 1-2 則，總計 8-15 則。以當天或最近 24 小時為主，找不到放寬至 3 天。
+
+| 章節 | 內容範圍 | 建議來源 |
+|---|---|---|
+| 技術理論 | 論文、新模型架構、演算法、benchmark | arXiv、HF Papers、Anthropic/OpenAI/DeepMind/Meta AI |
+| 市場情況 | 市場規模、投資統計、政策法規、晶片供需 | Bloomberg、Reuters、CB Insights、財經媒體 |
+| 重大新聞 | 重大公告、人事、爭議監管、安全事件 | TechCrunch、The Verge、WSJ、科技新報、iThome |
+| 企業應用導入 | 企業導入案例、轉型、ROI、Agent 部署 | VentureBeat、HBR、MIT TR、企業官方公告 |
+| 新創公司 | 募資、新品、估值、IPO/併購 | TechCrunch、The Information、INSIDE、數位時代 |
+
+關鍵字參考：「latest LLM paper」「new AI architecture」「AI market size 2026」「major AI news today」「enterprise AI adoption」「AI startup funding」「台灣 企業 AI 應用」等。
 
 ## 步驟 3：抓取每篇文章完整內容
 
-對每一則新聞用 `anthropic-skills:defuddle` skill 抓全文（.md 結尾的 URL 改用 WebFetch）。**若 Cowork 環境未載入 defuddle skill，直接改用 WebFetch。** defuddle 失敗則退到 WebFetch；都失敗才只記錄摘要並標註「⚠️ 全文抓取失敗」。
+對每一則新聞用 `anthropic-skills:defuddle` skill 抓全文（.md 結尾的 URL 或 defuddle 不可用時改用 WebFetch）。**兩者都失敗 → 放棄該篇、換一篇**（品質閘門會擋樣板字與短文，不要硬塞抓取失敗的內容）。記下實際用的方式（defuddle / webfetch），填進 `origin.fetchMethod`。
 
-## 步驟 4：逐篇撰寫 Article 筆記
+## 步驟 4：逐篇組裝 daily-bundle.json
 
-**逐篇處理**：對每一則新聞 → 依範本 A 寫一份 .md → 用 Write 工具存到 `content/Articles/` → 對照「Article 自檢」清單 → 缺項就補 → 確認無誤再進下一則。
+在 repo 根目錄維護 `daily-bundle.json`（已在 .gitignore，不會進版控）：
 
-## 步驟 5：撰寫當日日報
+1. 先寫入骨架（runDate、meta、空的 articles/learningNotes、dailyReport 含空 items）。
+2. **逐篇處理**：每完成一篇文章的摘要/翻譯 → 用 Edit/Write 把該篇 article 物件與對應的 dailyReport.items 項目加進檔案 → 才開始下一篇。（逐篇落盤，避免 context 壓縮時資訊散失。）
+3. 每篇「技術理論」文章完成後，接著寫它的 learning note（body 依「筆記 body 範本」）加入 learningNotes。
+4. 全部完成後補上 dailyReport 的 summaryMd 與 observationsMd。
 
-依範本 C 寫日報 → 存到 `content/AI日報-YYYY-MM-DD.md` → 對照「日報自檢」清單。
+**slug 一致性**是最常見錯誤來源：items 的 `articleSlug`、notes 的 `sourceArticleSlug` 必須與 articles 的 `slug` 一字不差。
 
-## 步驟 6：逐篇撰寫 Learning Note 學習筆記
+## 步驟 5：驗證與入庫（含修復迴圈）
 
-**對每一篇 category 為「技術理論」的 Article**：
+```bash
+npm run ingest:json -- daily-bundle.json
+```
 
-1. Read 該 Article 完整內容
-2. 辨識核心概念與關鍵術語
-3. 依範本 B 寫一份學習筆記 → 用 Write 工具存到 `content/Learning Notes/`
-4. 對照「Learning Note 自檢」清單
-5. **回頭更新對應的 Article 筆記**，補上「📓 學習筆記」區塊的 wikilink（用 Edit 工具）
-6. 進下一篇
+- 先看輸出的 `VALIDATION_ERRORS_JSON:`（若有）→ 依 path/message 修 JSON 後重跑。
+- 再看 `GATE_REPORT_JSON:` → 若 `"failed": true`，依各 `"status":"fail"` 的 detail 修正 bundle（換文章、補筆記、修 slug）後重跑。**最多修復 3 輪**；3 輪後仍 fail → 停止並在回報中完整貼上 GATE_REPORT_JSON。
+- exit 0 = 成功；exit 1 = 已入庫但有 warnings（讀 warnings，若是 slug 未解析請修正後重跑一次）。
+- 檢查 `=== Ingest summary ===`：`items resolved=… skipped=0`、`notes ... unresolved=0`。
+- 網路錯誤最多重試 4 次，指數退避 2s/4s/8s/16s。
 
-## 步驟 7：寫入 Supabase → 觸發 Vercel → 回報
+## 步驟 6：觸發 Vercel 刷新
 
-1. **直寫 Supabase**：所有筆記寫完後，執行 ingest CLI 把整個 `content/` 遞迴寫入 Supabase：
-   ```bash
-   npm run ingest:backfill
-   ```
-   - 此指令會遞迴解析整個 `content/`（含 `Articles/`、`Learning Notes/` 子目錄與頂層日報），idempotent upsert by slug（重跑安全），並做兩階段 FK 解析，把 articles / learning_notes / daily_reports / daily_report_items 全部寫入 Supabase。當日新檔已在 `content/` 內，會一起入庫。
-   - **不要**改用 `npm run ingest:day -- content/`（非遞迴、會清空 join 表，見最上方 ⛔ 警告）。
-   - 檢查結尾的 `=== Ingest summary ===`：要求 `FK: notes ... unresolved=0`、`items resolved=… skipped=0`，且 `articles`/`learning_notes`/`daily_reports` 數量涵蓋當日新內容。
-   - **exit 0** 視為成功。**exit 1**（有 warnings）：讀出 warnings —— 若出現 `skipped` 或 `unresolved`（多半是當日日報的 wikilink 檔名與實際 Article 檔名不一致），回頭修正檔名／wikilink 後重跑，直到 `skipped=0 unresolved=0`。
-   - 若指令因網路錯誤失敗，最多重試 4 次，指數退避 2s/4s/8s/16s。
-   - **不再** `git add content && git commit && git push`；**不再**建 Quartz 或觸發 Cloudflare 部署。
+```bash
+if [ -n "$VERCEL_DEPLOY_HOOK_URL" ]; then
+  curl -fsS -X POST "$VERCEL_DEPLOY_HOOK_URL" && echo "VERCEL DEPLOY TRIGGERED"
+else
+  echo "VERCEL_DEPLOY_HOOK_URL 未設定，略過（ISR 1 小時內自動更新）"
+fi
+```
+curl 失敗（非 2xx）最多重試 4 次；仍失敗記為警告（內容已入庫，ISR 會自動更新）。
 
-2. **觸發 Vercel 立即刷新**：入庫成功後，`curl` Deploy Hook 讓前端立即重新部署（不必等 ISR 的 1 小時）：
-   ```bash
-   if [ -n "$VERCEL_DEPLOY_HOOK_URL" ]; then
-     curl -fsS -X POST "$VERCEL_DEPLOY_HOOK_URL" && echo "VERCEL DEPLOY TRIGGERED"
-   else
-     echo "VERCEL_DEPLOY_HOOK_URL 未設定，略過立即刷新（ISR 1 小時內仍會自動更新）"
-   fi
-   ```
-   - URL 一律從環境變數讀取，**不要**把 hook URL 明文寫進 prompt 或檔案。
-   - curl 失敗（非 2xx）最多重試 4 次，指數退避 2s/4s/8s/16s；仍失敗則記為警告（內容已入庫，前端最慢 1 小時內仍會經 ISR 自動更新）。
+## 步驟 7：完成回報
 
-3. **完成回報**：
-   - 已入庫確認：「已執行 `npm run ingest:backfill`，當日內容已直寫 Supabase」，貼上 `=== Ingest summary ===` 數字（含 `items resolved / skipped`、`notes ... unresolved`），並列出本次新增/更新的當日檔案清單。
-   - Vercel 觸發結果：「已觸發 Deploy Hook，前端將重新部署」或「Deploy Hook 未設定/失敗，靠 ISR 自動更新」。
-   - 2-3 句跨章節關鍵脈絡。
-   - 今天生成的學習筆記清單（檔名 + 主題一句話）。
-   - 自檢清單通過狀況（例：「Article 自檢 ✅ 8/8、Learning Note 自檢 ✅ 3/3、日報自檢 ✅」）。
+- 「已執行 `npm run ingest:json`，當日內容已寫入 Supabase」＋ `=== Ingest summary ===` 數字。
+- GATE_REPORT_JSON 摘要（幾個 pass / warn；被 dedup 剔除的文章清單若有）。
+- Vercel 觸發結果。
+- 2-3 句跨章節關鍵脈絡。
+- 今天的學習筆記清單（slug + 主題一句話）。
 
 ---
 
 # ⚠️ 全局注意事項
 
-1. **格式一致性高於一切**——若你發現自己快忘了某個格式細節，先 Read 既有檔案再寫。
-2. **逐篇完成，不要批次擬稿**，避免 context 壓縮時資訊散失。
-3. **每寫完一份立刻自檢**，缺項就補，不要等到全部寫完才檢查。
-4. 五大章節盡量都有內容，缺則章節下標註「（今日無重要進展）」，但保留章節標題。
-5. 技術理論與企業應用為雙重點章節，各 2-5 則。
-6. 企業應用筆記務必填寫 `industry` 欄位與日報的「產業」列。
-7. 每篇技術理論文章 → 對應一份學習筆記。
-8. **步驟 7 必須依序執行 `npm run ingest:backfill`（寫 Supabase）→ `curl $VERCEL_DEPLOY_HOOK_URL`（觸發 Vercel）**。**不再** `git push` 內容，**不再**觸發 Cloudflare 部署。嚴禁用 `ingest:day -- content/`（會清空 daily_report_items）。
-9. 同一則新聞只歸入一個章節。
-10. 每篇 Article 必須有完整全文（defuddle 或 WebFetch 抓取）。
-11. 檔名禁止 `/ \ : * ? " < > |`。
-12. 中文新聞保留原文；英文新聞翻譯成繁體中文（專有名詞保留英文）。
-13. wikilinks 用 `[[檔名|顯示文字]]`，檔名不含 .md 與路徑。
-14. 路徑含空格（`content/Learning Notes/`），bash 指令務必用引號。
-15. 執行順序：驗環境＋`npm ci` → 搜集 → 抓全文 → Article 筆記 → 日報 → Learning Note → `npm run ingest:backfill` → `curl` Vercel Deploy Hook → 回報。
-16. 任務在 Cowork 雲端 Linux 沙箱（系統時區 UTC）執行：日期指令一律加 `TZ='Asia/Taipei'`；用 `date -d "yesterday"`（Linux）而非 `date -v-1d`（macOS）；`content/` 已存在於 repo 內，無需建立 Obsidian vault。
-17. **金鑰只走環境變數**：`SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`、`VERCEL_DEPLOY_HOOK_URL` 全部從 Cowork 環境設定注入；絕不可把任何金鑰／hook URL 明文寫進 prompt、`content/` 或任何會進版控的檔案。
-18. **雲端 clone 無 `node_modules`**：步驟 1 一定要先 `npm ci`（或 `npm install`）才能跑 `tsx`／`npm run ingest:backfill`。
+1. **契約與閘門高於一切**：格式正確性由 Zod 契約與品質閘門把關，你的職責是內容品質（選材、摘要、翻譯、觀察）。
+2. **逐篇落盤**：每完成一篇就更新 daily-bundle.json，不要批次擬稿。
+3. 五大章節盡量都有內容；技術理論與企業應用導入為雙重點（各 2-5 則）。
+4. 每篇技術理論文章 → 一份學習筆記（`sourceArticleSlug` 對準）。
+5. 企業應用導入文章務必填 `industry`。
+6. 同一則新聞只歸一個章節；每篇必須有完整全文（抓不到就換）。
+7. 中文新聞保留原文；英文翻譯成繁體中文（專有名詞保留英文）。
+8. 執行順序：驗環境＋`npm ci` → 搜集 → 抓全文 → 組 bundle → `ingest:json`（修復迴圈）→ `curl` Deploy Hook → 回報。
+9. 沙箱系統時區 UTC：日期指令一律加 `TZ='Asia/Taipei'`。
+10. **金鑰只走環境變數**，絕不可寫進任何檔案或輸出。
+11. **回滾備援**：若 `ingest:json` 因程式錯誤（非 gate fail）連續失敗且無法修復，回報錯誤全文並停止；不要改用 backfill。舊版 Markdown 流程保留於 `每日AI新聞日報排程-雲端版-v1.md`（僅供人工決策回滾用）。

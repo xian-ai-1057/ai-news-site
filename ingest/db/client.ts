@@ -27,10 +27,22 @@ export interface DeleteBuilder {
   eq(column: string, value: unknown): Promise<QueryResult>;
 }
 
+export interface SelectBuilder {
+  in(column: string, values: unknown[]): Promise<QueryResult>;
+}
+
+export interface UpdateBuilder {
+  eq(column: string, value: unknown): Promise<QueryResult>;
+}
+
 export interface TableBuilder {
   upsert(rows: unknown[], options?: { onConflict?: string }): UpsertBuilder;
   insert(rows: unknown[]): Promise<QueryResult> & InsertBuilder;
   delete(): DeleteBuilder;
+  /** Spec 007：閘門去重查詢（articles）用。 */
+  select(columns: string): SelectBuilder;
+  /** Spec 007：ingestion_runs 生命週期更新用。 */
+  update(values: Record<string, unknown>): UpdateBuilder;
 }
 
 export interface DbClient {

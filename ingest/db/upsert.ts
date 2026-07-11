@@ -134,6 +134,20 @@ export async function ingestBundle(
   }
 
   // ── ④ daily_report_items (delete-then-insert per report) ───────────
+  // Destructive guard (Spec 003 §3, §8 AC8): with no articles in the bundle the
+  // articleMap is empty, so every item FK is unresolvable and the per-report
+  // delete-then-insert below would only ever DELETE — silently wiping the join
+  // table. (History: a non-recursive `ingest:day -- content/` produced a
+  // zero-article bundle and emptied daily_report_items 231 → 0.) Skip Phase ④.
+  if (bundle.articles.length === 0 && bundle.dailyReports.length > 0) {
+    warnings.push(
+      `[daily_report_items] bundle has 0 articles; skipped delete-then-insert for ` +
+        `${bundle.dailyReports.length} report(s) to avoid wiping the join table`,
+    );
+    summary.unresolvedSlugs = [...unresolvedSlugSet].sort();
+    return summary;
+  }
+
   for (const report of bundle.dailyReports) {
     const reportId = reportMap.get(report.slug);
     if (!reportId) {

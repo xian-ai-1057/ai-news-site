@@ -11,6 +11,11 @@
 
 ## spec 索引
 - `001-db-schema` — schema DDL + Zod records + golden fixtures（上游）
-- `002-parser` — Markdown → records（消費 001）
+- `002-parser` — Markdown → records（消費 001；僅種子復原用）
 - `003-ingest-cli` — records → Supabase + CLI（消費 001+002）
 - `004-decommission` — 移除 Quartz + 文件 + 交付
+- `005-web-ui` / `006-web-linking` — Next.js 16 閱讀 App（web/）
+- `007-structured-channel` — daily-bundle.json 通道＋品質閘門＋ingestion_runs（組合 001 契約）
+- `008-source-layer` — sources/raw_items 候選池＋fetch-sources Edge Function
+- `009-observability` — status page＋daily-healthcheck＋Slack 告警
+- `010-ai-features` — pgvector 語意搜尋/相關文章＋pgroonga 中文 FTS

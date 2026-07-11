@@ -6,21 +6,27 @@ import type {
   TableBuilder,
   UpsertBuilder,
   DeleteBuilder,
+  SelectBuilder,
+  UpdateBuilder,
   QueryResult,
 } from "../../ingest/db/client";
 
 export interface RecordedCall {
   table: string;
-  op: "upsert" | "insert" | "delete";
+  op: "upsert" | "insert" | "delete" | "select" | "update";
   rows?: unknown[];
   onConflict?: string;
   selected?: boolean;
   eq?: { column: string; value: unknown };
+  in?: { column: string; values: unknown[] };
+  values?: Record<string, unknown>;
 }
 
 export interface FakeOptions {
   /** tables that should return {error} on the next matching op. */
   errorOn?: { table: string; op: RecordedCall["op"]; message: string }[];
+  /** canned rows returned by .select().in() per table (Spec 007 dedup lookup). */
+  selectRows?: Record<string, unknown[]>;
 }
 
 let uuidCounter = 0;
@@ -32,9 +38,11 @@ function synthUuid(table: string, slug: string): string {
 export class FakeClient implements DbClient {
   calls: RecordedCall[] = [];
   private errorOn: NonNullable<FakeOptions["errorOn"]>;
+  private selectRows: NonNullable<FakeOptions["selectRows"]>;
 
   constructor(opts: FakeOptions = {}) {
     this.errorOn = opts.errorOn ?? [];
+    this.selectRows = opts.selectRows ?? {};
   }
 
   private takeError(table: string, op: RecordedCall["op"]): { message: string } | null {
@@ -75,9 +83,15 @@ export class FakeClient implements DbClient {
         const error = self.takeError(table, "insert");
         const result: QueryResult = { data: error ? null : [], error };
         // ingestBundle awaits .insert() directly, so return a thenable.
+        // .select() echoes rows back with synthetic ids (Spec 007 runs.ts 需要 id)。
         return Object.assign(Promise.resolve(result), {
           async select(): Promise<QueryResult> {
-            return result;
+            if (error) return { data: null, error };
+            const data = (rows as Array<Record<string, unknown>>).map((r, i) => ({
+              ...r,
+              id: synthUuid(table, String((r as { slug?: string }).slug ?? i)),
+            }));
+            return { data, error: null };
           },
         });
       },
@@ -90,6 +104,25 @@ export class FakeClient implements DbClient {
               op: "delete",
               eq: { column, value },
             });
+            return { data: error ? null : [], error };
+          },
+        };
+      },
+      select(): SelectBuilder {
+        return {
+          async in(column: string, values: unknown[]): Promise<QueryResult> {
+            const error = self.takeError(table, "select");
+            self.calls.push({ table, op: "select", in: { column, values } });
+            if (error) return { data: null, error };
+            return { data: (self.selectRows[table] ?? []) as unknown[], error: null };
+          },
+        };
+      },
+      update(values: Record<string, unknown>): UpdateBuilder {
+        return {
+          async eq(column: string, value: unknown): Promise<QueryResult> {
+            const error = self.takeError(table, "update");
+            self.calls.push({ table, op: "update", values, eq: { column, value } });
             return { data: error ? null : [], error };
           },
         };

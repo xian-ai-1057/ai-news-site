@@ -12,3 +12,4 @@ tsconfig.tsbuildinfo
 private/
 .replit
 replit.nix
+daily-bundle*.json

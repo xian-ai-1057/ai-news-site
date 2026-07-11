@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getArticle, getArticleSlugs } from "@/lib/queries";
+import { getArticle, getArticleSlugs, getRelatedArticles } from "@/lib/queries";
 import { CATS } from "@/lib/categories";
 import MarkdownView from "@/components/MarkdownView";
 
@@ -21,6 +21,9 @@ export default async function Page({
   const article = await getArticle(decodeURIComponent(slug));
 
   if (!article) notFound();
+
+  // Spec 010：語意相關文章（embedding 未就緒時為空 → 區塊隱藏）
+  const related = await getRelatedArticles(article.slug);
 
   const cat = CATS[article.category];
   const backHref = article.reportDates[0]
@@ -81,6 +84,28 @@ export default async function Page({
               </Link>
             ))}
           </div>
+        )}
+
+        {related.length > 0 && (
+          <section style={{ marginTop: 40 }}>
+            <div className="eb">相關文章 · RELATED</div>
+            <ul style={{ listStyle: "none", padding: 0, margin: "12px 0 0" }}>
+              {related.map((r) => {
+                const rcat = CATS[r.catKey];
+                return (
+                  <li key={r.slug} style={{ padding: "8px 0" }}>
+                    <Link href={"/articles/" + r.slug}>
+                      {rcat ? rcat.emoji + " " : ""}
+                      {r.title}
+                    </Link>
+                    <span style={{ opacity: 0.6, fontSize: 13, marginLeft: 8 }}>
+                      {r.articleDate}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
         )}
       </div>
     </main>

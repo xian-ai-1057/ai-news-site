@@ -1,84 +1,111 @@
-# AI 日報 — Markdown → Supabase DB-first 內容管線
+# AI 日報 — Supabase DB-first 內容管線
 
-這是什麼：**AI 日報**是一個繁體中文 AI 新聞知識庫的後端內容管線。原為 Quartz 靜態網站，現已轉型為 **Supabase DB-first** 架構：Markdown 原始檔由 ingest CLI 解析後直接寫入 Postgres；介面（前端閱讀 App）為獨立專案，尚在規劃中，**不再使用 Quartz**。
+這是什麼：**AI 日報**是一個繁體中文 AI 新聞知識庫。內容存於 **Supabase Postgres**
+（唯一事實），由 Claude routine（Cowork 雲端排程）每日策展入庫，前端為
+`web/` 的 Next.js 16 閱讀 App（Vercel 部署）。原 Quartz 靜態站已除役。
 
-## 架構（三層內容）
+## 架構（v2 — 結構化通道，Specs 007–010）
+
+```
+外部來源（arXiv API / RSS/Atom）
+   └─ fetch-sources Edge Function（Supabase Cron 每 4h）
+        └─ raw_items 候選池（url_hash 跨日去重）
+             └─ Claude routine（Cowork 排程：讀候選池 → WebSearch 補缺 → 策展/摘要/翻譯）
+                  └─ daily-bundle.json（Zod 契約驗證）
+                       └─ ingest:json（品質閘門 → 當日 upsert → ingestion_runs）
+                            ├─ Supabase（articles / learning_notes / daily_reports / items）
+                            ├─ embed-articles Edge Function（pgvector 語意向量）
+                            └─ Vercel Deploy Hook → Next.js 網站（ISR + 搜尋 + /status）
+```
+
+- **確定性程式**（抓取、去重、儲存、向量化、健檢）跑在 Supabase/Vercel；
+  **AI 環節只有一個**：Claude routine 負責選材、摘要、翻譯。
+- Routine prompt：`每日AI新聞日報排程-雲端版.md`（v2）；舊 Markdown 流程備份於
+  `每日AI新聞日報排程-雲端版-v1.md`。
+
+### 三層內容 + 管線表
 
 ```
 daily_reports → daily_report_items → articles ← learning_notes
+sources → raw_items（候選池）      ingestion_runs（執行紀錄）
 ```
-
-| 資料類型 | 說明 | 現有數量 |
-|---|---|---|
-| `daily_reports` | 每日 AI 日報 | 23 份 |
-| `articles` | 個別新聞文章 | 214 篇 |
-| `learning_notes` | 技術學習筆記 | 61 份 |
 
 ## 目錄結構
 
 ```
 ingest/
-  parser/   — Markdown 解析（frontmatter + body → records）
-  db/       — records → Supabase upsert
-  cli/      — 批次回填 & 單日入庫 CLI
+  parser/   — Markdown 解析（僅供種子復原）
+  gates/    — 品質閘門（URL 格式/去重、內容品質、篇數、筆記覆蓋…）
+  render/   — record → Markdown 渲染器（raw_md；方向 DB→MD）
+  db/       — records → Supabase upsert、ingestion_runs 紀錄
+  cli/      — json / candidates / backfill / day 子命令
 supabase/
-  migrations/ — DB schema DDL（進版控）
-specs/        — 規格文件（每層一份 spec.md）
-content/      — 歷史種子 / 回填來源（已非內容來源，DB 為準）
-  Articles/
-  Learning Notes/
-  AI日報-YYYY-MM-DD.md（×23）
+  migrations/ — DB schema DDL（0001–0005，進版控）
+  functions/  — Edge Functions（fetch-sources / daily-healthcheck / embed-articles）
+specs/        — 規格與凍結契約（001–010）
+web/          — Next.js 16 閱讀 App（獨立子專案，Vercel Root Directory = web）
+content/      — 凍結歷史種子（2026-05-13 → 2026-06-07），僅供災難復原；禁止寫入
 ```
-
-> `content/` 僅作為可重現回填的種子與歷史備份，**不再是內容的唯一來源；資料庫（Supabase）才是唯一事實**。
 
 ## 環境設定與常用指令
 
-1. 複製環境變數範本並填入金鑰：
-   ```bash
-   cp .env.example .env
-   # 填入 SUPABASE_URL 與 SUPABASE_SERVICE_ROLE_KEY
-   ```
+1. 環境變數：`cp .env.example .env`，填入 `SUPABASE_URL` 與 `SUPABASE_SERVICE_ROLE_KEY`。
+2. `npm install` → `npm run typecheck` → `npm test`。
 
-2. 安裝相依套件：
-   ```bash
-   npm install
-   ```
+### 日常入庫（routine 使用）
 
-3. 型別檢查：
-   ```bash
-   npm run typecheck
-   ```
+```bash
+npm run candidates -- --hours 36        # 讀候選池（Spec 008）
+npm run ingest:json -- daily-bundle.json [--dry-run]   # 驗證+閘門+當日 upsert（Spec 007）
+```
 
-4. 執行測試：
-   ```bash
-   npm test
-   ```
+- exit code：`0` 成功 / `1` 有 warnings / `2` 用法錯誤 / `3` 驗證或閘門失敗。
+- 閘門結果印於 `GATE_REPORT_JSON:`（機器可讀）；每次執行記錄於 `ingestion_runs`。
 
-5. 全量入庫 / 每日入庫（需 Supabase 金鑰）—— 遞迴掃整個 `content/`、idempotent upsert、兩階段 FK 解析：
-   ```bash
-   npm run ingest:backfill
-   ```
+### 種子復原（僅災難復原用）
 
-6. 單日增量入庫（需 Supabase 金鑰）—— 只傳「當日」的檔案路徑，不可傳 `content/` 目錄：
-   ```bash
-   # ✅ 正確：明確列出當日檔案（含子資料夾路徑）
-   npm run ingest:day -- content/Articles/2026-06-07-*.md "content/Learning Notes/2026-06-07-*.md" content/AI日報-2026-06-07.md
+```bash
+npm run ingest:backfill        # = ingest backfill --force-seed
+```
 
-   # ⛔ 不要這樣用：ingest:day 的目錄掃描是「非遞迴」的，傳 content/ 只會抓到頂層日報、
-   #    抓不到 Articles/ 與 Learning Notes/，且 daily_report_items 採 delete-then-insert，
-   #    會把 join 表清空。要對整個 content/ 入庫，請改用上面的 ingest:backfill。
-   # npm run ingest:day -- content/
-   ```
+> ⚠️ `content/` 種子凍結於 2026-06-07。DB 已領先種子——整批 upsert 會以舊
+> Markdown **覆蓋較新的 DB 資料**，僅在災難復原時使用。無 `--force-seed`
+> 旗標的裸 `backfill` 會直接 exit 2。
+> `ingest:day` 傳目錄採遞迴掃描；批次無文章時會跳過 join 表的
+> delete-then-insert（防清空防呆）。
+
+### Edge Functions（網路服務端）
+
+| Function | 觸發 | 用途 |
+|---|---|---|
+| `fetch-sources` | Supabase Cron 每 4h | 抓 arXiv/RSS 進 `raw_items` 候選池 |
+| `daily-healthcheck` | Cron（台北 11:00 / 14:00） | 檢查日報/來源，失敗 POST Slack |
+| `embed-articles` | Cron 每小時＋ingest 後觸發 | OpenAI embeddings → pgvector |
+
+部署：push `v4` 觸碰 `supabase/functions/**` → GitHub Actions 自動
+`supabase functions deploy`（需 `SUPABASE_ACCESS_TOKEN` secret）。
+Cron 排程 SQL 見各 spec（008 §8、009 §5、010 §6）。
+
+### Secrets 總表
+
+| Secret | 位置 | 用途 |
+|---|---|---|
+| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | Cowork env / 本機 .env | ingest 寫入 |
+| `VERCEL_DEPLOY_HOOK_URL` | Cowork env | 入庫後觸發前端重建 |
+| `SUPABASE_ACCESS_TOKEN` | GitHub Actions secret | 自動部署 Edge Functions |
+| `SLACK_WEBHOOK_URL` | Edge Function secret | 健檢告警 |
+| `OPENAI_API_KEY` | Edge Function secret＋Vercel server env | embeddings / 語意搜尋 |
 
 ## 待辦事項
 
-- **新 UI**：獨立前端 App，直接讀取 Supabase，尚未開始
+- Migrations 0002–0005 套用到正式庫後：seed sources 觀察 3-4 天 → 確認候選池健康
+- 舊文 embedding backfill（重複 invoke `embed-articles` 至補完）
+- `articles.url_normalized` 清理舊資料後升級 unique index
 - **Cloudflare `ai-news` Workers 專案**：需手動在 Cloudflare Dashboard 停用（repo 外操作）
-- **中文全文搜尋**：Postgres `pg_jieba` 或 `pgroonga` 擴充，尚在評估
 
 ## 技術棧
 
-- Node ≥ 22、TypeScript、Zod、`@supabase/supabase-js`、`gray-matter`、`tsx`
-- Supabase（Postgres + PostgREST）
-- GitHub Actions CI（typecheck + parser 測試）
+- Node ≥ 22、TypeScript、Zod、`@supabase/supabase-js`、`gray-matter`、`fast-xml-parser`、`tsx`
+- Supabase（Postgres + PostgREST + Edge Functions + pg_cron；pgvector、pgroonga）
+- Next.js 16 + React 19 + Tailwind v4（`web/`，Vercel）
+- GitHub Actions（CI：typecheck + 測試；CD：Edge Functions）

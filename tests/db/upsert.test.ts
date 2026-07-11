@@ -132,6 +132,38 @@ test("unresolved article slug → item skipped + warning + summary", async () =>
   assert.equal(summary.counts.dailyReports, 1);
 });
 
+test("empty-articles bundle: Phase ④ skipped, join table not touched (AC8)", async () => {
+  // A report with items but NO articles in the bundle. The delete-then-insert
+  // would resolve zero item FKs and only ever DELETE — wiping daily_report_items.
+  // ingestBundle must skip Phase ④ entirely and warn instead.
+  const bundle: IngestBundle = {
+    articles: [],
+    learningNotes: [],
+    dailyReports: [goldenReport],
+    warnings: [],
+  };
+  const client = new FakeClient();
+  const summary = await ingestBundle(bundle, client);
+
+  const itemCalls = client.calls.filter((c) => c.table === "daily_report_items");
+  assert.equal(itemCalls.length, 0, "no delete and no insert on daily_report_items");
+  assert.equal(summary.counts.dailyReportItems, 0);
+  assert.equal(summary.fkResolution.itemsResolved, 0);
+  assert.equal(summary.fkResolution.itemsSkipped, 0);
+  assert.ok(
+    summary.warnings.some(
+      (w) => w.includes("daily_report_items") && w.includes("0 articles"),
+    ),
+    "warning explains why Phase ④ was skipped",
+  );
+  // The daily report itself is still upserted (Phase ③ unaffected).
+  assert.ok(
+    client.calls.some((c) => c.table === "daily_reports" && c.op === "upsert"),
+    "daily_reports still upserted",
+  );
+  assert.equal(summary.counts.dailyReports, 1);
+});
+
 test("per-batch upsert error → warning, batch continues", async () => {
   const client = new FakeClient({
     errorOn: [{ table: "articles", op: "upsert", message: "boom" }],

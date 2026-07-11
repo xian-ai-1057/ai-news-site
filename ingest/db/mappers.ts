@@ -6,6 +6,8 @@ import type {
   DailyReportRecord,
   DailyReportItem,
 } from "../../specs/001-db-schema/contracts/records.schema";
+import type { Origin } from "../../specs/007-structured-channel/contracts/daily-bundle.schema";
+import { normalizeUrl } from "../gates/url";
 
 export interface ArticleRow {
   slug: string;
@@ -20,6 +22,10 @@ export interface ArticleRow {
   tags: string[];
   created_date: string | null;
   raw_md: string;
+  /** Spec 007：出處（JSON 通道帶 Origin；markdown 種子為 channel 標記）。 */
+  origin: Record<string, unknown>;
+  /** Spec 007：正規化 URL（跨日去重比對鍵；空 url → ""）。 */
+  url_normalized: string;
 }
 
 export interface LearningNoteRow {
@@ -54,8 +60,12 @@ export interface DailyReportItemRow {
   blurb_md: string;
 }
 
-/** article → public.articles */
-export function articleToRow(rec: ArticleRecord): ArticleRow {
+/**
+ * article → public.articles。
+ * JSON 通道（Spec 007）的記錄帶 origin；markdown 種子路徑無 origin，
+ * 標記 channel=markdown-backfill 以利追溯。
+ */
+export function articleToRow(rec: ArticleRecord & { origin?: Origin }): ArticleRow {
   return {
     slug: rec.slug,
     title: rec.title,
@@ -69,6 +79,8 @@ export function articleToRow(rec: ArticleRecord): ArticleRow {
     tags: rec.tags,
     created_date: rec.createdDate,
     raw_md: rec.rawMd,
+    origin: rec.origin ?? { channel: "markdown-backfill" },
+    url_normalized: rec.url ? normalizeUrl(rec.url) : "",
   };
 }
 
