@@ -11,7 +11,7 @@
 > - 日期一律使用台北時區（`TZ='Asia/Taipei'`）。
 
 > 🔑 **前置設定（一次性；在 Routine 的 cloud environment 設定，不要寫進本 prompt）**：
-> 在 [claude.ai/code/routines](https://claude.ai/code/routines) 建立 routine → 選 repo `xian-ai-1057/ai-news-site` → **Environment → Environment variables** 加入下列變數；**Setup script** 填 `npm ci`。
+> 在 [claude.ai/code/routines](https://claude.ai/code/routines) 建立 routine → 選 repo `xian-ai-1057/ai-news-site` → **Environment → Environment variables** 加入下列變數。**Setup script 請留空**（Setup script 在 repo clone 之前執行、快照快取，放 `npm ci` 會因讀不到 lockfile 而失敗）——相依套件改由 repo 內 `.claude/settings.json` 的 **SessionStart hook** 在 clone 後自動 `npm ci`。
 > - `SUPABASE_URL` = `https://ifbpfuvlevjegwdnhyqh.supabase.co`
 > - `SUPABASE_SERVICE_ROLE_KEY` = Supabase 的 **secret / service_role** 金鑰（**不可**用 anon/publishable 金鑰，會被 RLS 擋下 INSERT）。
 > - `VERCEL_DEPLOY_HOOK_URL` = Vercel 專案的 Deploy Hook URL（分支 `v4`）。
@@ -174,7 +174,7 @@
    test -n "$SUPABASE_URL" && test -n "$SUPABASE_SERVICE_ROLE_KEY" && echo "ENV OK" || echo "ENV MISSING"
    ```
    `ENV MISSING` → 立即停止並回報。`VERCEL_DEPLOY_HOOK_URL` 缺少則僅警告、照常入庫。
-3. `npm ci`（失敗退 `npm install`；確認 Node ≥ 22）。
+3. 相依套件通常已由 SessionStart hook 裝好；保險起見確認 `node_modules/` 存在，缺了再 `npm ci`（失敗退 `npm install`）。確認 Node ≥ 22。
 4. 取日期與時間戳：
    ```bash
    TZ='Asia/Taipei' date +%Y-%m-%d

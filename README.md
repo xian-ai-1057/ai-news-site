@@ -22,7 +22,9 @@
   **AI 環節只有一個**：Claude routine 負責選材、摘要、翻譯。
 - 排程：**Claude Code Routine**（[claude.ai/code/routines](https://claude.ai/code/routines)，訂閱制、雲端、不需開機）。
   Routine 設定：repo `xian-ai-1057/ai-news-site`、Environment 變數
-  `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`/`VERCEL_DEPLOY_HOOK_URL`、Setup script `npm ci`、
+  `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`/`VERCEL_DEPLOY_HOOK_URL`/`INGEST_TRIGGER_SRC=routine`、
+  **Setup script 留空**（相依套件由 `.claude/settings.json` 的 SessionStart hook 在 clone 後 `npm ci`；
+  Setup script 在 clone 前執行，放 `npm ci` 會失敗）、
   **Network access = Custom，只放行 `ifbpfuvlevjegwdnhyqh.supabase.co`**（全文抽取已搬伺服端，routine 不碰新聞網站；WebSearch 走 Anthropic 自動放行）、Schedule 觸發（台北時間，早於健檢 14:00）。
   Instructions 指向本 repo 的 `每日AI新聞日報排程-雲端版.md`。舊 Markdown 流程備份於
   `每日AI新聞日報排程-雲端版-v1.md`。
@@ -103,7 +105,7 @@ Cron 排程 SQL 見各 spec（008 §8、009 §5、010 §6）。
 
 ## 待辦事項
 
-- **建立 Claude Code Routine**（[claude.ai/code/routines](https://claude.ai/code/routines)）：設 env 變數＋Setup script＋Network=Full＋daily 排程；先 Run now 試跑驗證，穩定後停用舊 Cowork 排程
+- **建立 Claude Code Routine**（[claude.ai/code/routines](https://claude.ai/code/routines)）：設 env 變數＋**Setup script 留空**＋Network=Custom（只放行 Supabase）＋daily 排程；先 Run now 試跑驗證，穩定後停用舊 Cowork 排程
 - Edge Function secrets：`SLACK_WEBHOOK_URL`（健檢告警）、`OPENAI_API_KEY`（embeddings＋語意搜尋；Vercel 也需一份 server env）
 - GitHub secret `SUPABASE_ACCESS_TOKEN`（deploy-functions workflow 自動部署 Edge Functions）
 - seed sources 觀察 3-4 天 → 確認候選池健康後再把 routine prompt 切為兩層選材主通道
