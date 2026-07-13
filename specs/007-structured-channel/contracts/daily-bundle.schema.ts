@@ -25,7 +25,8 @@ export type Origin = z.infer<typeof OriginSchema>;
 
 /**
  * JSON 通道的文章：url 由 001 的 default("") 升級為必填合法 URL；
- * observationsMd（💡 觀察與啟發）僅用於 raw_md 渲染，DB 無獨立欄位。
+ * observationsMd（💡 觀察與啟發）無 DB 獨立欄位，由 render 併入 content_md
+ * 顯示 body（fillDisplayContentMd）與 raw_md，使文章頁呈現與種子通道一致。
  */
 export const BundleArticleSchema = ArticleRecordSchema.extend({
   url: z.string().url(),

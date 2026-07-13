@@ -17,7 +17,7 @@ import type {
 } from "../../specs/001-db-schema/contracts/records.schema";
 import { DailyBundleSchema } from "../../specs/007-structured-channel/contracts/daily-bundle.schema";
 import { runGates, type ExistingUrlLookup } from "../gates/index";
-import { fillRawMd } from "../render/markdown";
+import { fillRawMd, fillDisplayContentMd } from "../render/markdown";
 import { startRun, gateResultsJson } from "../db/runs";
 import { formatCandidates, type CandidateRow } from "./candidates";
 import { parseUrlsInput, dedupeHttpUrls } from "./fulltext";
@@ -323,10 +323,14 @@ export async function runJsonCommand(
       return 3;
     }
 
+    // content_md 顯示欄位：把每篇文章的 contentMd（全文段）升級為完整 body，
+    // 與種子（parser）通道一致 —— 文章頁只渲染 content_md，故此步驟讓 routine
+    // 產出的文章頁恢復摘要／觀察等結構（見 render/markdown.ts fillDisplayContentMd）。
+    const displayBundle = fillDisplayContentMd(report.bundle);
     const dayBundle: IngestBundle = {
-      articles: report.bundle.articles,
-      learningNotes: report.bundle.learningNotes,
-      dailyReports: [report.bundle.dailyReport],
+      articles: displayBundle.articles,
+      learningNotes: displayBundle.learningNotes,
+      dailyReports: [displayBundle.dailyReport],
       warnings: [],
     };
 
