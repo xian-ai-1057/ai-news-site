@@ -150,6 +150,28 @@ export function parseArticle(filePath: string, raw: string): ArticleRecord {
   };
 }
 
+/**
+ * 由文章 raw_md 還原「顯示用 content_md」（= 完整 body，起於 `> [!info]`）。
+ *
+ * 供 reconcile 修補既有 routine 文章列：這些列的 raw_md 已由 renderArticleMd 產出
+ * 完整 body（含 📝 摘要 / 💡 觀察 / 📓 筆記），只是 content_md 當初僅存了全文一段。
+ * 去掉 frontmatter、標題 H1 與頁尾簽名，即得與 render/markdown.ts fillDisplayContentMd
+ * 相同語意的 body。無法還原（body 不以 info callout 起頭）→ 回傳 null，呼叫端略過。
+ */
+export function articleBodyFromRawMd(rawMd: string): string | null {
+  const { body } = getBody(rawMd);
+  const lines = stripFooter(body).split("\n");
+  // 去掉開頭空行後、緊接的標題 H1（renderArticleMd 會加 `# title`）與其後空行。
+  let i = 0;
+  while (i < lines.length && lines[i].trim() === "") i += 1;
+  if (i < lines.length && /^#\s+/.test(lines[i])) {
+    lines.splice(i, 1);
+    if (lines[i] !== undefined && lines[i].trim() === "") lines.splice(i, 1);
+  }
+  const result = lines.join("\n").trim();
+  return result.startsWith("> [!info]") ? result : null;
+}
+
 // ---------------------------------------------------------------------------
 // Learning Note
 // ---------------------------------------------------------------------------

@@ -10,6 +10,7 @@ import {
   fillRawMd,
   fillDisplayContentMd,
 } from "../../ingest/render/markdown";
+import { articleBodyFromRawMd } from "../../ingest/parser/index";
 import { makeValidBundle, makeArticle, makeNote, RUN_DATE } from "../gates/bundle-fixtures";
 
 function assertAscendingOrder(text: string, markers: string[]): void {
@@ -153,6 +154,31 @@ test("fillDisplayContentMd：JSON 通道 content_md 升級為完整 body、raw_m
     // raw_md 不受此步驟影響。
     assert.equal(a.rawMd, rawBefore[i], `${a.slug} raw_md 不應被改動`);
   }
+});
+
+test("articleBodyFromRawMd：由 raw_md 還原的 body === fillDisplayContentMd 的 content_md（技術理論含筆記/觀察）", () => {
+  const article = makeArticle(0, "技術理論");
+  article.observationsMd = "一段觀察與啟發。";
+  const note = makeNote(article, 0);
+  const rawMd = renderArticleMd(article, { noteSlug: note.slug });
+
+  const recovered = articleBodyFromRawMd(rawMd);
+  const expected = renderArticleBodyMd(article, { noteSlug: note.slug });
+  assert.equal(recovered, expected, "reconcile 應與新入庫的 content_md 完全一致");
+  assert.ok(recovered!.startsWith("> [!info] 文章資訊"));
+  assert.ok(!recovered!.includes(`# ${article.title}`), "還原 body 不應含標題 H1");
+  assert.ok(!recovered!.includes("自動整理於"), "還原 body 不應含頁尾");
+});
+
+test("articleBodyFromRawMd：非技術理論、無觀察也能還原", () => {
+  const article = makeArticle(1, "市場情況");
+  const rawMd = renderArticleMd(article);
+  assert.equal(articleBodyFromRawMd(rawMd), renderArticleBodyMd(article));
+});
+
+test("articleBodyFromRawMd：raw_md 無 info callout（如空字串/非文章）→ null", () => {
+  assert.equal(articleBodyFromRawMd(""), null);
+  assert.equal(articleBodyFromRawMd("---\ntitle: x\n---\n\n# x\n\n隨便的內容。"), null);
 });
 
 test("fillRawMd：空 rawMd 補齊、非空保留（idempotent）", () => {

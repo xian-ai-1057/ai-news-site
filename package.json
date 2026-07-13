@@ -15,7 +15,8 @@
     "candidates": "tsx ingest/cli/index.ts candidates",
     "fulltext": "tsx ingest/cli/index.ts fulltext",
     "ingest:backfill": "tsx ingest/cli/index.ts backfill --force-seed",
-    "ingest:day": "tsx ingest/cli/index.ts day"
+    "ingest:day": "tsx ingest/cli/index.ts day",
+    "reconcile:content-md": "tsx ingest/cli/index.ts reconcile-content-md"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.10",
