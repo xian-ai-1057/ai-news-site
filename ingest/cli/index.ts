@@ -304,7 +304,11 @@ export async function runReconcileContentMdCommand(args: string[]): Promise<numb
   for (const row of rows) {
     const content = row.content_md ?? "";
     // 已是完整 body（種子通道，或先前已修補）→ 略過。
-    if (content.trimStart().startsWith(INFO_CALLOUT_MARK)) {
+    // 用 includes 而非 startsWith：部分種子的 content_md 在 info callout 前still
+    // 保留一行 H1 主張標題（例：`# 主張：…\n> [!info] 文章資訊`），只要正文任一處
+    // 含 callout 即代表已是完整 body，不該被「還原」而砍掉標題。routine 通道漏補的
+    // 列則是純全文段、不含 callout，才需回填。
+    if (content.includes(INFO_CALLOUT_MARK)) {
       alreadyFull += 1;
       continue;
     }
