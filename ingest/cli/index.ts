@@ -28,6 +28,7 @@ import {
   parseArticle,
   parseLearningNote,
   parseDailyReport,
+  articleBodyFromRawMd,
 } from "../parser/index";
 
 const CONTENT_DIR = "content";
@@ -265,6 +266,99 @@ export async function runFulltextCommand(args: string[]): Promise<number> {
   }
 }
 
+const INFO_CALLOUT_MARK = "> [!info] 文章資訊";
+
+/**
+ * 一次性維護：把既有 routine（JSON 通道）文章列的 content_md 由「僅全文一段」
+ * 補成「完整 body」（info + 摘要 + 全文 + 觀察 + 連結 + 筆記），與種子通道一致。
+ *
+ * 資料來源全部取自 DB 既有 raw_md（已含完整 body，含摘要與觀察），不需重跑 routine、
+ * 不需外部網路。dry-run 為預設；`--apply` 才實際 UPDATE content_md。冪等：已是完整
+ * body 的列（種子、或已修補過）會被略過。
+ */
+export async function runReconcileContentMdCommand(args: string[]): Promise<number> {
+  const apply = args.includes("--apply");
+  const client = createDbClient();
+
+  // 分頁抓全部文章（slug + content_md + raw_md）。
+  const rows: Array<{ slug: string; content_md: string | null; raw_md: string | null }> = [];
+  const pageSize = 500;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await client
+      .from("articles")
+      .select("slug,content_md,raw_md")
+      .order("slug", { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) {
+      console.error(`reconcile 讀取 articles 失敗：${error.message}`);
+      return 3;
+    }
+    const batch = (data ?? []) as typeof rows;
+    rows.push(...batch);
+    if (batch.length < pageSize) break;
+  }
+
+  const toFix: Array<{ slug: string; next: string; prevLen: number }> = [];
+  const unfixable: string[] = [];
+  let alreadyFull = 0;
+  for (const row of rows) {
+    const content = row.content_md ?? "";
+    // 已是完整 body（種子通道，或先前已修補）→ 略過。
+    if (content.trimStart().startsWith(INFO_CALLOUT_MARK)) {
+      alreadyFull += 1;
+      continue;
+    }
+    const next = articleBodyFromRawMd(row.raw_md ?? "");
+    if (next === null) {
+      unfixable.push(row.slug); // raw_md 無完整 body，無法還原。
+      continue;
+    }
+    if (next === content) {
+      alreadyFull += 1;
+      continue;
+    }
+    toFix.push({ slug: row.slug, next, prevLen: content.length });
+  }
+
+  console.log(
+    "\n=== reconcile content_md ===\n" +
+      `文章總數=${rows.length} 已是完整 body（略過）=${alreadyFull} ` +
+      `待修補=${toFix.length} 無法還原（raw_md 缺完整 body）=${unfixable.length}`,
+  );
+  for (const f of toFix.slice(0, 20)) {
+    console.log(`  fix ${f.slug}: content_md ${f.prevLen} → ${f.next.length} 字元`);
+  }
+  if (toFix.length > 20) console.log(`  …另 ${toFix.length - 20} 篇`);
+  if (unfixable.length > 0) {
+    console.log("無法還原（略過，需重跑當天 routine 才會補內容）：");
+    for (const s of unfixable) console.log(`  - ${s}`);
+  }
+
+  if (!apply) {
+    console.log("\n[dry-run] 未寫入任何資料。確認無誤後加 --apply 實際更新。");
+    return 0;
+  }
+
+  let ok = 0;
+  const failed: string[] = [];
+  for (const f of toFix) {
+    const { error } = await client
+      .from("articles")
+      .update({ content_md: f.next })
+      .eq("slug", f.slug);
+    if (error) failed.push(`${f.slug}: ${error.message}`);
+    else ok += 1;
+  }
+  console.log(`\n[apply] 已更新 ${ok}/${toFix.length} 篇 content_md。`);
+  console.log("（前端 ISR 1 小時內自動反映；要即時可另觸發 Vercel deploy hook。）");
+  if (failed.length > 0) {
+    console.log(`更新失敗 ${failed.length} 篇：`);
+    for (const m of failed) console.log(`  ! ${m}`);
+    return 1;
+  }
+  return 0;
+}
+
 /** Spec 007 — `json <bundle.json> [--dry-run]` 子命令。 */
 export async function runJsonCommand(
   args: string[],
@@ -371,6 +465,9 @@ async function main(): Promise<number> {
   if (cmd === "fulltext") {
     return runFulltextCommand(rest);
   }
+  if (cmd === "reconcile-content-md") {
+    return runReconcileContentMdCommand(rest);
+  }
 
   let bundle: IngestBundle;
   if (cmd === "backfill") {
@@ -399,7 +496,7 @@ async function main(): Promise<number> {
     bundle = await buildDayBundle(rest);
   } else {
     console.error(
-      `Unknown command "${cmd ?? ""}". Use: json <bundle.json> [--dry-run] | candidates [--hours N] | fulltext <urls.json|url...> | backfill --force-seed | day <paths...>`,
+      `Unknown command "${cmd ?? ""}". Use: json <bundle.json> [--dry-run] | candidates [--hours N] | fulltext <urls.json|url...> | reconcile-content-md [--apply] | backfill --force-seed | day <paths...>`,
     );
     return 2;
   }
