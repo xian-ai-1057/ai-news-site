@@ -3,10 +3,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   renderArticleMd,
+  renderArticleBodyMd,
   renderLearningNoteMd,
   renderDailyReportMd,
   previousDate,
   fillRawMd,
+  fillDisplayContentMd,
 } from "../../ingest/render/markdown";
 import { makeValidBundle, makeArticle, makeNote, RUN_DATE } from "../gates/bundle-fixtures";
 
@@ -100,6 +102,57 @@ test("previousDate 跨月/跨年正確", () => {
   assert.equal(previousDate("2026-07-01"), "2026-06-30");
   assert.equal(previousDate("2026-01-01"), "2025-12-31");
   assert.equal(previousDate("2026-03-01"), "2026-02-28");
+});
+
+test("renderArticleBodyMd：完整 body（info + 摘要 + 全文 + 觀察 + 連結 + 筆記），無 frontmatter/標題/頁尾", () => {
+  const article = makeArticle(0, "技術理論");
+  article.observationsMd = "一段觀察與啟發。";
+  const note = makeNote(article, 0);
+  const body = renderArticleBodyMd(article, { noteSlug: note.slug });
+
+  // 完整 body 各章節齊、順序正確。
+  assertAscendingOrder(body, [
+    "> [!info] 文章資訊",
+    "## 📝 重點摘要",
+    "## 📖 全文內容",
+    "## 💡 觀察與啟發",
+    "## 🔗 相關連結",
+    "## 📓 學習筆記",
+  ]);
+  // 原始摘要與全文段都保留在 body 內。
+  assert.ok(body.includes(article.summaryMd), "body 應含原始摘要");
+  assert.ok(body.includes(article.contentMd), "body 應含原始全文");
+  assert.ok(body.includes(`[[${note.slug}|查看深入學習筆記]]`));
+  // content_md 顯示欄位不含 frontmatter / 標題 H1 / 頁尾簽名。
+  assert.ok(!body.startsWith("---"), "content_md 不應含 frontmatter");
+  assert.ok(!body.includes(`# ${article.title}`), "content_md 不應含標題 H1");
+  assert.ok(!body.includes("自動整理於"), "content_md 不應含頁尾簽名");
+});
+
+test("fillDisplayContentMd：JSON 通道 content_md 升級為完整 body、raw_md 不受影響", () => {
+  const filled = fillRawMd(makeValidBundle());
+  const rawBefore = filled.articles.map((a) => a.rawMd);
+  const contentFulltextBefore = filled.articles.map((a) => a.contentMd);
+
+  const display = fillDisplayContentMd(filled);
+
+  for (let i = 0; i < display.articles.length; i += 1) {
+    const a = display.articles[i];
+    // content_md 現在是完整 body（含摘要與全文章節標題）。
+    assert.ok(a.contentMd.includes("## 📝 重點摘要"), `${a.slug} content_md 缺摘要章節`);
+    assert.ok(a.contentMd.includes("## 📖 全文內容"), `${a.slug} content_md 缺全文章節`);
+    // 原本的全文段仍完整保留在新的 content_md 內。
+    assert.ok(
+      a.contentMd.includes(contentFulltextBefore[i]),
+      `${a.slug} content_md 應保留原始全文`,
+    );
+    // 技術理論文章帶入對應筆記 wikilink。
+    if (a.category === "技術理論") {
+      assert.ok(a.contentMd.includes("查看深入學習筆記"), `${a.slug} 缺筆記連結`);
+    }
+    // raw_md 不受此步驟影響。
+    assert.equal(a.rawMd, rawBefore[i], `${a.slug} raw_md 不應被改動`);
+  }
 });
 
 test("fillRawMd：空 rawMd 補齊、非空保留（idempotent）", () => {

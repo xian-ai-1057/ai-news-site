@@ -42,6 +42,47 @@ export function previousDate(date: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * Article body（不含 frontmatter / 標題 H1 / 頁尾簽名）——info callout + 五大章節。
+ * 與 parser（Spec 002）對種子產出的 content_md（= 整篇 body）語意一致，
+ * 讓 JSON 通道（Spec 007）也能把完整 body 寫進 articles.content_md，
+ * 使文章頁（只渲染 content_md）對兩條通道呈現一致（見 fillDisplayContentMd）。
+ */
+function renderArticleBodyLines(
+  article: BundleArticle,
+  opts: { noteSlug?: string } = {},
+): string[] {
+  const lines: string[] = [
+    "> [!info] 文章資訊",
+    `> - **來源**：[${article.source}](${article.url})`,
+    `> - **發布日期**：${article.articleDate}`,
+    `> - **分類**：${article.category}`,
+    "",
+    "## 📝 重點摘要",
+    article.summaryMd,
+    "",
+    "## 📖 全文內容",
+    article.contentMd,
+    "",
+  ];
+  if (article.observationsMd.length > 0) {
+    lines.push("## 💡 觀察與啟發", article.observationsMd, "");
+  }
+  lines.push("## 🔗 相關連結", `- [原文連結](${article.url})`, "");
+  if (article.category === "技術理論" && opts.noteSlug) {
+    lines.push("## 📓 學習筆記", `- [[${opts.noteSlug}|查看深入學習筆記]]`, "");
+  }
+  return lines;
+}
+
+/** 文章 body 的 Markdown 字串（trim 過），供 content_md 顯示欄位用。 */
+export function renderArticleBodyMd(
+  article: BundleArticle,
+  opts: { noteSlug?: string } = {},
+): string {
+  return renderArticleBodyLines(article, opts).join("\n").trim();
+}
+
 /** 範本 A：Article 筆記。noteSlug 僅技術理論文章提供（📓 學習筆記 wikilink）。 */
 export function renderArticleMd(
   article: BundleArticle,
@@ -62,26 +103,11 @@ export function renderArticleMd(
     "",
     `# ${article.title}`,
     "",
-    "> [!info] 文章資訊",
-    `> - **來源**：[${article.source}](${article.url})`,
-    `> - **發布日期**：${article.articleDate}`,
-    `> - **分類**：${article.category}`,
-    "",
-    "## 📝 重點摘要",
-    article.summaryMd,
-    "",
-    "## 📖 全文內容",
-    article.contentMd,
+    ...renderArticleBodyLines(article, opts),
+    "---",
+    `*由 Claude 自動整理於 ${created}*`,
     "",
   ];
-  if (article.observationsMd.length > 0) {
-    lines.push("## 💡 觀察與啟發", article.observationsMd, "");
-  }
-  lines.push("## 🔗 相關連結", `- [原文連結](${article.url})`, "");
-  if (article.category === "技術理論" && opts.noteSlug) {
-    lines.push("## 📓 學習筆記", `- [[${opts.noteSlug}|查看深入學習筆記]]`, "");
-  }
-  lines.push("---", `*由 Claude 自動整理於 ${created}*`, "");
   return lines.join("\n");
 }
 
@@ -210,5 +236,31 @@ export function fillRawMd(bundle: DailyBundle): DailyBundle {
               bundle.meta,
             ),
           },
+  };
+}
+
+/**
+ * 把 JSON 通道每篇文章的 `contentMd` 由「僅全文內容一段」升級為「完整 body」
+ * （info callout + 📝 摘要 + 📖 全文 + 💡 觀察 + 🔗 連結 +（技術理論）📓 筆記），
+ * 與 parser 種子產出的 content_md 語意對齊。文章頁只渲染 content_md，故此步驟
+ * 讓 routine（JSON）產出的文章頁恢復完整結構（摘要、觀察不再遺失）。
+ *
+ * 必須在 fillRawMd 之後施作：raw_md 已由原始 contentMd（全文段）渲染完成，
+ * 此處僅改寫 content_md 顯示欄位，不影響 raw_md、observationsMd 等其他欄位。
+ */
+export function fillDisplayContentMd(bundle: DailyBundle): DailyBundle {
+  const noteByArticleSlug = new Map(
+    bundle.learningNotes
+      .filter((n) => n.sourceArticleSlug)
+      .map((n) => [n.sourceArticleSlug!, n]),
+  );
+  return {
+    ...bundle,
+    articles: bundle.articles.map((a) => ({
+      ...a,
+      contentMd: renderArticleBodyMd(a, {
+        noteSlug: noteByArticleSlug.get(a.slug)?.slug,
+      }),
+    })),
   };
 }
