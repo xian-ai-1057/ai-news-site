@@ -1,8 +1,23 @@
-# AI 日報 — Supabase DB-first 內容管線
+# AI Daily: News Pipeline and Reading App
 
-這是什麼：**AI 日報**是一個繁體中文 AI 新聞知識庫。內容存於 **Supabase Postgres**
-（唯一事實），由 Claude Code Routine（雲端排程）每日策展入庫，前端為
-`web/` 的 Next.js 16 閱讀 App（Vercel 部署）。原 Quartz 靜態站已除役。
+A Traditional Chinese AI news knowledge base that turns collected sources into structured articles, daily digests, and learning notes. The project connects content ingestion with a searchable reading interface, using Supabase Postgres as the source of truth.
+
+## What is implemented
+
+- A TypeScript ingestion pipeline with Zod contracts, URL normalization and deduplication, content checks, coverage checks, and recorded ingestion results
+- Supabase Edge Functions for source collection, full-text extraction, article embeddings, and scheduled health checks
+- A Next.js 16 / React 19 reading app in `web/`, with article, digest, learning-note, tag, and status pages
+- A server-side search endpoint that combines Chinese full-text and vector search, with full-text fallback when embeddings are unavailable
+
+The documented curation workflow uses a Claude Code Routine to select, summarize, and translate candidates before ingestion. Source collection, validation, storage, and search are implemented as separate components.
+
+## Status and validation
+
+The current application is on the `v4` default branch; the earlier Quartz site is retired. The hosted preview was paused as of 2026-10-05; use the source and local setup for review.
+
+[CI](.github/workflows/ci.yaml) runs the root ingestion project's TypeScript check and tests. It does not establish a passing Next.js production build or browser end-to-end coverage. Live operation also depends on configured database migrations, secrets, and schedules.
+
+Explore the [ingestion code](ingest/), [web app](web/), [database migrations](supabase/migrations/), and [tests](tests/). Architecture and configuration follow below.
 
 ## 架構（v2 — 結構化通道，Specs 007–010）
 
