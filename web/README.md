@@ -32,9 +32,12 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 ## Deploy on Vercel
 
 This app is the **web** sub-project of a monorepo (the repo root is the ingest pipeline;
-each has its own `package.json` / lockfile). It is fully deploy-ready: read-only Supabase
-access via the public `anon` key + public-read RLS, no API routes, no server secrets,
-ISR + SSG (`revalidate: 3600`). The anon key is safe to expose publicly.
+each has its own `package.json` / lockfile). Article pages use Supabase's public
+publishable/anon key with public-read RLS and ISR + SSG (`revalidate: 3600`).
+The server-side `/api/search` endpoint combines Chinese full-text search with optional
+OpenAI embeddings and pgvector search. Without `OPENAI_API_KEY`, or when embedding
+requests fail, it falls back to full-text search. Required database migrations and
+search RPCs must be configured for those features to work.
 
 One-time setup on [vercel.com](https://vercel.com/new):
 
@@ -46,6 +49,8 @@ One-time setup on [vercel.com](https://vercel.com/new):
    [`.env.local.example`](.env.local.example), **never** the `service_role` / secret key:
    - `NEXT_PUBLIC_SUPABASE_URL` = `https://ifbpfuvlevjegwdnhyqh.supabase.co`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = `sb_publishable_…`
+   - Optional: `OPENAI_API_KEY` for server-side semantic search. Keep it server-only;
+     never add a `NEXT_PUBLIC_` prefix. Do not place a Supabase service-role key in this app.
 4. Set the **Production Branch** to `v4`.
 5. Deploy → you get a public `https://<project>.vercel.app` URL anyone can reach.
    (Optional: bind a custom domain under Project → Settings → Domains.)
